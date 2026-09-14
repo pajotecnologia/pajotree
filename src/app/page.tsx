@@ -120,10 +120,6 @@ export default function LandingPage() {
       q: "Como funciona o Meta Pixel por link?",
       a: "Você pode atribuir um Pixel diferente para cada botão/link ou disparar eventos específicos (Lead, Purchase, Contact) antes do redirecionamento, otimizando suas campanhas de tráfego pago.",
     },
-    {
-      q: "O sistema roda em servidor próprio ou Coolify?",
-      a: "O Pajotree foi arquitetado para rodar com máxima eficiência em containers Docker, PostgreSQL e Coolify, garantindo soberania total dos seus dados e performance inigualável.",
-    },
   ];
 
   return (
