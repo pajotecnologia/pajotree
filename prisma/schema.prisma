@@ -1,0 +1,1105 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==========================================
+// 1. ORGANIZATIONS & TENANCY
+// ==========================================
+
+enum OrganizationStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  BLOCKED
+}
+
+model Organization {
+  id          String             @id @default(cuid())
+  name        String
+  legalName   String?
+  tradeName   String?
+  document    String?            // CNPJ / CPF
+  email       String
+  phone       String?
+  whatsapp    String?
+  website     String?
+  description String?
+  segment     String?
+  status      OrganizationStatus @default(TRIAL)
+  logoUrl     String?
+  faviconUrl  String?
+  
+  planId      String?
+  plan        Plan?              @relation(fields: [planId], references: [id])
+  
+  addresses          OrganizationAddress[]
+  users              OrganizationUser[]
+  roles              Role[]
+  pages              Page[]
+  links              Link[]
+  shortLinks         ShortLink[]
+  metaPixels         MetaPixel[]
+  googleIntegrations GoogleIntegration[]
+  tiktokPixels       TikTokPixel[]
+  analyticsEvents    AnalyticsEvent[]
+  qrCodes            QRCode[]
+  campaigns          Campaign[]
+  leads              Lead[]
+  customers          Customer[]
+  tags               Tag[]
+  pipelines          Pipeline[]
+  opportunities      Opportunity[]
+  tasks              Task[]
+  forms              Form[]
+  whatsappInstances  WhatsappInstance[]
+  whatsappContacts   WhatsappContact[]
+  automations        Automation[]
+  subscriptions      Subscription[]
+  subscriptionUsages SubscriptionUsage[]
+  payments           Payment[]
+  domains            Domain[]
+  auditLogs          AuditLog[]
+  notifications      Notification[]
+  trackingConsents   TrackingConsent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([planId])
+}
+
+model OrganizationAddress {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  zipCode        String?
+  street         String?
+  number         String?
+  complement     String?
+  neighborhood   String?
+  city           String?
+  state          String?
+  country        String?      @default("BR")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+}
+
+// ==========================================
+// 2. USERS, ROLES & PERMISSIONS
+// ==========================================
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  status       UserStatus @default(ACTIVE)
+  isSuperAdmin Boolean    @default(false)
+  lastLoginAt  DateTime?
+
+  organizations    OrganizationUser[]
+  opportunities    Opportunity[]
+  tasksAssigned    Task[]             @relation("AssignedTasks")
+  tasksCreated     Task[]             @relation("CreatedTasks")
+  activityLogs     ActivityLog[]
+  auditLogs        AuditLog[]
+  notifications    Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+model OrganizationUser {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId         String
+  role           Role         @relation(fields: [roleId], references: [id])
+  status         UserStatus   @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+}
+
+model Role {
+  id             String        @id @default(cuid())
+  organizationId String?       // Nullable for Global System Roles (Admin, Member, etc.)
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  isSystem       Boolean       @default(false)
+
+  permissions       RolePermission[]
+  organizationUsers OrganizationUser[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique // e.g., page.view, page.edit, links.create, crm.edit
+  description String?
+  roles       RolePermission[]
+
+  createdAt DateTime @default(now())
+}
+
+model RolePermission {
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+}
+
+// ==========================================
+// 3. PAGES, THEMES & BLOCKS
+// ==========================================
+
+enum PageStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Page {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  slug           String       @unique
+  title          String?
+  description    String?
+  status         PageStatus   @default(DRAFT)
+  publishedAt    DateTime?
+
+  settings        PageSettings?
+  blocks          PageBlock[]
+  links           Link[]
+  analyticsEvents AnalyticsEvent[]
+  qrCodes         QRCode[]
+  leads           Lead[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([slug])
+}
+
+model PageSettings {
+  id              String   @id @default(cuid())
+  pageId          String   @unique
+  page            Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  themeId         String?
+  theme           Theme?   @relation(fields: [themeId], references: [id])
+  backgroundType  String   @default("gradient") // color, gradient, image, video
+  backgroundValue String   @default("linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)")
+  primaryColor    String   @default("#6366f1")
+  secondaryColor  String   @default("#ec4899")
+  textColor       String   @default("#f8fafc")
+  buttonStyle     String   @default("rounded-xl") // square, rounded, rounded-xl, pill, glass
+  fontFamily      String   @default("Inter")
+  layout          String   @default("classic") // classic, compact, grid, hero
+  customCss       String?
+  
+  // SEO & OpenGraph
+  seoTitle        String?
+  seoDescription  String?
+  ogImageUrl      String?
+  faviconUrl      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Theme {
+  id           String         @id @default(cuid())
+  name         String
+  description  String?
+  previewImage String?
+  configJson   String         @db.Text
+  isGlobal     Boolean        @default(true)
+  status       String         @default("ACTIVE")
+  pages        PageSettings[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum BlockType {
+  LINK
+  TEXT
+  IMAGE
+  VIDEO
+  WHATSAPP
+  INSTAGRAM
+  FACEBOOK
+  TIKTOK
+  YOUTUBE
+  LINKEDIN
+  MAP
+  FORM
+  PRODUCT
+  SERVICE
+  APPOINTMENT
+  TESTIMONIAL
+  BANNER
+  FAQ
+}
+
+model PageBlock {
+  id          String     @id @default(cuid())
+  pageId      String
+  page        Page       @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  type        BlockType
+  title       String?
+  contentJson String     @db.Text // Structured JSON config per block
+  position    Int        @default(0)
+  status      String     @default("ACTIVE")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pageId])
+  @@index([position])
+}
+
+// ==========================================
+// 4. LINKS, TRACKING & SHORT LINKS
+// ==========================================
+
+model Link {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  pageId         String?
+  page           Page?        @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  title          String
+  url            String
+  description    String?
+  icon           String?
+  image          String?
+  position       Int          @default(0)
+  status         String       @default("ACTIVE")
+  startAt        DateTime?
+  endAt          DateTime?
+  openNewTab     Boolean      @default(true)
+  featured       Boolean      @default(false)
+
+  trackingConfig  LinkTrackingConfig?
+  shortLinks      ShortLink[]
+  analyticsEvents AnalyticsEvent[]
+  qrCodes         QRCode[]
+  leads           Lead[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([pageId])
+  @@index([position])
+}
+
+enum TrackingMode {
+  INHERIT
+  CUSTOM
+  DISABLED
+}
+
+model LinkTrackingConfig {
+  id                String       @id @default(cuid())
+  linkId            String       @unique
+  link              Link         @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  enabled           Boolean      @default(true)
+  trackingMode      TrackingMode @default(INHERIT)
+  metaPixelId       String?
+  googleAnalyticsId String?
+  tiktokPixelId     String?
+  eventName         String?      @default("Lead")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ShortLink {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  linkId         String?
+  link           Link?        @relation(fields: [linkId], references: [id], onDelete: SetNull)
+  code           String       @unique
+  destinationUrl String
+  status         String       @default("ACTIVE")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([code])
+}
+
+// ==========================================
+// 5. PIXELS & INTEGRATIONS
+// ==========================================
+
+model MetaPixel {
+  id                   String       @id @default(cuid())
+  organizationId       String
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name                 String
+  pixelId              String
+  accessTokenEncrypted String?      @db.Text
+  testEventCode        String?
+  isDefault            Boolean      @default(false)
+  status               String       @default("ACTIVE")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+model GoogleIntegration {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  measurementId  String
+  status         String       @default("ACTIVE")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+model TikTokPixel {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  pixelId        String
+  status         String       @default("ACTIVE")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+// ==========================================
+// 6. ANALYTICS & EVENTS
+// ==========================================
+
+model AnalyticsEvent {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  pageId         String?
+  page           Page?        @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  linkId         String?
+  link           Link?        @relation(fields: [linkId], references: [id], onDelete: SetNull)
+  
+  eventType      String       // PageView, LinkClick, Lead, FormSubmit, WhatsAppClick, Custom
+  eventName      String?
+  sessionId      String?
+  visitorId      String?
+  referrer       String?
+  userAgent      String?      @db.Text
+  deviceType     String?      // mobile, desktop, tablet
+  browser        String?
+  os             String?
+  country        String?
+  state          String?
+  city           String?
+  ipHash         String?
+  
+  utmSource      String?
+  utmMedium      String?
+  utmCampaign    String?
+  utmContent     String?
+  utmTerm        String?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([pageId])
+  @@index([linkId])
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+// ==========================================
+// 7. QR CODES & CAMPAIGNS
+// ==========================================
+
+model QRCode {
+  id                 String        @id @default(cuid())
+  organizationId     String
+  organization       Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  pageId             String?
+  page               Page?         @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  linkId             String?
+  link               Link?         @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  campaignId         String?
+  campaign           Campaign?     @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  code               String        @unique
+  customOptionsJson  String?       @db.Text
+  status             String        @default("ACTIVE")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([code])
+}
+
+model Campaign {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  utmSource      String?
+  utmMedium      String?
+  utmCampaign    String?
+  utmContent     String?
+  utmTerm        String?
+  status         String       @default("ACTIVE")
+  startAt        DateTime?
+  endAt          DateTime?
+
+  qrCodes QRCode[]
+  leads   Lead[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+// ==========================================
+// 8. LEADS, CUSTOMERS & CRM
+// ==========================================
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  NEGOTIATION
+  CONVERTED
+  LOST
+}
+
+model Lead {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  email          String?
+  phone          String?
+  whatsapp       String?
+  company        String?
+  message        String?      @db.Text
+  source         String?      @default("bio_page")
+  campaignId     String?
+  campaign       Campaign?    @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  pageId         String?
+  page           Page?        @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  linkId         String?
+  link           Link?        @relation(fields: [linkId], references: [id], onDelete: SetNull)
+  status         LeadStatus   @default(NEW)
+
+  tags          LeadTag[]
+  customers     Customer[]
+  opportunities Opportunity[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Customer {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  document       String?
+  email          String?
+  phone          String?
+  whatsapp       String?
+  company        String?
+  address        String?
+  notes          String?      @db.Text
+  
+  leadId         String?
+  convertedFrom  Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  tags          CustomerTag[]
+  opportunities Opportunity[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+model Tag {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  color          String        @default("#6366f1")
+
+  leads     LeadTag[]
+  customers CustomerTag[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model LeadTag {
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tagId  String
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([leadId, tagId])
+}
+
+model CustomerTag {
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tagId      String
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([customerId, tagId])
+}
+
+model Pipeline {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  isDefault      Boolean         @default(false)
+  stages         PipelineStage[]
+  opportunities  Opportunity[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+model PipelineStage {
+  id            String        @id @default(cuid())
+  pipelineId    String
+  pipeline      Pipeline      @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  name          String
+  position      Int           @default(0)
+  color         String        @default("#64748b")
+  opportunities Opportunity[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pipelineId])
+  @@index([position])
+}
+
+model Opportunity {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  pipelineId     String
+  pipeline       Pipeline      @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  stageId        String
+  stage          PipelineStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  title          String
+  value          Decimal       @default(0.0) @db.Decimal(12, 2)
+  
+  leadId         String?
+  lead           Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  customerId     String?
+  customer       Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  assignedUserId String?
+  assignedUser   User?         @relation(fields: [assignedUserId], references: [id], onDelete: SetNull)
+
+  tasks          Task[]
+  activityLogs   ActivityLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([pipelineId])
+  @@index([stageId])
+}
+
+model Task {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  opportunityId  String?
+  opportunity    Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  title          String
+  description    String?
+  dueDate        DateTime?
+  completed      Boolean      @default(false)
+  
+  assignedUserId String?
+  assignedUser   User?        @relation("AssignedTasks", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  createdById    String?
+  createdBy      User?        @relation("CreatedTasks", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([opportunityId])
+}
+
+model ActivityLog {
+  id            String       @id @default(cuid())
+  opportunityId String
+  opportunity   Opportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  userId        String?
+  user          User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type          String       // note, call, meeting, status_change, stage_change
+  content       String       @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([opportunityId])
+}
+
+// ==========================================
+// 9. FORMS & SUBMISSIONS
+// ==========================================
+
+model Form {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String
+  description    String?
+  successMessage String?          @default("Mensagem enviada com sucesso!")
+  fields         FormField[]
+  submissions    FormSubmission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+model FormField {
+  id          String   @id @default(cuid())
+  formId      String
+  form        Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  label       String
+  type        String   // text, email, phone, number, select, textarea, date
+  placeholder String?
+  required    Boolean  @default(false)
+  optionsJson String?  // For select/radios
+  position    Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([formId])
+  @@index([position])
+}
+
+model FormSubmission {
+  id        String   @id @default(cuid())
+  formId    String
+  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  dataJson  String   @db.Text
+  ipHash    String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  @@index([formId])
+}
+
+// ==========================================
+// 10. WHATSAPP & EVOLUTION API
+// ==========================================
+
+enum WhatsappStatus {
+  CONNECTING
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+model WhatsappInstance {
+  id                   String         @id @default(cuid())
+  organizationId       String
+  organization         Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name                 String
+  instanceName         String         @unique
+  phone                String?
+  status               WhatsappStatus @default(DISCONNECTED)
+  apiUrl               String?
+  credentialsEncrypted String?        @db.Text
+  webhookStatus        String?        @default("PENDING")
+
+  conversations WhatsappConversation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([instanceName])
+}
+
+model WhatsappContact {
+  id             String                 @id @default(cuid())
+  organizationId String
+  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  remoteJid      String                 // e.g. 5511999999999@s.whatsapp.net
+  name           String?
+  profilePicUrl  String?
+  
+  conversations  WhatsappConversation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, remoteJid])
+  @@index([organizationId])
+}
+
+model WhatsappConversation {
+  id         String            @id @default(cuid())
+  instanceId String
+  instance   WhatsappInstance  @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  contactId  String
+  contact    WhatsappContact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  status     String            @default("OPEN") // OPEN, CLOSED, WAITING
+  unread     Int               @default(0)
+
+  messages WhatsappMessage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([instanceId])
+  @@index([contactId])
+}
+
+model WhatsappMessage {
+  id             String               @id @default(cuid())
+  conversationId String
+  conversation   WhatsappConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  direction      String               // incoming, outgoing
+  messageType    String               // text, image, audio, video, document, sticker
+  content        String?              @db.Text
+  mediaUrl       String?
+  status         String               @default("SENT") // PENDING, SENT, DELIVERED, READ, ERROR
+  externalId     String?              @unique // For webhook idempotency
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId])
+  @@index([externalId])
+}
+
+// ==========================================
+// 11. AUTOMATIONS & QUEUES
+// ==========================================
+
+model Automation {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  active         Boolean      @default(true)
+
+  triggers   AutomationTrigger[]
+  conditions AutomationCondition[]
+  actions    AutomationAction[]
+  executions AutomationExecution[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+model AutomationTrigger {
+  id           String     @id @default(cuid())
+  automationId String
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  type         String     // lead_created, form_submitted, whatsapp_message, link_clicked
+  configJson   String     @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([automationId])
+}
+
+model AutomationCondition {
+  id           String     @id @default(cuid())
+  automationId String
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  field        String
+  operator     String     // equals, contains, starts_with, greater_than
+  value        String
+
+  createdAt DateTime @default(now())
+
+  @@index([automationId])
+}
+
+model AutomationAction {
+  id           String     @id @default(cuid())
+  automationId String
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  type         String     // send_whatsapp, send_email, add_tag, create_deal, move_stage
+  configJson   String     @db.Text
+  position     Int        @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([automationId])
+  @@index([position])
+}
+
+model AutomationExecution {
+  id           String     @id @default(cuid())
+  automationId String
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  status       String     // SUCCESS, FAILED, RUNNING
+  error        String?    @db.Text
+  metadataJson String?    @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([automationId])
+}
+
+// ==========================================
+// 12. PLANS, SUBSCRIPTIONS & LIMITS
+// ==========================================
+
+model Plan {
+  id            String        @id @default(cuid())
+  name          String        @unique // FREE, START, PRO, BUSINESS
+  description   String?
+  priceMonthly  Decimal       @default(0.0) @db.Decimal(10, 2)
+  priceYearly   Decimal       @default(0.0) @db.Decimal(10, 2)
+  trialDays     Int           @default(14)
+  status        String        @default("ACTIVE")
+
+  features      PlanFeature[]
+  organizations Organization[]
+  subscriptions Subscription[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PlanFeature {
+  id                   String  @id @default(cuid())
+  planId               String
+  plan                 Plan    @relation(fields: [planId], references: [id], onDelete: Cascade)
+  maxPages             Int     @default(1)
+  maxLinks             Int     @default(10)
+  maxUsers             Int     @default(1)
+  maxLeads             Int     @default(100)
+  maxForms             Int     @default(1)
+  maxWhatsappInstances Int     @default(0)
+  maxMetaPixels        Int     @default(1)
+  maxAutomations       Int     @default(0)
+  maxStorageMb         Int     @default(50)
+  customDomainAllowed  Boolean @default(false)
+  crmAllowed           Boolean @default(false)
+  whatsappInboxAllowed Boolean @default(false)
+  advancedAnalytics    Boolean @default(false)
+  removeBranding       Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([planId])
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+  SUSPENDED
+}
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  organizationId     String
+  organization       Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  planId             String
+  plan               Plan               @relation(fields: [planId], references: [id])
+  status             SubscriptionStatus @default(TRIAL)
+  billingCycle       String             @default("monthly") // monthly, yearly
+  trialStart         DateTime?
+  trialEnd           DateTime?
+  currentPeriodStart DateTime           @default(now())
+  currentPeriodEnd   DateTime
+  cancelledAt        DateTime?
+
+  payments Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([planId])
+}
+
+model SubscriptionUsage {
+  id                String       @id @default(cuid())
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  linksCount        Int          @default(0)
+  pagesCount        Int          @default(0)
+  usersCount        Int          @default(1)
+  leadsCount        Int          @default(0)
+  formsCount        Int          @default(0)
+  whatsappInstances Int          @default(0)
+  metaPixelsCount   Int          @default(0)
+  storageMbUsed     Float        @default(0.0)
+  automationsCount  Int          @default(0)
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId])
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subscriptionId String?
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  provider       String        @default("manual") // stripe, mercadopago, asaas, manual
+  externalId     String?
+  amount         Decimal       @db.Decimal(10, 2)
+  currency       String        @default("BRL")
+  status         String        @default("PAID") // PENDING, PAID, FAILED, REFUNDED
+  paymentMethod  String?       // credit_card, pix, boleto
+  receiptUrl     String?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([subscriptionId])
+}
+
+// ==========================================
+// 13. DOMAINS, AUDIT & NOTIFICATIONS
+// ==========================================
+
+model Domain {
+  id                 String       @id @default(cuid())
+  organizationId     String
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  domain             String       @unique
+  verificationStatus String       @default("PENDING") // PENDING, VERIFIED, FAILED
+  sslStatus          String       @default("PENDING") // PENDING, ISSUED, ERROR
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([domain])
+}
+
+model AuditLog {
+  id             String        @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action         String        // login, create_link, delete_link, update_plan, connect_whatsapp
+  entity         String        // User, Link, Plan, Organization, WhatsappInstance
+  entityId       String?
+  metadata       String?       @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model Notification {
+  id             String        @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type           String        // new_lead, new_whatsapp, limit_reached, billing_warning
+  title          String
+  message        String        @db.Text
+  read           Boolean       @default(false)
+  link           String?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([userId])
+}
+
+model TrackingConsent {
+  id              String        @id @default(cuid())
+  organizationId  String
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  visitorId       String
+  consentGiven    Boolean       @default(true)
+  policyVersion   String        @default("1.0")
+  preferencesJson String?       @db.Text
+  ipHash          String?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([visitorId])
+}
