@@ -87,12 +87,23 @@ export async function POST(request: NextRequest) {
       });
 
       // Gerar QR Code de pareamento
-      const qrData = await EvolutionService.getQrCode(instanceName);
-      const qrDataUrl = await QRCode.toDataURL(qrData.qrCodeData);
+      const qrData = await EvolutionService.getQrCode(instanceName, orgId);
+      let qrDataUrl = qrData.qrCodeData;
+      if (!qrDataUrl.startsWith("data:image/")) {
+        qrDataUrl = await QRCode.toDataURL(qrData.qrCodeData, {
+          width: 300,
+          margin: 2,
+          color: {
+            dark: "#000000",
+            light: "#ffffff",
+          },
+        });
+      }
 
       return NextResponse.json({
         success: true,
         instance,
+        pairingCode: qrData.pairingCode,
         qrCodeUrl: qrDataUrl,
       });
     }

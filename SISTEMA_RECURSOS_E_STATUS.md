@@ -48,6 +48,11 @@ Este documento registra detalhadamente todos os módulos, recursos, arquitetura 
 
 ## 🔗 2. Links Rastreáveis & Gerador de WhatsApp (`/app/links`)
 
+- **Edição Completa de Links**:
+  - Botão de **Editar** (`Pencil`) em cada link da lista.
+  - Carregamento automático e preenchimento dos campos no modal.
+  - Se o link for do WhatsApp, extrai automaticamente o **DDD + Telefone** e a **Mensagem personalizada** para edição fácil e rápida.
+  - Atualização via `PUT /api/links`.
 - **Aba de Link / Site Tradicional**: URL de destino com auto-prepend de `https://`.
 - **Aba de WhatsApp**:
   - Campo específico para **DDD + Telefone** (ex: `11 99999-9999`).

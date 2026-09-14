@@ -16,6 +16,7 @@ import {
   Smartphone,
   HelpCircle,
   Zap,
+  Pencil,
 } from "lucide-react";
 
 export default function LinksPage() {
@@ -25,6 +26,7 @@ export default function LinksPage() {
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
 
   // Link Form State
   const [linkType, setLinkType] = useState<"custom" | "whatsapp">("custom");
@@ -88,7 +90,66 @@ export default function LinksPage() {
     setUrl(`https://wa.me/${fullPhone}${encodedMsg}`);
   };
 
-  const handleCreateLink = async (e: React.FormEvent) => {
+  const handleOpenCreate = () => {
+    setEditingLinkId(null);
+    setError(null);
+    setTitle("");
+    setUrl("");
+    setDescription("");
+    setIcon("globe");
+    setFeatured(false);
+    setMetaPixelId("");
+    setEventName("LinkClick");
+    setWaPhone("");
+    setWaMessage("");
+    setLinkType("custom");
+    setShowModal(true);
+  };
+
+  const handleOpenEdit = (link: any) => {
+    setEditingLinkId(link.id);
+    setError(null);
+    setTitle(link.title || "");
+    setUrl(link.url || "");
+    setDescription(link.description || "");
+    setIcon(link.icon || "globe");
+    setFeatured(!!link.featured);
+    setMetaPixelId(link.trackingConfig?.metaPixelId || "");
+    setEventName(link.trackingConfig?.eventName || "LinkClick");
+
+    const isWa = link.icon === "whatsapp" || (link.url && link.url.includes("wa.me"));
+    if (isWa) {
+      setLinkType("whatsapp");
+      try {
+        const parsed = new URL(link.url);
+        let p = parsed.pathname.replace(/^\//, "");
+        if (p.startsWith("55") && p.length >= 12) {
+          p = p.substring(2);
+        }
+        setWaPhone(p);
+        setWaMessage(parsed.searchParams.get("text") || "");
+      } catch {
+        const match = (link.url || "").match(/wa\.me\/(\d+)/);
+        if (match) {
+          let p = match[1];
+          if (p.startsWith("55") && p.length >= 12) p = p.substring(2);
+          setWaPhone(p);
+        }
+        const textMatch = (link.url || "").match(/text=([^&]+)/);
+        if (textMatch) {
+          setWaMessage(decodeURIComponent(textMatch[1]));
+        }
+      }
+    } else {
+      setLinkType("custom");
+      setWaPhone("");
+      setWaMessage("");
+    }
+
+    setShowModal(true);
+  };
+
+  const handleSaveLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
@@ -116,24 +177,33 @@ export default function LinksPage() {
     }
 
     try {
-      const res = await fetch("/api/links", {
-        method: "POST",
+      const endpoint = "/api/links";
+      const method = editingLinkId ? "PUT" : "POST";
+      const payload: any = {
+        title: title.trim(),
+        url: finalUrl,
+        description: description.trim(),
+        icon,
+        featured,
+        metaPixelId: metaPixelId || undefined,
+        eventName,
+      };
+
+      if (editingLinkId) {
+        payload.id = editingLinkId;
+      }
+
+      const res = await fetch(endpoint, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: title.trim(),
-          url: finalUrl,
-          description: description.trim(),
-          icon,
-          featured,
-          metaPixelId: metaPixelId || undefined,
-          eventName,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Erro ao criar link");
+      if (!res.ok) throw new Error(json.error || (editingLinkId ? "Erro ao editar link" : "Erro ao criar link"));
 
       setShowModal(false);
+      setEditingLinkId(null);
       setTitle("");
       setUrl("");
       setDescription("");
@@ -146,7 +216,7 @@ export default function LinksPage() {
       setLinkType("custom");
       await loadData();
     } catch (err: any) {
-      setError(err.message || "Erro ao criar link");
+      setError(err.message || "Erro ao salvar link");
     } finally {
       setSubmitting(false);
     }
@@ -187,10 +257,7 @@ export default function LinksPage() {
         </div>
         <button
           type="button"
-          onClick={() => {
-            setError(null);
-            setShowModal(true);
-          }}
+          onClick={handleOpenCreate}
           disabled={isLimitReached}
           className="min-h-11 w-full sm:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center justify-center gap-2"
         >
@@ -293,6 +360,15 @@ export default function LinksPage() {
                   </a>
                   <button
                     type="button"
+                    onClick={() => handleOpenEdit(link)}
+                    className="min-h-11 min-w-11 p-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:bg-indigo-50 hover:border-indigo-200 text-indigo-600 transition shadow-2xs flex items-center justify-center"
+                    title="Editar Link"
+                    aria-label="Editar Link"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => handleDelete(link.id)}
                     className="min-h-11 min-w-11 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition shadow-2xs flex items-center justify-center"
                     title="Excluir Link"
@@ -315,7 +391,9 @@ export default function LinksPage() {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="w-full max-w-lg max-h-[calc(100vh-1.5rem)] overflow-y-auto bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-xl">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <h3 className="font-bold text-base text-slate-900">Adicionar Link Rastreável</h3>
+              <h3 className="font-bold text-base text-slate-900">
+                {editingLinkId ? "Editar Link Rastreável" : "Adicionar Link Rastreável"}
+              </h3>
               <div className="flex p-0.5 bg-slate-100 rounded-lg text-xs font-semibold">
                 <button
                   type="button"
@@ -357,7 +435,7 @@ export default function LinksPage() {
               </div>
             )}
 
-            <form onSubmit={handleCreateLink} className="space-y-4">
+            <form onSubmit={handleSaveLink} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                   Título do Link *
@@ -504,10 +582,12 @@ export default function LinksPage() {
                 >
                   {submitting ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : editingLinkId ? (
+                    <Check className="w-3.5 h-3.5" />
                   ) : (
                     <Plus className="w-3.5 h-3.5" />
                   )}
-                  <span>Criar Link</span>
+                  <span>{editingLinkId ? "Salvar Alterações" : "Criar Link"}</span>
                 </button>
               </div>
             </form>

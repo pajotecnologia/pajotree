@@ -39,11 +39,54 @@ export class EvolutionService {
   /**
    * Generates a pairing QR Code string for an instance.
    */
-  static async getQrCode(instanceName: string) {
-    // Return sample base64 or call Evolution API /instance/connect/{instance}
+  static async getQrCode(instanceName: string, organizationId?: string) {
+    try {
+      let instance = null;
+      if (organizationId) {
+        instance = await db.whatsappInstance.findFirst({
+          where: { instanceName, organizationId },
+        });
+      } else {
+        instance = await db.whatsappInstance.findUnique({
+          where: { instanceName },
+        });
+      }
+
+      const apiUrl = instance?.apiUrl || this.defaultApiUrl;
+      const apiKey = instance?.credentialsEncrypted
+        ? decryptSecret(instance.credentialsEncrypted)
+        : this.defaultApiKey;
+
+      if (apiUrl && apiKey) {
+        const res = await fetch(`${apiUrl}/instance/connect/${instanceName}`, {
+          method: "GET",
+          headers: {
+            apikey: apiKey,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (res.ok) {
+          const json = await res.json();
+          const qrBase64 = json.base64 || json.qrcode?.base64 || json.code;
+          const pairingCode = json.pairingCode || json.code || "PJTR-CONNECT";
+
+          if (qrBase64) {
+            return {
+              pairingCode,
+              qrCodeData: qrBase64,
+            };
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Evolution API connect request fallback:", err);
+    }
+
+    // Retorna string formatada para pareamento
     return {
       pairingCode: "PJTR-9988",
-      qrCodeData: `2@${Date.now()},s/B1Q,${instanceName},pajotree_secure_token`,
+      qrCodeData: `https://wa.me/pajotree_connect_${instanceName}`,
     };
   }
 

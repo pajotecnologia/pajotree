@@ -143,6 +143,105 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function PUT(request: NextRequest) {
+  try {
+    const auth = await getCurrentAuthContext();
+    if (!auth || !auth.organization) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    }
+
+    const orgId = auth.organization.id;
+    const body = await request.json();
+    const { id, ...dataToValidate } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: "ID do link é obrigatório" }, { status: 400 });
+    }
+
+    const existing = await db.link.findFirst({
+      where: { id, organizationId: orgId },
+      include: { trackingConfig: true, shortLinks: true },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Link não encontrado" }, { status: 404 });
+    }
+
+    const parsed = linkSchema.safeParse(dataToValidate);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || "Dados inválidos" },
+        { status: 400 }
+      );
+    }
+
+    const { title, url, description, icon, featured, openNewTab, metaPixelId, eventName } = parsed.data;
+
+    const updated = await db.$transaction(async (tx) => {
+      const link = await tx.link.update({
+        where: { id },
+        data: {
+          title,
+          url,
+          description: description || null,
+          icon: icon || "globe",
+          featured: !!featured,
+          openNewTab: !!openNewTab,
+        },
+      });
+
+      // Atualiza tracking
+      if (existing.trackingConfig) {
+        await tx.linkTrackingConfig.update({
+          where: { id: existing.trackingConfig.id },
+          data: {
+            trackingMode: metaPixelId ? "CUSTOM" : "INHERIT",
+            metaPixelId: metaPixelId || null,
+            eventName: eventName || "LinkClick",
+          },
+        });
+      } else {
+        await tx.linkTrackingConfig.create({
+          data: {
+            linkId: id,
+            enabled: true,
+            trackingMode: metaPixelId ? "CUSTOM" : "INHERIT",
+            metaPixelId: metaPixelId || null,
+            eventName: eventName || "LinkClick",
+          },
+        });
+      }
+
+      // Atualiza shortLinks
+      if (existing.shortLinks.length > 0) {
+        await tx.shortLink.updateMany({
+          where: { linkId: id },
+          data: { destinationUrl: url },
+        });
+      }
+
+      return link;
+    });
+
+    await AuditService.log({
+      organizationId: orgId,
+      userId: auth.user.id,
+      action: "UPDATE_LINK",
+      entity: "Link",
+      entityId: id,
+      metadata: { title, url },
+    });
+
+    return NextResponse.json({ success: true, link: updated });
+  } catch (error: any) {
+    console.error("Erro ao atualizar link:", error);
+    return NextResponse.json(
+      { error: error.message || "Erro ao atualizar link" },
+      { status: 400 }
+    );
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const auth = await getCurrentAuthContext();
