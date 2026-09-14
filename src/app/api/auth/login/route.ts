@@ -101,8 +101,13 @@ export async function POST(req: Request) {
     });
 
     return response;
-  } catch (error) {
-    console.error("Erro no login:", error instanceof Error ? error.message : "Erro desconhecido");
-    return apiError("INTERNAL_ERROR", "Ocorreu um erro ao processar o login. Tente novamente.", 500);
+  } catch (error: any) {
+    const message = error instanceof Error ? error.message : "Erro desconhecido";
+    console.error("Erro detalhado no login:", error);
+    return apiError(
+      "INTERNAL_ERROR",
+      `Ocorreu um erro ao processar o login (${message}). Tente novamente.`,
+      500
+    );
   }
 }
