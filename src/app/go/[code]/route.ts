@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { TrackingService } from "@/server/services/tracking.service";
+import { normalizeWhatsAppDestinationUrl } from "@/lib/whatsapp";
 
 export async function GET(
   request: NextRequest,
@@ -56,7 +57,7 @@ export async function GET(
     }).catch((e) => console.error("Falha no tracking assíncrono:", e));
 
     // Montar URL de destino preservando UTMs
-    let destination = shortLink.destinationUrl;
+    let destination = normalizeWhatsAppDestinationUrl(shortLink.destinationUrl);
     try {
       const destUrl = new URL(destination);
       url.searchParams.forEach((value, key) => {

@@ -54,17 +54,11 @@ Este documento registra detalhadamente todos os módulos, recursos, arquitetura 
   - Se o link for do WhatsApp, extrai automaticamente o **DDD + Telefone** e a **Mensagem personalizada** para edição fácil e rápida.
   - Atualização via `PUT /api/links`.
 - **Aba de Link / Site Tradicional**: URL de destino com auto-prepend de `https://`.
-- **Aba de WhatsApp**:
-  - Campo específico para **DDD + Telefone** (ex: `11 99999-9999`).
-  - Campo para **Mensagem personalizada pré-preenchida** (ex: *"Olá, vim pelo link da bio!"*).
-  - Geração automática e codificada do link oficial `https://wa.me/55...`.
-- **Eventos de Conversão do Meta Pixel em Português**:
-  - `Contact`: Iniciar Conversa no WhatsApp
-  - `Schedule`: Agendamento de Consulta / Reunião
-  - `Lead`: Cadastro / Captação de Lead
-  - `ViewContent`: Visualização de Conteúdo
-  - `LinkClick`: Clique no Link
-- **Sugestão Inteligente**: Ao escolher o ícone do WhatsApp, o evento de conversão padrão é configurado automaticamente para *Contact*.
+- **Normalização e DDI Internacional Obrigatório**:
+  - Garantia de prefixo DDI do Brasil (`55`) em todos os números com DDD de 10 ou 11 dígitos (ex: `87996540551` vira `5587996540551`).
+  - Motor de redirecionamento `/go/[code]` intercepta e normaliza em tempo real qualquer link antigo ou sem DDI, evitando erros do WhatsApp.
+  - Rotinas de auto-cura no `GET /api/links` que corrigem URLs legadas no banco de dados.
+
 
 ---
 

@@ -180,12 +180,13 @@ export async function POST(req: Request) {
 
       if (whatsapp) {
         const cleanPhone = whatsapp.replace(/\D/g, "");
+        const fullPhone = cleanPhone.length === 10 || cleanPhone.length === 11 ? `55${cleanPhone}` : (cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`);
         const waLink = await tx.link.create({
           data: {
             organizationId: org.id,
             pageId: page.id,
             title: "Falar no WhatsApp",
-            url: `https://wa.me/${cleanPhone}`,
+            url: `https://wa.me/${fullPhone}`,
             icon: "whatsapp",
             position: 0,
             status: "ACTIVE",
@@ -203,6 +204,7 @@ export async function POST(req: Request) {
           },
         });
       }
+
 
       await tx.pipeline.create({
         data: {

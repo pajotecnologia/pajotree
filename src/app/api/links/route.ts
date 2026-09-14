@@ -3,6 +3,7 @@ import { getCurrentAuthContext } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { PlanLimitService } from "@/server/services/plan-limit.service";
 import { AuditService } from "@/server/services/audit.service";
+import { normalizeWhatsAppDestinationUrl } from "@/lib/whatsapp";
 import { z } from "zod";
 
 const linkSchema = z.object({
@@ -36,6 +37,22 @@ export async function GET() {
       },
       orderBy: { position: "asc" },
     });
+
+    // Auto-correção de links WhatsApp sem DDI 55
+    for (const link of links) {
+      const normalized = normalizeWhatsAppDestinationUrl(link.url);
+      if (normalized !== link.url) {
+        await db.link.update({
+          where: { id: link.id },
+          data: { url: normalized },
+        });
+        await db.shortLink.updateMany({
+          where: { linkId: link.id },
+          data: { destinationUrl: normalized },
+        });
+        link.url = normalized;
+      }
+    }
 
     const metaPixels = await db.metaPixel.findMany({
       where: { organizationId: orgId, status: "ACTIVE" },
@@ -73,6 +90,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { title, url, description, icon, featured, openNewTab, metaPixelId, eventName } = parsed.data;
+    const finalUrl = normalizeWhatsAppDestinationUrl(url);
 
     // Buscar a página principal da organização
     const page = await db.page.findFirst({
@@ -93,7 +111,7 @@ export async function POST(request: NextRequest) {
           organizationId: orgId,
           pageId: page?.id || null,
           title,
-          url,
+          url: finalUrl,
           description: description || null,
           icon: icon || "globe",
           featured: !!featured,
@@ -116,7 +134,7 @@ export async function POST(request: NextRequest) {
           organizationId: orgId,
           linkId: createdLink.id,
           code: shortCode,
-          destinationUrl: url,
+          destinationUrl: finalUrl,
           status: "ACTIVE",
         },
       });
@@ -130,7 +148,7 @@ export async function POST(request: NextRequest) {
       action: "CREATE_LINK",
       entity: "Link",
       entityId: link.id,
-      metadata: { title, url, shortCode },
+      metadata: { title, url: finalUrl, shortCode },
     });
 
     return NextResponse.json({ success: true, link });
@@ -176,13 +194,14 @@ export async function PUT(request: NextRequest) {
     }
 
     const { title, url, description, icon, featured, openNewTab, metaPixelId, eventName } = parsed.data;
+    const finalUrl = normalizeWhatsAppDestinationUrl(url);
 
     const updated = await db.$transaction(async (tx) => {
       const link = await tx.link.update({
         where: { id },
         data: {
           title,
-          url,
+          url: finalUrl,
           description: description || null,
           icon: icon || "globe",
           featured: !!featured,
@@ -216,7 +235,7 @@ export async function PUT(request: NextRequest) {
       if (existing.shortLinks.length > 0) {
         await tx.shortLink.updateMany({
           where: { linkId: id },
-          data: { destinationUrl: url },
+          data: { destinationUrl: finalUrl },
         });
       }
 
@@ -229,8 +248,9 @@ export async function PUT(request: NextRequest) {
       action: "UPDATE_LINK",
       entity: "Link",
       entityId: id,
-      metadata: { title, url },
+      metadata: { title, url: finalUrl },
     });
+
 
     return NextResponse.json({ success: true, link: updated });
   } catch (error: any) {
