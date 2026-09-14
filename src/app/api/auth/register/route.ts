@@ -4,6 +4,9 @@ import { hashPassword, setSessionCookie } from "@/lib/auth";
 import { AuditService } from "@/server/services/audit.service";
 import { z } from "zod";
 
+const MAX_LOGO_DATA_URL_LENGTH = 2_800_000;
+const ALLOWED_LOGO_MIME_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
+
 const registerSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   email: z.string().email("E-mail inválido"),
@@ -11,7 +14,27 @@ const registerSchema = z.object({
   companyName: z.string().min(2, "Nome da empresa obrigatório"),
   whatsapp: z.string().optional(),
   segment: z.string().optional(),
+  logoDataUrl: z.string().max(MAX_LOGO_DATA_URL_LENGTH, "A logomarca é muito grande").nullable().optional(),
 });
+
+function validateLogoDataUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+
+  const match = value.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/);
+  if (!match) {
+    throw new Error("Logomarca inválida. Use PNG, JPG ou WebP.");
+  }
+
+  const mimeType = match[1] as (typeof ALLOWED_LOGO_MIME_TYPES)[number];
+  const base64Payload = match[2];
+  const estimatedBytes = Math.floor((base64Payload.length * 3) / 4) - (base64Payload.endsWith("==") ? 2 : base64Payload.endsWith("=") ? 1 : 0);
+
+  if (!ALLOWED_LOGO_MIME_TYPES.includes(mimeType) || estimatedBytes > 2 * 1024 * 1024) {
+    throw new Error("A logomarca deve ser PNG, JPG ou WebP e ter no máximo 2 MB.");
+  }
+
+  return value;
+}
 
 function generateSlug(text: string): string {
   return text
@@ -40,8 +63,8 @@ export async function POST(req: Request) {
     }
 
     const { name, email, password, companyName, whatsapp, segment } = parsed.data;
+    const logoUrl = validateLogoDataUrl(parsed.data.logoDataUrl);
 
-    // 1. Verificar se o e-mail já existe
     const existingUser = await db.user.findUnique({
       where: { email: email.toLowerCase() },
     });
@@ -53,19 +76,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Hash da senha
     const passwordHash = await hashPassword(password);
 
-    // 3. Buscar plano inicial (START com 14 dias de Trial ou FREE)
-    const startPlan = await db.plan.findUnique({
-      where: { name: "START" },
-    });
-    const freePlan = await db.plan.findUnique({
-      where: { name: "FREE" },
-    });
+    const startPlan = await db.plan.findUnique({ where: { name: "START" } });
+    const freePlan = await db.plan.findUnique({ where: { name: "FREE" } });
     const defaultPlan = startPlan || freePlan;
 
-    // 4. Gerar slug único para a página pública
     let baseSlug = generateSlug(companyName);
     if (!baseSlug || RESERVED_SLUGS.includes(baseSlug)) {
       baseSlug = `empresa-${Date.now().toString().slice(-4)}`;
@@ -78,9 +94,7 @@ export async function POST(req: Request) {
       counter++;
     }
 
-    // 5. Transação atômica para criação de Usuário + Organização + Permissões + Página Inicial + Assinatura
     const result = await db.$transaction(async (tx) => {
-      // Criação do Usuário
       const user = await tx.user.create({
         data: {
           name,
@@ -91,19 +105,18 @@ export async function POST(req: Request) {
         },
       });
 
-      // Criação da Organização
       const org = await tx.organization.create({
         data: {
           name: companyName,
           email: email.toLowerCase(),
           whatsapp: whatsapp || null,
           segment: segment || "Serviços",
+          logoUrl,
           status: "TRIAL",
           planId: defaultPlan?.id || null,
         },
       });
 
-      // Role Administrador padrão para o criador
       let adminRole = await tx.role.findFirst({
         where: { organizationId: org.id, name: "Administrador" },
       });
@@ -118,7 +131,6 @@ export async function POST(req: Request) {
           },
         });
 
-        // Vincular todas as permissões existentes
         const allPermissions = await tx.permission.findMany();
         if (allPermissions.length > 0) {
           await tx.rolePermission.createMany({
@@ -130,7 +142,6 @@ export async function POST(req: Request) {
         }
       }
 
-      // Vincular Usuário à Organização com a Role Admin
       await tx.organizationUser.create({
         data: {
           organizationId: org.id,
@@ -140,16 +151,13 @@ export async function POST(req: Request) {
         },
       });
 
-      // Criar Página Pública inicial com Tema Padrão
-      const defaultTheme = await tx.theme.findFirst({
-        where: { isGlobal: true },
-      });
+      const defaultTheme = await tx.theme.findFirst({ where: { isGlobal: true } });
 
       const page = await tx.page.create({
         data: {
           organizationId: org.id,
           name: companyName,
-          slug: slug,
+          slug,
           title: `${companyName} | Links & Contato Oficial`,
           description: `Conecte-se conosco através dos nossos canais oficiais.`,
           status: "PUBLISHED",
@@ -170,7 +178,6 @@ export async function POST(req: Request) {
         },
       });
 
-      // Criar 2 blocos/links de exemplo
       if (whatsapp) {
         const cleanPhone = whatsapp.replace(/\D/g, "");
         const waLink = await tx.link.create({
@@ -186,7 +193,6 @@ export async function POST(req: Request) {
           },
         });
 
-        // Criar ShortLink
         await tx.shortLink.create({
           data: {
             organizationId: org.id,
@@ -198,8 +204,7 @@ export async function POST(req: Request) {
         });
       }
 
-      // Criar Pipeline CRM Padrão
-      const pipeline = await tx.pipeline.create({
+      await tx.pipeline.create({
         data: {
           organizationId: org.id,
           name: "Funil de Vendas",
@@ -216,7 +221,6 @@ export async function POST(req: Request) {
         },
       });
 
-      // Criar Assinatura Trial (14 dias)
       if (defaultPlan) {
         const trialEnd = new Date();
         trialEnd.setDate(trialEnd.getDate() + (defaultPlan.trialDays || 14));
@@ -228,7 +232,7 @@ export async function POST(req: Request) {
             status: "TRIAL",
             billingCycle: "monthly",
             trialStart: new Date(),
-            trialEnd: trialEnd,
+            trialEnd,
             currentPeriodStart: new Date(),
             currentPeriodEnd: trialEnd,
           },
@@ -238,7 +242,6 @@ export async function POST(req: Request) {
       return { user, org, page };
     });
 
-    // 6. Criar Sessão e Cookie HttpOnly
     await setSessionCookie({
       userId: result.user.id,
       email: result.user.email,
@@ -246,7 +249,6 @@ export async function POST(req: Request) {
       activeOrganizationId: result.org.id,
     });
 
-    // 7. Registrar Auditoria
     await AuditService.log({
       organizationId: result.org.id,
       userId: result.user.id,
@@ -269,10 +271,10 @@ export async function POST(req: Request) {
       },
       pageSlug: result.page.slug,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Erro no cadastro:", error);
     return NextResponse.json(
-      { error: error.message || "Falha ao processar cadastro. Tente novamente." },
+      { error: error instanceof Error ? error.message : "Falha ao processar cadastro. Tente novamente." },
       { status: 500 }
     );
   }
