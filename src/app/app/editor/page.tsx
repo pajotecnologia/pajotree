@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   Palette,
   Smartphone,
@@ -20,8 +20,51 @@ import {
   FileText,
   Loader2,
   ExternalLink,
+  Upload,
+  Image as ImageIcon,
+  X,
+  AlertCircle,
+  RefreshCw,
+  Globe,
+  Sliders,
 } from "lucide-react";
 import { PublicPageRenderer } from "@/components/public-page/page-renderer";
+
+const GRADIENT_PRESETS = [
+  { name: "Galáxia Escura", value: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)" },
+  { name: "Obsidiana Minimal", value: "linear-gradient(135deg, #18181b 0%, #09090b 100%)" },
+  { name: "Sunset Violet", value: "linear-gradient(135deg, #312e81 0%, #4c1d95 50%, #831843 100%)" },
+  { name: "Emerald Forest", value: "linear-gradient(135deg, #064e3b 0%, #022c22 100%)" },
+  { name: "Ocean Deep", value: "linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)" },
+  { name: "Minimal Clean", value: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)" },
+];
+
+const IMAGE_PRESETS = [
+  {
+    name: "Dark Gradient Mesh",
+    url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    name: "Cyber Neon City",
+    url: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    name: "Abstract Fluid",
+    url: "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    name: "Deep Space Night",
+    url: "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    name: "Studio Minimalist",
+    url: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    name: "Nordic Mountain",
+    url: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
+  },
+];
 
 export default function VisualEditorPage() {
   const [pageData, setPageData] = useState<any>(null);
@@ -44,6 +87,13 @@ export default function VisualEditorPage() {
   const [buttonStyle, setButtonStyle] = useState("rounded-xl");
   const [fontFamily, setFontFamily] = useState("Inter");
 
+  // Background Image states
+  const [bgMode, setBgMode] = useState<"gradient" | "image">("gradient");
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [customImageUrl, setCustomImageUrl] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // New Block Modal
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [newBlockType, setNewBlockType] = useState("TEXT");
@@ -65,8 +115,19 @@ export default function VisualEditorPage() {
 
           const settings = json.page.settings;
           if (settings) {
-            setBackgroundType(settings.backgroundType || "gradient");
+            const isImage =
+              settings.backgroundType === "image" ||
+              Boolean(
+                settings.backgroundValue &&
+                (settings.backgroundValue.startsWith("data:image/") ||
+                 settings.backgroundValue.startsWith("http://") ||
+                 settings.backgroundValue.startsWith("https://") ||
+                 settings.backgroundValue.startsWith("url("))
+              );
+
+            setBackgroundType(settings.backgroundType || (isImage ? "image" : "gradient"));
             setBackgroundValue(settings.backgroundValue || "linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)");
+            setBgMode(isImage ? "image" : "gradient");
             setPrimaryColor(settings.primaryColor || "#6366f1");
             setSecondaryColor(settings.secondaryColor || "#ec4899");
             setTextColor(settings.textColor || "#ffffff");
@@ -86,7 +147,10 @@ export default function VisualEditorPage() {
   const handleApplyTheme = (theme: any) => {
     try {
       const config = JSON.parse(theme.configJson);
-      if (config.backgroundType) setBackgroundType(config.backgroundType);
+      if (config.backgroundType) {
+        setBackgroundType(config.backgroundType);
+        setBgMode(config.backgroundType === "image" ? "image" : "gradient");
+      }
       if (config.backgroundValue) setBackgroundValue(config.backgroundValue);
       if (config.primaryColor) setPrimaryColor(config.primaryColor);
       if (config.secondaryColor) setSecondaryColor(config.secondaryColor);
@@ -96,6 +160,65 @@ export default function VisualEditorPage() {
     } catch (e) {
       console.error("Erro ao aplicar tema:", e);
     }
+  };
+
+  const handleImageFileUpload = (file: File) => {
+    setImageError(null);
+    if (!["image/png", "image/jpeg", "image/webp", "image/gif"].includes(file.type)) {
+      setImageError("Formato não suportado. Por favor, envie uma imagem PNG, JPG, WebP ou GIF.");
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      setImageError("A imagem deve ter no máximo 3 MB.");
+      return;
+    }
+
+    setUploadingImage(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setBackgroundType("image");
+        setBackgroundValue(reader.result);
+        setBgMode("image");
+        setImageError(null);
+      } else {
+        setImageError("Não foi possível processar a imagem.");
+      }
+      setUploadingImage(false);
+    };
+    reader.onerror = () => {
+      setImageError("Erro ao ler o arquivo de imagem.");
+      setUploadingImage(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleApplyImageUrl = () => {
+    if (!customImageUrl.trim()) return;
+    const url = customImageUrl.trim();
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      setImageError("Por favor, insira uma URL válida iniciando com https://");
+      return;
+    }
+    setBackgroundType("image");
+    setBackgroundValue(url);
+    setBgMode("image");
+    setCustomImageUrl("");
+    setImageError(null);
+  };
+
+  const handleApplyPresetImage = (url: string) => {
+    setBackgroundType("image");
+    setBackgroundValue(url);
+    setBgMode("image");
+    setImageError(null);
+  };
+
+  const handleRemoveBackgroundImage = () => {
+    setBackgroundType("gradient");
+    setBackgroundValue("linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)");
+    setBgMode("gradient");
+    setImageError(null);
   };
 
   const handleSave = async () => {
@@ -361,18 +484,243 @@ export default function VisualEditorPage() {
                 </div>
               </div>
 
-              {/* Fundo Customizado */}
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                  Estilo de Fundo (CSS Background)
-                </label>
-                <input
-                  type="text"
-                  value={backgroundValue}
-                  onChange={(e) => setBackgroundValue(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 shadow-2xs"
-                  placeholder="linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)"
-                />
+              {/* Personalização do Fundo */}
+              <div className="space-y-3 p-4 bg-slate-50/70 border border-slate-200/80 rounded-2xl">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Fundo da Página</span>
+                  </label>
+                  <div className="flex p-0.5 bg-slate-200/80 rounded-lg text-[11px] font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBgMode("gradient");
+                        if (backgroundType === "image") {
+                          setBackgroundType("gradient");
+                          if (backgroundValue.startsWith("data:image/") || backgroundValue.startsWith("http")) {
+                            setBackgroundValue("linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)");
+                          }
+                        }
+                      }}
+                      className={`px-2.5 py-1 rounded-md transition ${
+                        bgMode === "gradient"
+                          ? "bg-white text-indigo-600 shadow-xs font-bold"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      Gradiente / Cor
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBgMode("image");
+                        setBackgroundType("image");
+                      }}
+                      className={`px-2.5 py-1 rounded-md transition ${
+                        bgMode === "image"
+                          ? "bg-white text-indigo-600 shadow-xs font-bold"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      Imagem de Fundo
+                    </button>
+                  </div>
+                </div>
+
+                {imageError && (
+                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{imageError}</span>
+                  </div>
+                )}
+
+                {bgMode === "image" ? (
+                  <div className="space-y-3.5">
+                    {/* Imagem Atual / Upload */}
+                    {backgroundType === "image" &&
+                    backgroundValue &&
+                    (backgroundValue.startsWith("data:image/") ||
+                      backgroundValue.startsWith("http://") ||
+                      backgroundValue.startsWith("https://") ||
+                      backgroundValue.startsWith("url(")) ? (
+                      <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-900 p-3 flex items-center justify-between shadow-xs">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-14 h-14 rounded-lg bg-cover bg-center border border-white/20 shadow-inner shrink-0"
+                            style={{
+                              backgroundImage: backgroundValue.startsWith("url(")
+                                ? backgroundValue
+                                : `url("${backgroundValue}")`,
+                            }}
+                          />
+                          <div className="min-w-0">
+                            <span className="text-xs font-bold text-white block">
+                              Imagem Ativa
+                            </span>
+                            <span className="text-[10px] text-slate-300 block truncate max-w-[170px]">
+                              {backgroundValue.startsWith("data:image/")
+                                ? "Imagem carregada localmente"
+                                : backgroundValue}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploadingImage}
+                            className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-semibold transition flex items-center gap-1"
+                          >
+                            <RefreshCw className={`w-3 h-3 ${uploadingImage ? "animate-spin" : ""}`} />
+                            <span>Trocar</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRemoveBackgroundImage}
+                            className="p-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 transition"
+                            title="Remover Imagem"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/30 rounded-xl p-5 text-center cursor-pointer transition group"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition">
+                          {uploadingImage ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <Upload className="w-5 h-5" />
+                          )}
+                        </div>
+                        <p className="text-xs font-bold text-slate-800">
+                          {uploadingImage ? "Carregando imagem..." : "Clique para enviar imagem de fundo"}
+                        </p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          PNG, JPG, WebP ou GIF · até 3 MB
+                        </p>
+                      </div>
+                    )}
+
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageFileUpload(file);
+                      }}
+                    />
+
+                    {/* URL Externa de Imagem */}
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Ou inserir URL direta da imagem
+                      </label>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <Globe className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input
+                            type="url"
+                            placeholder="https://exemplo.com/fundo.jpg"
+                            value={customImageUrl}
+                            onChange={(e) => setCustomImageUrl(e.target.value)}
+                            className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 shadow-2xs"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleApplyImageUrl}
+                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-2xs"
+                        >
+                          Aplicar
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Sugestões de Imagens Curadas */}
+                    <div>
+                      <span className="block text-[11px] font-semibold text-slate-700 mb-1.5">
+                        Sugestões de Imagens em Alta Qualidade
+                      </span>
+                      <div className="grid grid-cols-3 gap-2">
+                        {IMAGE_PRESETS.map((preset, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleApplyPresetImage(preset.url)}
+                            className="group relative h-14 rounded-lg overflow-hidden border border-slate-200 hover:border-indigo-500 transition shadow-2xs text-left"
+                          >
+                            <img
+                              src={preset.url}
+                              alt={preset.name}
+                              className="w-full h-full object-cover group-hover:scale-110 transition duration-300"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-1">
+                              <span className="text-[9px] font-bold text-white truncate drop-shadow-sm">
+                                {preset.name}
+                              </span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {/* Presets de Gradiente */}
+                    <div>
+                      <span className="block text-[11px] font-semibold text-slate-700 mb-1.5">
+                        Gradientes Pré-definidos
+                      </span>
+                      <div className="grid grid-cols-3 gap-2">
+                        {GRADIENT_PRESETS.map((grad, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              setBackgroundType("gradient");
+                              setBackgroundValue(grad.value);
+                            }}
+                            className={`h-11 rounded-lg border p-1.5 flex flex-col justify-end transition shadow-2xs text-left ${
+                              backgroundValue === grad.value
+                                ? "ring-2 ring-indigo-500 border-indigo-500"
+                                : "border-slate-200 hover:opacity-90"
+                            }`}
+                            style={{ background: grad.value }}
+                          >
+                            <span className="text-[9px] font-bold text-white drop-shadow-md">
+                              {grad.name}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Custom CSS Input */}
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Código CSS de Fundo (Gradient ou Cor)
+                      </label>
+                      <input
+                        type="text"
+                        value={backgroundValue}
+                        onChange={(e) => {
+                          setBackgroundType("gradient");
+                          setBackgroundValue(e.target.value);
+                        }}
+                        className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-900 shadow-2xs"
+                        placeholder="linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Estilo do Botão */}

@@ -85,15 +85,49 @@ export function PublicPageRenderer({ page }: PageProps) {
   const initialLetter = displayName ? displayName.charAt(0).toUpperCase() : "P";
   const logoUrl = page?.organization?.logoUrl;
 
+  const isImageBackground =
+    settings.backgroundType === "image" ||
+    Boolean(
+      settings.backgroundValue &&
+      (settings.backgroundValue.startsWith("data:image/") ||
+       settings.backgroundValue.startsWith("http://") ||
+       settings.backgroundValue.startsWith("https://") ||
+       settings.backgroundValue.startsWith("url("))
+    );
+
+  const containerStyle: React.CSSProperties = {
+    color: settings.textColor,
+    fontFamily: settings.fontFamily,
+    ...(isImageBackground
+      ? {
+          backgroundImage: settings.backgroundValue.startsWith("url(")
+            ? settings.backgroundValue
+            : `url("${settings.backgroundValue}")`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }
+      : {
+          background: settings.backgroundValue || "linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)",
+        }),
+  };
+
   return (
-    <div style={{ background: settings.backgroundValue, color: settings.textColor, fontFamily: settings.fontFamily }} className="min-h-screen w-full flex flex-col items-center justify-between p-4 sm:p-6 transition-colors duration-300">
-      <div className="w-full max-w-md flex justify-end mb-2">
+    <div
+      style={containerStyle}
+      className="min-h-screen w-full flex flex-col items-center justify-between p-4 sm:p-6 transition-colors duration-300 relative overflow-x-hidden"
+    >
+      {isImageBackground && (
+        <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-[0.5px] pointer-events-none" />
+      )}
+
+      <div className="relative z-10 w-full max-w-md flex justify-end mb-2">
         <button onClick={handleShare} aria-label="Compartilhar página" className="p-2.5 rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-md text-white/80 hover:text-white border border-white/10 transition shadow-sm flex items-center gap-1.5 text-xs font-medium">
           {copied ? <><Check className="w-3.5 h-3.5 text-emerald-400" /><span className="text-emerald-300">Copiado</span></> : <><Share2 className="w-3.5 h-3.5" /><span>Compartilhar</span></>}
         </button>
       </div>
 
-      <main className="w-full max-w-md flex flex-col items-center text-center space-y-6">
+      <main className="relative z-10 w-full max-w-md flex flex-col items-center text-center space-y-6">
         <div className="flex flex-col items-center space-y-3">
           <div className="relative group">
             <div style={{ background: `linear-gradient(135deg, ${settings.primaryColor}, ${settings.secondaryColor})` }} className="p-1 rounded-full shadow-xl transition-transform duration-300 group-hover:scale-105">

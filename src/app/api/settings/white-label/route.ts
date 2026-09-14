@@ -39,7 +39,7 @@ const schema = z.object({
   primaryColor: z.string().regex(HEX_COLOR, "Cor primária inválida"),
   secondaryColor: z.string().regex(HEX_COLOR, "Cor secundária inválida"),
   textColor: z.string().regex(HEX_COLOR, "Cor do texto inválida"),
-  backgroundValue: z.string().max(500),
+  backgroundValue: z.string().max(3_000_000),
   buttonStyle: z.enum(["square", "rounded", "rounded-xl", "pill", "glass"]),
   fontFamily: z.enum(ALLOWED_FONTS),
 });
