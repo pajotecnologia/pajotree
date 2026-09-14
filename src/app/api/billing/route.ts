@@ -36,6 +36,7 @@ export async function GET() {
       planAndUsage,
       allPlans,
       subscription,
+      isSuperAdmin: auth.isSuperAdmin,
     });
   } catch (error) {
     console.error("Erro ao obter dados de faturamento:", error);
@@ -50,7 +51,80 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
-    const parsed = changePlanSchema.safeParse(await request.json());
+    const body = await request.json();
+
+    // Check if user requested Banco Inter Bolepix generation
+    if (body.action === "emit_bolepix") {
+      const { planId, billingCycle, pagador } = body;
+      const orgId = auth.organization.id;
+
+      const targetPlan = await db.plan.findUnique({
+        where: { id: planId },
+        include: { features: true },
+      });
+
+      if (!targetPlan) {
+        return NextResponse.json({ error: "Plano inválido" }, { status: 400 });
+      }
+
+      const price = Number(billingCycle === "yearly" ? targetPlan.priceYearly : targetPlan.priceMonthly);
+      if (price <= 0) {
+        return NextResponse.json({ error: "Plano gratuito não gera cobrança." }, { status: 400 });
+      }
+
+      // 1. Cria o registro de pagamento pendente
+      const payment = await db.payment.create({
+        data: {
+          organizationId: orgId,
+          amount: price,
+          status: "PENDING",
+          provider: "banco_inter",
+          paymentMethod: "bolepix",
+        },
+      });
+
+      try {
+        const { emitirBolepixInter } = await import("@/lib/banco-inter");
+        const bolepix = await emitirBolepixInter({
+          identifier: payment.id,
+          valor: price,
+          dataVencimento: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+          pagador: {
+            nome: pagador?.nome || auth.organization.name,
+            cpfCnpj: pagador?.cpfCnpj || auth.organization.document || "00000000000",
+            email: pagador?.email || auth.organization.email,
+            telefone: pagador?.telefone || auth.organization.phone || undefined,
+            endereco: pagador?.endereco || undefined,
+            cidade: pagador?.cidade || undefined,
+            uf: pagador?.uf || undefined,
+            cep: pagador?.cep || undefined,
+          },
+          mensagem1: `Upgrade para Plano ${targetPlan.name}`,
+          mensagem2: `Pajotree SaaS - Ciclo ${billingCycle === "yearly" ? "Anual" : "Mensal"}`,
+        });
+
+        await db.payment.update({
+          where: { id: payment.id },
+          data: {
+            externalId: bolepix.codigoSolicitacao,
+          },
+        });
+
+        return NextResponse.json({
+          success: true,
+          paymentId: payment.id,
+          bolepix,
+          pdfUrl: `/api/banco-inter/pdf?paymentId=${payment.id}`,
+        });
+      } catch (interError: any) {
+        console.error("Erro emissão Banco Inter:", interError);
+        return NextResponse.json({
+          error: `Erro ao emitir cobrança Banco Inter: ${interError.message || "Verifique as credenciais no Painel Mestre."}`,
+        }, { status: 400 });
+      }
+    }
+
+    const parsed = changePlanSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: "Dados do upgrade inválidos" }, { status: 400 });
     }

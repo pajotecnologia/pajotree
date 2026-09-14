@@ -17,6 +17,9 @@ import {
 
 export default function AnalyticsPage() {
   const [range, setRange] = useState("30d");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [showCustomDates, setShowCustomDates] = useState(false);
   const [data, setData] = useState<any>(null);
   const [pixelsData, setPixelsData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -30,8 +33,13 @@ export default function AnalyticsPage() {
 
   async function loadMetrics() {
     try {
+      setLoading(true);
+      let url = `/api/analytics?range=${range}`;
+      if (range === "custom" && startDate && endDate) {
+        url += `&startDate=${startDate}&endDate=${endDate}`;
+      }
       const [resAnalytics, resPixels] = await Promise.all([
-        fetch(`/api/analytics?range=${range}`),
+        fetch(url),
         fetch("/api/pixels"),
       ]);
       if (resAnalytics.ok) {
@@ -50,8 +58,10 @@ export default function AnalyticsPage() {
   }
 
   useEffect(() => {
-    loadMetrics();
-  }, [range]);
+    if (range !== "custom" || (startDate && endDate)) {
+      loadMetrics();
+    }
+  }, [range, startDate, endDate]);
 
   const handleSavePixel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,7 +110,7 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-8">
       {/* Top Header & Range Filters */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
             Analytics & Rastreamento
@@ -110,16 +120,28 @@ export default function AnalyticsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-1 p-1 bg-white border border-slate-200 rounded-xl text-xs font-semibold shadow-2xs">
+        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-white border border-slate-200 rounded-xl text-xs font-semibold shadow-2xs">
           {[
             { label: "Hoje", val: "today" },
+            { label: "Ontem", val: "yesterday" },
             { label: "7 Dias", val: "7d" },
             { label: "30 Dias", val: "30d" },
+            { label: "Este Mês", val: "this_month" },
+            { label: "Mês Anterior", val: "last_month" },
             { label: "90 Dias", val: "90d" },
+            { label: "Todo Período", val: "all" },
+            { label: "Personalizado", val: "custom" },
           ].map((item) => (
             <button
               key={item.val}
-              onClick={() => setRange(item.val)}
+              onClick={() => {
+                setRange(item.val);
+                if (item.val === "custom") {
+                  setShowCustomDates(true);
+                } else {
+                  setShowCustomDates(false);
+                }
+              }}
               className={`px-3 py-1.5 rounded-lg transition ${
                 range === item.val
                   ? "bg-indigo-600 text-white shadow-xs"
@@ -131,6 +153,38 @@ export default function AnalyticsPage() {
           ))}
         </div>
       </div>
+
+      {/* Custom Date Inputs if range is custom */}
+      {(range === "custom" || showCustomDates) && (
+        <div className="p-4 bg-indigo-50/60 border border-indigo-100 rounded-2xl flex flex-wrap items-center gap-3">
+          <span className="text-xs font-bold text-indigo-900">Período Personalizado:</span>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-slate-600">De:</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 font-semibold shadow-2xs focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-slate-600">Até:</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 font-semibold shadow-2xs focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          <button
+            onClick={() => loadMetrics()}
+            disabled={!startDate || !endDate}
+            className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs transition"
+          >
+            Filtrar
+          </button>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -174,6 +228,37 @@ export default function AnalyticsPage() {
           <div className="text-2xl font-extrabold text-slate-900">{summary.conversionRate}</div>
         </div>
       </div>
+
+      {/* Timeline Chart if available */}
+      {data?.timeline && data.timeline.length > 0 && (
+        <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-4">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-indigo-600" />
+            <h3 className="font-bold text-sm text-slate-900">Evolução de Acessos no Período</h3>
+          </div>
+
+          <div className="space-y-2 pt-2">
+            {data.timeline.map((point: any, idx: number) => {
+              const maxViews = Math.max(...data.timeline.map((p: any) => p.views), 1);
+              const percentage = Math.min(100, Math.round((point.views / maxViews) * 100));
+              return (
+                <div key={idx} className="flex items-center gap-3 text-xs">
+                  <span className="w-24 text-slate-500 font-mono shrink-0">{point.date}</span>
+                  <div className="flex-1 bg-slate-100 rounded-full h-4 overflow-hidden flex">
+                    <div
+                      className="bg-indigo-600 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${Math.max(percentage, 4)}%` }}
+                    />
+                  </div>
+                  <span className="w-16 text-right font-bold text-slate-900 shrink-0">
+                    {point.views} {point.views === 1 ? "visita" : "visitas"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Charts & Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -117,6 +117,86 @@ export async function getCurrentAuthContext() {
     activeOrgUser = user.organizations[0];
   }
 
+  // If user is a Super Admin and has no organization association yet, ensure/link master organization
+  if (!activeOrgUser && user.isSuperAdmin) {
+    try {
+      let defaultOrg = await db.organization.findFirst({
+        include: {
+          plan: {
+            include: { features: true },
+          },
+        },
+      });
+
+      if (!defaultOrg) {
+        const masterPlan = await db.plan.findFirst({
+          include: { features: true },
+        });
+
+        defaultOrg = await db.organization.create({
+          data: {
+            name: "Pajotree Master",
+            email: user.email,
+            status: "ACTIVE",
+            planId: masterPlan?.id || null,
+          },
+          include: {
+            plan: { include: { features: true } },
+          },
+        });
+      }
+
+      let ownerRole = await db.role.findFirst({
+        where: { name: "OWNER" },
+        include: { permissions: { include: { permission: true } } },
+      });
+
+      if (!ownerRole) {
+        ownerRole = await db.role.create({
+          data: {
+            name: "OWNER",
+            description: "Proprietário / Acesso Total",
+          },
+          include: { permissions: { include: { permission: true } } },
+        });
+      }
+
+      if (defaultOrg && ownerRole) {
+        activeOrgUser = await db.organizationUser.upsert({
+          where: {
+            organizationId_userId: {
+              organizationId: defaultOrg.id,
+              userId: user.id,
+            },
+          },
+          create: {
+            userId: user.id,
+            organizationId: defaultOrg.id,
+            roleId: ownerRole.id,
+            status: "ACTIVE",
+          },
+          update: {
+            status: "ACTIVE",
+          },
+          include: {
+            organization: {
+              include: {
+                plan: { include: { features: true } },
+              },
+            },
+            role: {
+              include: {
+                permissions: { include: { permission: true } },
+              },
+            },
+          },
+        });
+      }
+    } catch (err) {
+      console.error("Erro ao vincular organização master ao Super Admin:", err);
+    }
+  }
+
   const permissions = new Set<string>();
   if (activeOrgUser?.role?.permissions) {
     activeOrgUser.role.permissions.forEach((rp) => {

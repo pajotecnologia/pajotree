@@ -36,6 +36,12 @@ export default function BillingPage() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Bolepix modal state
+  const [bolepixData, setBolepixData] = useState<any>(null);
+  const [generatingBolepix, setGeneratingBolepix] = useState(false);
+  const [copiedLinha, setCopiedLinha] = useState(false);
+  const [copiedPix, setCopiedPix] = useState(false);
+
   async function loadBilling() {
     try {
       const res = await fetch("/api/billing", { cache: "no-store" });
@@ -57,6 +63,31 @@ export default function BillingPage() {
     setSuccessMsg(null);
     setErrorMsg(null);
     setSelectedPlan(plan);
+  };
+
+  const handleGenerateBolepix = async () => {
+    if (!selectedPlan) return;
+    setGeneratingBolepix(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch("/api/billing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "emit_bolepix",
+          planId: selectedPlan.id,
+          billingCycle,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Erro ao emitir cobrança Banco Inter.");
+      setSelectedPlan(null);
+      setBolepixData(json);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Erro ao gerar Bolepix.");
+    } finally {
+      setGeneratingBolepix(false);
+    }
   };
 
   const handleConfirmUpgrade = async () => {
@@ -163,6 +194,25 @@ export default function BillingPage() {
         </div>
       )}
 
+      {data?.isSuperAdmin && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/90 border border-amber-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <span className="text-xs sm:text-sm font-bold text-amber-950 flex items-center gap-1.5">
+              👑 Acesso Master / Super Administrador
+            </span>
+            <p className="text-xs text-amber-800/90">
+              Sua conta possui acesso irrestrito e limites ilimitados em todos os módulos. Para criar ou precificar os planos oferecidos aos clientes, acesse a gestão de planos.
+            </p>
+          </div>
+          <a
+            href="/admin/plans"
+            className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold whitespace-nowrap shadow-xs transition text-center"
+          >
+            Gerenciar Planos do SaaS
+          </a>
+        </div>
+      )}
+
       <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -172,16 +222,23 @@ export default function BillingPage() {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-extrabold text-base text-slate-900">
-                  Plano Atual: {currentPlan?.name || "FREE"}
+                  Plano Atual: {data?.isSuperAdmin ? "MASTER (Super Admin)" : currentPlan?.name || "FREE"}
                 </span>
                 {isTrial && (
                   <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-extrabold uppercase">
                     Período de Teste
                   </span>
                 )}
+                {data?.isSuperAdmin && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-extrabold uppercase">
+                    Ilimitado
+                  </span>
+                )}
               </div>
               <span className="text-xs text-slate-500 block mt-0.5">
-                {currentPlan?.description || "Acesso aos recursos essenciais."}
+                {data?.isSuperAdmin
+                  ? "Acesso mestre com cotas e ferramentas liberadas sem restrição."
+                  : currentPlan?.description || "Acesso aos recursos essenciais."}
               </span>
             </div>
           </div>
@@ -190,13 +247,13 @@ export default function BillingPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-3">
           {[
-            ["Links Criados", usage?.linksCount || 0, features?.maxLinks, "bg-indigo-600"],
-            ["Leads Capturados", usage?.leadsCount || 0, features?.maxLeads, "bg-emerald-600"],
-            ["WhatsApp Conectado", usage?.whatsappInstancesCount || 0, features?.maxWhatsappInstances, "bg-blue-600"],
-            ["Meta Pixels", usage?.metaPixelsCount || 0, features?.maxMetaPixels, "bg-pink-600"],
+            ["Links Criados", usage?.linksCount || 0, data?.isSuperAdmin ? "Ilimitado" : features?.maxLinks, "bg-indigo-600"],
+            ["Leads Capturados", usage?.leadsCount || 0, data?.isSuperAdmin ? "Ilimitado" : features?.maxLeads, "bg-emerald-600"],
+            ["WhatsApp Conectado", usage?.whatsappInstancesCount || 0, data?.isSuperAdmin ? "Ilimitado" : features?.maxWhatsappInstances, "bg-blue-600"],
+            ["Meta Pixels", usage?.metaPixelsCount || 0, data?.isSuperAdmin ? "Ilimitado" : features?.maxMetaPixels, "bg-pink-600"],
           ].map(([label, used, max, barClass]) => {
             const numericMax = Number(max) || 1;
-            const percentage = Math.min((Number(used) / numericMax) * 100, 100);
+            const percentage = data?.isSuperAdmin ? 100 : Math.min((Number(used) / numericMax) * 100, 100);
             return (
               <div key={String(label)} className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
                 <div className="flex justify-between text-xs gap-2">
@@ -311,21 +368,151 @@ export default function BillingPage() {
               </div>
             </div>
 
-            <div className="flex flex-col-reverse sm:flex-row gap-2 mt-6">
+            <div className="flex flex-col sm:flex-row gap-2 mt-6">
               <button
                 onClick={() => setSelectedPlan(null)}
-                disabled={Boolean(upgradingId)}
-                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                disabled={Boolean(upgradingId) || generatingBolepix}
+                className="py-2.5 px-3 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
+                onClick={handleGenerateBolepix}
+                disabled={Boolean(upgradingId) || generatingBolepix}
+                className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-60 shadow-xs"
+              >
+                {generatingBolepix ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CreditCard className="w-3.5 h-3.5" />}
+                Pagar com Boleto / Pix
+              </button>
+              <button
                 onClick={handleConfirmUpgrade}
-                disabled={Boolean(upgradingId)}
-                className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-60"
+                disabled={Boolean(upgradingId) || generatingBolepix}
+                className="py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-60 shadow-xs"
               >
                 {upgradingId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                Confirmar upgrade
+                Ativar Agora
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bolepix Data Modal */}
+      {bolepixData && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-2xl p-6 space-y-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600 border border-amber-200">
+                  <CreditCard className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-base">Boleto com Pix (Bolepix)</h3>
+                  <p className="text-xs text-slate-500">
+                    Pague pelo Pix para ativação imediata ou utilize o código de barras.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setBolepixData(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200/80 space-y-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-amber-900 font-semibold">Valor da Cobrança:</span>
+                <span className="text-sm font-extrabold text-amber-950">
+                  R$ {Number(bolepixData.bolepix?.valorNominal || 0).toFixed(2).replace(".", ",")}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-amber-800">Vencimento:</span>
+                <span className="font-bold text-amber-900">
+                  {bolepixData.bolepix?.dataVencimento
+                    ? new Date(bolepixData.bolepix.dataVencimento).toLocaleDateString("pt-BR")
+                    : "Em 3 dias"}
+                </span>
+              </div>
+            </div>
+
+            {/* Pix Copia e Cola */}
+            {bolepixData.bolepix?.pixCopiaECola && (
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-800">
+                  Código Pix Copia e Cola (Compensação Imediata)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={bolepixData.bolepix.pixCopiaECola}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-700 select-all"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(bolepixData.bolepix.pixCopiaECola);
+                      setCopiedPix(true);
+                      setTimeout(() => setCopiedPix(false), 3000);
+                    }}
+                    className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shrink-0 transition"
+                  >
+                    {copiedPix ? "Copiado!" : "Copiar Pix"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Linha Digitável */}
+            {bolepixData.bolepix?.linhaDigitavel && (
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-800">
+                  Linha Digitável do Boleto
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={bolepixData.bolepix.linhaDigitavel}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-700 select-all"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(bolepixData.bolepix.linhaDigitavel);
+                      setCopiedLinha(true);
+                      setTimeout(() => setCopiedLinha(false), 3000);
+                    }}
+                    className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold shrink-0 transition"
+                  >
+                    {copiedLinha ? "Copiado!" : "Copiar Linha"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* PDF and Close Actions */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-200 gap-2">
+              {bolepixData.pdfUrl && (
+                <a
+                  href={bolepixData.pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                >
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span>Visualizar / Baixar PDF</span>
+                </a>
+              )}
+              <button
+                onClick={() => {
+                  setBolepixData(null);
+                  loadBilling();
+                }}
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition"
+              >
+                Concluir
               </button>
             </div>
           </div>

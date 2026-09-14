@@ -2,7 +2,20 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  Plus, Link2, Trash2, ExternalLink, Copy, Check, AlertCircle, Loader2, Globe,
+  Plus,
+  Link2,
+  Trash2,
+  ExternalLink,
+  Copy,
+  Check,
+  AlertCircle,
+  Loader2,
+  Globe,
+  MessageCircle,
+  Sparkles,
+  Smartphone,
+  HelpCircle,
+  Zap,
 } from "lucide-react";
 
 export default function LinksPage() {
@@ -12,6 +25,9 @@ export default function LinksPage() {
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+
+  // Link Form State
+  const [linkType, setLinkType] = useState<"custom" | "whatsapp">("custom");
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [description, setDescription] = useState("");
@@ -19,6 +35,11 @@ export default function LinksPage() {
   const [featured, setFeatured] = useState(false);
   const [metaPixelId, setMetaPixelId] = useState("");
   const [eventName, setEventName] = useState("LinkClick");
+
+  // WhatsApp Generator State
+  const [waPhone, setWaPhone] = useState("");
+  const [waMessage, setWaMessage] = useState("");
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,7 +59,9 @@ export default function LinksPage() {
     }
   }
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const handleCopyShortLink = (code: string, id: string) => {
     const fullUrl = `${window.location.origin}/go/${code}`;
@@ -47,20 +70,80 @@ export default function LinksPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleIconChange = (newIcon: string) => {
+    setIcon(newIcon);
+    if (newIcon === "whatsapp") {
+      setEventName("Contact");
+    }
+  };
+
+  const handleUpdateWhatsAppUrl = (phone: string, msg: string) => {
+    const cleanPhone = phone.replace(/\D/g, "");
+    if (!cleanPhone) {
+      setUrl("");
+      return;
+    }
+    const fullPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
+    const encodedMsg = msg.trim() ? `?text=${encodeURIComponent(msg.trim())}` : "";
+    setUrl(`https://wa.me/${fullPhone}${encodedMsg}`);
+  };
+
   const handleCreateLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+
+    let finalUrl = url.trim();
+    if (linkType === "whatsapp") {
+      const cleanPhone = waPhone.replace(/\D/g, "");
+      if (!cleanPhone) {
+        setError("Por favor, digite o número do WhatsApp com DDD.");
+        setSubmitting(false);
+        return;
+      }
+      const fullPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
+      const encodedMsg = waMessage.trim() ? `?text=${encodeURIComponent(waMessage.trim())}` : "";
+      finalUrl = `https://wa.me/${fullPhone}${encodedMsg}`;
+    } else {
+      if (!finalUrl) {
+        setError("Por favor, informe a URL de destino.");
+        setSubmitting(false);
+        return;
+      }
+      if (!finalUrl.startsWith("http://") && !finalUrl.startsWith("https://")) {
+        finalUrl = `https://${finalUrl}`;
+      }
+    }
+
     try {
       const res = await fetch("/api/links", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, url, description, icon, featured, metaPixelId: metaPixelId || undefined, eventName }),
+        body: JSON.stringify({
+          title: title.trim(),
+          url: finalUrl,
+          description: description.trim(),
+          icon,
+          featured,
+          metaPixelId: metaPixelId || undefined,
+          eventName,
+        }),
       });
+
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Erro ao criar link");
+
       setShowModal(false);
-      setTitle(""); setUrl(""); setDescription(""); setIcon("globe"); setFeatured(false); setMetaPixelId("");
+      setTitle("");
+      setUrl("");
+      setDescription("");
+      setIcon("globe");
+      setFeatured(false);
+      setMetaPixelId("");
+      setEventName("LinkClick");
+      setWaPhone("");
+      setWaMessage("");
+      setLinkType("custom");
       await loadData();
     } catch (err: any) {
       setError(err.message || "Erro ao criar link");
@@ -80,7 +163,11 @@ export default function LinksPage() {
   };
 
   if (loading) {
-    return <div className="h-96 flex items-center justify-center"><Loader2 className="w-8 h-8 text-indigo-600 animate-spin" /></div>;
+    return (
+      <div className="h-96 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+      </div>
+    );
   }
 
   const maxLinks = planUsage?.features?.maxLinks || 5;
@@ -91,67 +178,338 @@ export default function LinksPage() {
     <div className="space-y-6 min-w-0">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight break-words">Links & Tracking de Cliques</h1>
-          <p className="text-xs text-slate-500 mt-1">Crie links rastreáveis com redirecionamento `/go/`, Meta Pixel dedicado e UTMs automáticas.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight break-words">
+            Links & Tracking de Cliques
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Crie links inteligentes com redirecionamento rastreável, disparo automático de eventos no Meta Pixel e suporte a WhatsApp.
+          </p>
         </div>
-        <button type="button" onClick={() => { setError(null); setShowModal(true); }} disabled={isLimitReached} className="min-h-11 w-full sm:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center justify-center gap-2">
-          <Plus className="w-4 h-4" /><span>Novo Link</span>
+        <button
+          type="button"
+          onClick={() => {
+            setError(null);
+            setShowModal(true);
+          }}
+          disabled={isLimitReached}
+          className="min-h-11 w-full sm:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center justify-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Novo Link</span>
         </button>
       </div>
 
       <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600 shrink-0"><Link2 className="w-4 h-4" /></div>
+          <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600 shrink-0">
+            <Link2 className="w-4 h-4" />
+          </div>
           <div className="min-w-0">
-            <span className="text-xs font-semibold text-slate-800 block break-words">Consumo do Plano: {currentCount} de {maxLinks} links utilizados</span>
-            <span className="text-[10px] text-slate-500 block">{isLimitReached ? "Limite máximo atingido. Faça upgrade do seu plano para criar mais links." : `Você ainda pode criar mais ${maxLinks - currentCount} link(s).`}</span>
+            <span className="text-xs font-semibold text-slate-800 block break-words">
+              Consumo do Plano: {currentCount} de {maxLinks} links utilizados
+            </span>
+            <span className="text-[10px] text-slate-500 block">
+              {isLimitReached
+                ? "Limite máximo atingido. Faça upgrade do seu plano para criar mais links."
+                : `Você ainda pode criar mais ${maxLinks - currentCount} link(s).`}
+            </span>
           </div>
         </div>
         <div className="w-full sm:w-32 h-2 bg-slate-100 rounded-full overflow-hidden">
-          <div style={{ width: `${Math.min((currentCount / maxLinks) * 100, 100)}%` }} className={`h-full transition-all ${isLimitReached ? "bg-rose-500" : "bg-indigo-600"}`} />
+          <div
+            style={{ width: `${Math.min((currentCount / maxLinks) * 100, 100)}%` }}
+            className={`h-full transition-all ${isLimitReached ? "bg-rose-500" : "bg-indigo-600"}`}
+          />
         </div>
       </div>
 
       <div className="space-y-3">
-        {links.length > 0 ? links.map((link) => {
-          const shortCode = link.shortLinks?.[0]?.code;
-          const clickCount = link._count?.analyticsEvents || 0;
-          return (
-            <div key={link.id} className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-indigo-200 transition min-w-0">
-              <div className="flex items-start sm:items-center gap-3.5 min-w-0">
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-indigo-600 shrink-0"><Globe className="w-5 h-5" /></div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap"><span className="font-bold text-sm text-slate-900 break-words">{link.title}</span>{link.featured && <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[9px] font-extrabold uppercase border border-indigo-100">Destaque</span>}</div>
-                  <span className="text-xs text-slate-500 block truncate max-w-full sm:max-w-md mt-0.5">{link.url}</span>
-                  {shortCode && <span className="text-[10px] text-indigo-600 font-mono mt-1 block break-all">Link de tracking: /go/{shortCode}</span>}
+        {links.length > 0 ? (
+          links.map((link) => {
+            const shortCode = link.shortLinks?.[0]?.code;
+            const clickCount = link._count?.analyticsEvents || 0;
+            return (
+              <div
+                key={link.id}
+                className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-indigo-200 transition min-w-0"
+              >
+                <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-indigo-600 shrink-0">
+                    {link.icon === "whatsapp" ? (
+                      <MessageCircle className="w-5 h-5 text-emerald-600" />
+                    ) : (
+                      <Globe className="w-5 h-5" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-sm text-slate-900 break-words">{link.title}</span>
+                      {link.featured && (
+                        <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[9px] font-extrabold uppercase border border-indigo-100 flex items-center gap-1">
+                          <Sparkles className="w-2.5 h-2.5" /> Destaque
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-slate-500 block truncate max-w-full sm:max-w-md mt-0.5">
+                      {link.url}
+                    </span>
+                    {shortCode && (
+                      <span className="text-[10px] text-indigo-600 font-mono mt-1 block break-all">
+                        Link de tracking: /go/{shortCode}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 sm:gap-3 border-t md:border-t-0 border-slate-100 pt-3 md:pt-0 justify-between md:justify-end flex-wrap">
+                  <div className="min-h-11 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-100 text-center flex flex-col justify-center">
+                    <span className="text-xs font-extrabold text-slate-900 block">{clickCount}</span>
+                    <span className="text-[9px] text-slate-400 uppercase tracking-wider">Cliques</span>
+                  </div>
+                  {shortCode && (
+                    <button
+                      type="button"
+                      onClick={() => handleCopyShortLink(shortCode, link.id)}
+                      className="min-h-11 min-w-11 p-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition shadow-2xs flex items-center justify-center"
+                      title="Copiar Link de Redirecionamento"
+                      aria-label="Copiar Link de Redirecionamento"
+                    >
+                      {copiedId === link.id ? (
+                        <Check className="w-4 h-4 text-emerald-600" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </button>
+                  )}
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="min-h-11 min-w-11 p-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition shadow-2xs flex items-center justify-center"
+                    title="Acessar Destino Real"
+                    aria-label="Acessar Destino Real"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(link.id)}
+                    className="min-h-11 min-w-11 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition shadow-2xs flex items-center justify-center"
+                    title="Excluir Link"
+                    aria-label="Excluir Link"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-
-              <div className="flex items-center gap-2 sm:gap-3 border-t md:border-t-0 border-slate-100 pt-3 md:pt-0 justify-between md:justify-end flex-wrap">
-                <div className="min-h-11 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-100 text-center flex flex-col justify-center"><span className="text-xs font-extrabold text-slate-900 block">{clickCount}</span><span className="text-[9px] text-slate-400 uppercase tracking-wider">Cliques</span></div>
-                {shortCode && <button type="button" onClick={() => handleCopyShortLink(shortCode, link.id)} className="min-h-11 min-w-11 p-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition shadow-2xs flex items-center justify-center" title="Copiar Link de Redirecionamento" aria-label="Copiar Link de Redirecionamento">{copiedId === link.id ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}</button>}
-                <a href={link.url} target="_blank" rel="noopener noreferrer" className="min-h-11 min-w-11 p-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition shadow-2xs flex items-center justify-center" title="Acessar Destino Real" aria-label="Acessar Destino Real"><ExternalLink className="w-4 h-4" /></a>
-                <button type="button" onClick={() => handleDelete(link.id)} className="min-h-11 min-w-11 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition shadow-2xs flex items-center justify-center" title="Excluir Link" aria-label="Excluir Link"><Trash2 className="w-4 h-4" /></button>
-              </div>
-            </div>
-          );
-        }) : <div className="py-16 text-center text-xs text-slate-400 bg-white border border-dashed border-slate-200 rounded-2xl">Nenhum link cadastrado ainda. Clique em &quot;Novo Link&quot; para começar.</div>}
+            );
+          })
+        ) : (
+          <div className="py-16 text-center text-xs text-slate-400 bg-white border border-dashed border-slate-200 rounded-2xl">
+            Nenhum link cadastrado ainda. Clique em &quot;Novo Link&quot; para começar.
+          </div>
+        )}
       </div>
 
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="w-full max-w-lg max-h-[calc(100vh-1.5rem)] overflow-y-auto bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-xl">
-            <h3 className="font-bold text-base text-slate-900 mb-4">Adicionar Link Rastreável</h3>
-            {error && <div className="mb-4 flex items-center gap-2 p-3 text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded-xl"><AlertCircle className="w-4 h-4 shrink-0 text-rose-600" /><span>{error}</span></div>}
-            <form onSubmit={handleCreateLink} className="space-y-4">
-              <div><label className="block text-xs font-semibold text-slate-700 mb-1.5">Título do Link *</label><input type="text" required placeholder="Ex: Agende sua Consultoria Grátis" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full min-h-11 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 shadow-2xs" /></div>
-              <div><label className="block text-xs font-semibold text-slate-700 mb-1.5">URL de Destino *</label><input type="url" required placeholder="https://meusite.com.br/oferta" value={url} onChange={(e) => setUrl(e.target.value)} className="w-full min-h-11 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 shadow-2xs" /></div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div><label className="block text-xs font-semibold text-slate-700 mb-1.5">Ícone</label><select value={icon} onChange={(e) => setIcon(e.target.value)} className="w-full min-h-11 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-500 shadow-2xs"><option value="globe">Globo / Site</option><option value="whatsapp">WhatsApp</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="youtube">YouTube</option><option value="linkedin">LinkedIn</option></select></div>
-                <div><label className="block text-xs font-semibold text-slate-700 mb-1.5">Evento de Conversão (Pixel)</label><select value={eventName} onChange={(e) => setEventName(e.target.value)} className="w-full min-h-11 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-500 shadow-2xs"><option value="LinkClick">LinkClick (Padrão)</option><option value="Lead">Lead</option><option value="Contact">Contact</option><option value="Schedule">Schedule</option><option value="ViewContent">ViewContent</option></select></div>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <h3 className="font-bold text-base text-slate-900">Adicionar Link Rastreável</h3>
+              <div className="flex p-0.5 bg-slate-100 rounded-lg text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLinkType("custom");
+                    setIcon("globe");
+                  }}
+                  className={`px-2.5 py-1 rounded-md transition ${
+                    linkType === "custom"
+                      ? "bg-white text-indigo-600 shadow-xs font-bold"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Link / Site
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLinkType("whatsapp");
+                    setIcon("whatsapp");
+                    setEventName("Contact");
+                  }}
+                  className={`px-2.5 py-1 rounded-md transition flex items-center gap-1 ${
+                    linkType === "whatsapp"
+                      ? "bg-emerald-600 text-white shadow-xs font-bold"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>WhatsApp</span>
+                </button>
               </div>
-              <div className="flex items-start gap-2 pt-2"><input type="checkbox" id="featured" checked={featured} onChange={(e) => setFeatured(e.target.checked)} className="mt-1 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" /><label htmlFor="featured" className="text-xs text-slate-700 font-medium">Destacar este link na bio com animação e borda colorida</label></div>
-              <div className="mt-6 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2"><button type="button" onClick={() => setShowModal(false)} className="min-h-11 px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900">Cancelar</button><button type="submit" disabled={submitting} className="min-h-11 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50">{submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}<span>Criar Link</span></button></div>
+            </div>
+
+            {error && (
+              <div className="mb-4 flex items-center gap-2 p-3 text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded-xl">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleCreateLink} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Título do Link *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder={
+                    linkType === "whatsapp"
+                      ? "Ex: Agende sua Consulta em Garanhuns"
+                      : "Ex: Acesse nosso Site Oficial"
+                  }
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full min-h-11 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 shadow-2xs"
+                />
+              </div>
+
+              {linkType === "whatsapp" ? (
+                <div className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-2xl space-y-3">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
+                    <MessageCircle className="w-4 h-4 text-emerald-600" />
+                    <span>Gerador Automático de Link WhatsApp</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Número com DDD (apenas números) *
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="Ex: 87999999999"
+                      value={waPhone}
+                      onChange={(e) => {
+                        setWaPhone(e.target.value);
+                        handleUpdateWhatsAppUrl(e.target.value, waMessage);
+                      }}
+                      className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Mensagem Pronta (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Olá! Gostaria de agendar uma consulta em Garanhuns."
+                      value={waMessage}
+                      onChange={(e) => {
+                        setWaMessage(e.target.value);
+                        handleUpdateWhatsAppUrl(waPhone, e.target.value);
+                      }}
+                      className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  {url && (
+                    <div className="p-2 rounded-lg bg-white/80 border border-emerald-100 text-[10px] text-emerald-800 font-mono truncate">
+                      Link gerado: {url}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    URL de Destino *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="https://meusite.com.br/oferta ou meusite.com.br"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    className="w-full min-h-11 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 shadow-2xs"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    Adicionaremos https:// automaticamente caso não informado.
+                  </span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Ícone</label>
+                  <select
+                    value={icon}
+                    onChange={(e) => handleIconChange(e.target.value)}
+                    className="w-full min-h-11 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-500 shadow-2xs"
+                  >
+                    <option value="globe">🌐 Globo / Site Geral</option>
+                    <option value="whatsapp">📱 WhatsApp</option>
+                    <option value="instagram">📸 Instagram</option>
+                    <option value="facebook">📘 Facebook</option>
+                    <option value="youtube">🎥 YouTube / Vídeo</option>
+                    <option value="linkedin">💼 LinkedIn</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Evento de Conversão (Pixel)
+                  </label>
+                  <select
+                    value={eventName}
+                    onChange={(e) => setEventName(e.target.value)}
+                    className="w-full min-h-11 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-500 shadow-2xs font-medium"
+                  >
+                    <option value="Contact">Contato no WhatsApp / Chat (Contact)</option>
+                    <option value="Schedule">Agendamento de Consulta / Serviço (Schedule)</option>
+                    <option value="Lead">Cadastro de Lead / Formulário (Lead)</option>
+                    <option value="ViewContent">Visualização de Conteúdo / Catálogo (ViewContent)</option>
+                    <option value="LinkClick">Clique Geral no Link (LinkClick)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="featured"
+                  checked={featured}
+                  onChange={(e) => setFeatured(e.target.checked)}
+                  className="mt-1 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <label htmlFor="featured" className="text-xs text-slate-700 font-medium cursor-pointer">
+                  Destacar este link na bio com animação e borda colorida
+                </label>
+              </div>
+
+              <div className="mt-6 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="min-h-11 px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="min-h-11 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  {submitting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Plus className="w-3.5 h-3.5" />
+                  )}
+                  <span>Criar Link</span>
+                </button>
+              </div>
             </form>
           </div>
         </div>

@@ -50,6 +50,39 @@ export class PlanLimitService {
       db.automation.count({ where: { organizationId } }),
     ]);
 
+    const isMaster = org.name.toLowerCase().includes("master");
+    if (isMaster) {
+      return {
+        plan: org.plan || { name: "MASTER", description: "Super Administrador (Acesso Ilimitado)" },
+        features: {
+          maxPages: 99999,
+          maxLinks: 99999,
+          maxUsers: 99999,
+          maxLeads: 999999,
+          maxForms: 99999,
+          maxWhatsappInstances: 999,
+          maxMetaPixels: 999,
+          maxAutomations: 999,
+          maxStorageMb: 99999,
+          customDomainAllowed: true,
+          crmAllowed: true,
+          whatsappInboxAllowed: true,
+          advancedAnalytics: true,
+          removeBranding: true,
+        },
+        usage: {
+          linksCount,
+          pagesCount,
+          usersCount,
+          leadsCount,
+          formsCount,
+          whatsappInstancesCount,
+          metaPixelsCount,
+          automationsCount,
+        },
+      };
+    }
+
     return {
       plan: org.plan,
       features: features || {
