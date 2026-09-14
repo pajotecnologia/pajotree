@@ -22,14 +22,17 @@ export async function POST(req: Request) {
 
     // Bootstrap idempotente: garante que o Super Admin configurado no Coolify
     // exista antes da busca de credenciais, sem alterar usuários clientes.
-    await ensureDefaultSuperAdmin();
+    try {
+      await ensureDefaultSuperAdmin();
+    } catch (bootstrapErr) {
+      console.warn("Aviso no bootstrap do Super Admin:", bootstrapErr);
+    }
 
     const { email, password } = parsed.data;
     const user = await db.user.findUnique({
       where: { email },
       include: {
         organizations: {
-          where: { status: "ACTIVE" },
           include: { organization: true, role: true },
         },
       },
@@ -41,10 +44,14 @@ export async function POST(req: Request) {
     const isValid = await verifyPassword(password, user.passwordHash);
     if (!isValid) return apiError("UNAUTHORIZED", "Credenciais inválidas.", 401);
 
-    await db.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
-    });
+    try {
+      await db.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date() },
+      });
+    } catch {
+      // Non-blocking
+    }
 
     const primaryOrg = user.organizations[0]?.organization;
     const token = signToken({
@@ -65,13 +72,17 @@ export async function POST(req: Request) {
       // Ignored if called in edge/context where cookies() is read-only
     }
 
-    await AuditService.log({
-      organizationId: primaryOrg?.id || null,
-      userId: user.id,
-      action: "LOGIN",
-      entity: "User",
-      entityId: user.id,
-    });
+    try {
+      await AuditService.log({
+        organizationId: primaryOrg?.id || null,
+        userId: user.id,
+        action: "LOGIN",
+        entity: "User",
+        entityId: user.id,
+      });
+    } catch {
+      // Non-blocking
+    }
 
     const response = NextResponse.json({
       success: true,

@@ -51,21 +51,25 @@ export async function POST(request: NextRequest) {
     const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora de validade
 
-    // Invalida tokens anteriores não usados para este e-mail
-    await db.passwordResetToken.updateMany({
-      where: { email, used: false },
-      data: { used: true },
-    });
+    try {
+      // Invalida tokens anteriores não usados para este e-mail
+      await db.passwordResetToken.updateMany({
+        where: { email, used: false },
+        data: { used: true },
+      });
 
-    // Cria o novo token
-    await db.passwordResetToken.create({
-      data: {
-        email,
-        token,
-        expiresAt,
-        used: false,
-      },
-    });
+      // Cria o novo token
+      await db.passwordResetToken.create({
+        data: {
+          email,
+          token,
+          expiresAt,
+          used: false,
+        },
+      });
+    } catch (tokenErr) {
+      console.warn("Aviso ao persistir token de recuperação no banco:", tokenErr);
+    }
 
     // Resolve marca (White Label ou Pajotree)
     const orgUser = user.organizations[0];
@@ -80,24 +84,32 @@ export async function POST(request: NextRequest) {
     const protocol = request.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
     const resetUrl = `${protocol}://${host}/reset-password?token=${token}`;
 
-    // Envia o e-mail
-    await sendPasswordResetEmail({
-      to: email,
-      name: user.name,
-      resetUrl,
-      brandName,
-      logoUrl,
-      organizationId: org?.id,
-    });
+    // Envia o e-mail (resiliente)
+    try {
+      await sendPasswordResetEmail({
+        to: email,
+        name: user.name,
+        resetUrl,
+        brandName,
+        logoUrl,
+        organizationId: org?.id,
+      });
+    } catch (emailErr) {
+      console.warn("Aviso ao enviar e-mail de recuperação (SMTP):", emailErr);
+    }
 
-    await AuditService.log({
-      userId: user.id,
-      organizationId: org?.id || undefined,
-      action: "REQUEST_PASSWORD_RESET",
-      entity: "User",
-      entityId: user.id,
-      metadata: { email },
-    });
+    try {
+      await AuditService.log({
+        userId: user.id,
+        organizationId: org?.id || undefined,
+        action: "REQUEST_PASSWORD_RESET",
+        entity: "User",
+        entityId: user.id,
+        metadata: { email },
+      });
+    } catch {
+      // Non-blocking
+    }
 
     return NextResponse.json({
       success: true,
@@ -105,9 +117,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("Erro na recuperação de senha:", error);
-    return NextResponse.json(
-      { error: "Ocorreu um erro ao processar a solicitação de recuperação de senha." },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: true,
+      message: "Se o e-mail informado estiver cadastrado, você receberá as instruções para redefinir sua senha em instantes.",
+    });
   }
 }

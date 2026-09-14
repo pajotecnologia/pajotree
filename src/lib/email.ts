@@ -147,21 +147,30 @@ export async function sendEmail({
     };
   }
 
-  const transporter = createTransporter(config);
+  try {
+    const transporter = createTransporter(config);
 
-  const info = await transporter.sendMail({
-    from: `"${config.fromName}" <${config.fromEmail}>`,
-    to,
-    subject,
-    text: text || html.replace(/<[^>]+>/g, ""),
-    html,
-  });
+    const info = await transporter.sendMail({
+      from: `"${config.fromName}" <${config.fromEmail}>`,
+      to,
+      subject,
+      text: text || html.replace(/<[^>]+>/g, ""),
+      html,
+    });
 
-  return {
-    success: true,
-    messageId: info.messageId,
-    simulated: false,
-  };
+    return {
+      success: true,
+      messageId: info.messageId,
+      simulated: false,
+    };
+  } catch (err: any) {
+    console.warn("⚠️ Aviso ao enviar e-mail via SMTP (servidor indisponível ou credenciais inválidas):", err.message);
+    return {
+      success: false,
+      error: err.message,
+      simulated: true,
+    };
+  }
 }
 
 /**

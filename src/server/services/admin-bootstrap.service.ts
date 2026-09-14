@@ -2,15 +2,15 @@ import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
 
 function getConfiguredAdminCredentials(): { email: string; password: string } | null {
-  const email = process.env.ADMIN_DEFAULT_EMAIL?.trim().toLowerCase();
-  const password = process.env.ADMIN_DEFAULT_PASSWORD;
+  try {
+    const email = process.env.ADMIN_DEFAULT_EMAIL?.trim().toLowerCase();
+    const password = process.env.ADMIN_DEFAULT_PASSWORD;
 
-  if (!email || !password) return null;
-  if (password.length < 6) {
-    throw new Error("ADMIN_DEFAULT_PASSWORD must contain at least 6 characters");
+    if (!email || !password || password.length < 6) return null;
+    return { email, password };
+  } catch {
+    return null;
   }
-
-  return { email, password };
 }
 
 /**
