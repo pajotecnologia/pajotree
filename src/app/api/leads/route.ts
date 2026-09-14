@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentAuthContext } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { LeadStatus } from "@prisma/client";
 
 export async function GET() {
   try {
@@ -10,21 +9,28 @@ export async function GET() {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
-    const leads = await db.lead.findMany({
-      where: { organizationId: auth.organization.id },
-      include: {
-        tags: { include: { tag: true } },
-        customers: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const orgId = auth.organization.id;
 
-    const customers = await db.customer.findMany({
-      where: { organizationId: auth.organization.id },
-      orderBy: { createdAt: "desc" },
-    });
+    const [leads, customers, newLeadsCount] = await Promise.all([
+      db.lead.findMany({
+        where: { organizationId: orgId },
+        include: {
+          tags: { include: { tag: true } },
+          customers: true,
+          page: { select: { title: true, slug: true, name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      db.customer.findMany({
+        where: { organizationId: orgId },
+        orderBy: { createdAt: "desc" },
+      }),
+      db.lead.count({
+        where: { organizationId: orgId, status: "NEW" },
+      }),
+    ]);
 
-    return NextResponse.json({ leads, customers });
+    return NextResponse.json({ leads, customers, newLeadsCount });
   } catch (error: any) {
     console.error("Erro ao buscar leads:", error);
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 });
@@ -39,7 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { action, leadId } = body;
+    const { action, leadId, status } = body;
 
     if (action === "convert_to_customer") {
       const lead = await db.lead.findFirst({
@@ -75,9 +81,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, customer });
     }
 
+    if (action === "update_status") {
+      if (!leadId || !status) {
+        return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
+      }
+
+      const updated = await db.lead.updateMany({
+        where: { id: leadId, organizationId: auth.organization.id },
+        data: { status },
+      });
+
+      return NextResponse.json({ success: true, updated });
+    }
+
     return NextResponse.json({ error: "Ação não suportada" }, { status: 400 });
   } catch (error: any) {
-    console.error("Erro ao converter lead:", error);
+    console.error("Erro ao processar ação de lead:", error);
     return NextResponse.json({ error: error.message || "Erro ao processar ação" }, { status: 500 });
   }
 }
+

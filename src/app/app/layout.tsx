@@ -13,21 +13,30 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [authData, setAuthData] = useState<any>(null);
+  const [newLeadsCount, setNewLeadsCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadAuth() {
       try {
-        const res = await fetch("/api/auth/me");
-        if (!res.ok) { router.push("/login"); return; }
-        const data = await res.json();
+        const [authRes, leadsRes] = await Promise.all([
+          fetch("/api/auth/me"),
+          fetch("/api/leads"),
+        ]);
+        if (!authRes.ok) { router.push("/login"); return; }
+        const data = await authRes.json();
         if (!data.authenticated) { router.push("/login"); return; }
         setAuthData(data);
+
+        if (leadsRes.ok) {
+          const leadsData = await leadsRes.json();
+          setNewLeadsCount(leadsData.newLeadsCount || 0);
+        }
       } catch { router.push("/login"); }
       finally { setLoading(false); }
     }
     loadAuth();
-  }, [router]);
+  }, [router, pathname]);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -39,8 +48,8 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
     { label: "Dashboard", href: "/app", icon: LayoutDashboard },
     { label: "Editor Visual", href: "/app/editor", icon: Palette },
     { label: "Links & Tracking", href: "/app/links", icon: Link2 },
-    { label: "Leads & Contatos", href: "/app/leads", icon: Users2 },
-    { label: "CRM Kanban", href: "/app/crm", icon: KanbanSquare },
+    { label: "Leads & Contatos", href: "/app/leads", icon: Users2, badge: newLeadsCount > 0 ? `${newLeadsCount} novo${newLeadsCount > 1 ? "s" : ""}` : null },
+    { label: "CRM Kanban", href: "/app/crm", icon: KanbanSquare, badge: newLeadsCount > 0 ? "Novo" : null },
     { label: "WhatsApp & Inbox", href: "/app/whatsapp", icon: MessageSquare },
     { label: "Formulários", href: "/app/forms", icon: FileText },
     { label: "Analytics & Pixels", href: "/app/analytics", icon: BarChart3 },
@@ -82,7 +91,27 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
             {navItems.map((item) => {
               const active = pathname === item.href;
               const Icon = item.icon;
-              return <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)} className={`min-h-11 flex items-center gap-3 px-3 rounded-xl text-xs font-semibold transition ${active ? "bg-indigo-50 text-indigo-700" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"}`}><Icon className={`w-4 h-4 shrink-0 ${active ? "text-indigo-600" : "text-slate-400"}`} /><span>{item.label}</span></Link>;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`min-h-11 flex items-center justify-between px-3 rounded-xl text-xs font-semibold transition ${
+                    active ? "bg-indigo-50 text-indigo-700" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Icon className={`w-4 h-4 shrink-0 ${active ? "text-indigo-600" : "text-slate-400"}`} />
+                    <span className="truncate">{item.label}</span>
+                  </div>
+
+                  {item.badge && (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold animate-pulse shadow-2xs">
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              );
             })}
           </nav>
         </div>
@@ -110,9 +139,20 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
             <h1 className="text-sm font-bold text-slate-800 hidden sm:block truncate">{organization?.name || "Painel de Controle"}</h1>
           </div>
           <div className="flex items-center gap-2 max-w-full">
+            {newLeadsCount > 0 && (
+              <Link
+                href="/app/leads"
+                className="min-h-11 px-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold hover:bg-emerald-100 transition flex items-center gap-1.5 whitespace-nowrap shadow-2xs"
+                title={`${newLeadsCount} novos leads aguardando atendimento`}
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                <span>{newLeadsCount} {newLeadsCount === 1 ? "Novo Lead" : "Novos Leads"}</span>
+              </Link>
+            )}
             {authData?.isSuperAdmin && <Link href="/admin" className="min-h-11 px-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold hover:bg-amber-100 transition flex items-center gap-1.5 whitespace-nowrap"><ShieldAlert className="w-3.5 h-3.5 text-amber-600" /><span className="hidden xs:inline">Painel Mestre</span><span className="sm:hidden">Mestre</span></Link>}
             <Link href={`/p/${organization?.name?.toLowerCase().replace(/[^a-z0-9]/g, "-") || "minha-empresa"}`} target="_blank" className="min-h-11 px-3 sm:px-3.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap"><span className="hidden sm:inline">Ver Minha Página</span><span className="sm:hidden">Minha Página</span><ExternalLink className="w-3.5 h-3.5 text-indigo-600" /></Link>
           </div>
+
         </header>
         <main className="flex-1 p-3 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">{children}</main>
       </div>

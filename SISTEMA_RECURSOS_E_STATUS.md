@@ -54,13 +54,27 @@ Este documento registra detalhadamente todos os módulos, recursos, arquitetura 
   - Se o link for do WhatsApp, extrai automaticamente o **DDD + Telefone** e a **Mensagem personalizada** para edição fácil e rápida.
   - Atualização via `PUT /api/links`.
 - **Aba de Link / Site Tradicional**: URL de destino com auto-prepend de `https://`.
-- **Normalização e DDI Internacional Obrigatório**:
-  - Garantia de prefixo DDI do Brasil (`55`) em todos os números com DDD de 10 ou 11 dígitos (ex: `87996540551` vira `5587996540551`).
-  - Motor de redirecionamento `/go/[code]` intercepta e normaliza em tempo real qualquer link antigo ou sem DDI, evitando erros do WhatsApp.
-  - Rotinas de auto-cura no `GET /api/links` que corrigem URLs legadas no banco de dados.
-
-
 ---
+
+## 👥 3. Gestão e Sinalização Visual de Novos Leads (`/app/leads` e `/app/crm`)
+
+### Sinalização em Tempo Real em Todo o Sistema:
+- **Barra de Navegação / Menu Lateral (`/app/layout.tsx`)**:
+  - Badge pulsante verde `Novo` / `+X novos` ao lado de *Leads & Contatos* e *CRM Kanban*.
+  - Indicador numérico animado no topo do cabeçalho quando há leads aguardando atendimento.
+- **Central de Leads (`/app/leads`)**:
+  - **Badge de Origem com Destaque**: `📝 Formulário do Site` (lilás/índigo com ícone `FileText`) identificando claramente contatos vindos do formulário público.
+  - **Badge de Status com Pulso**: `✨ NOVO LEAD` com ponto pulsante verde esmeralda.
+  - **Destaque Visual na Linha**: Borda lateral verde (`border-l-4 border-l-emerald-500 bg-emerald-50/25`) nos novos leads.
+  - **Balão de Mensagem Direta**: Exibição do texto que o cliente escreveu no formulário em caixa de citação elegante.
+  - **Ações Rápidas**: Botão de WhatsApp direto com DDI 55, botão de *Atendido* e botão de *Converter em Cliente*.
+- **Kanban CRM (`/app/crm`)**:
+  - Card da oportunidade com badge `📝 Formulário do Site` e tag `NOVO`.
+  - Prévia da mensagem do lead no próprio card do Kanban.
+  - Botão de 1 clique para chamar no WhatsApp direto do card.
+- **Dashboard Principal (`/app`)**:
+  - Lista de *Leads Recentes* com tag `Formulário`, badge `NOVO` e botão de WhatsApp.
+
 
 ## 📊 3. Analytics & Rastreamento (`/app/analytics`)
 
