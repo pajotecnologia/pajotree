@@ -43,6 +43,8 @@ model Organization {
   whiteLabelParent    Organization?              @relation("WhiteLabelTenants", fields: [whiteLabelParentId], references: [id], onDelete: SetNull)
   whiteLabelClients   Organization[]             @relation("WhiteLabelTenants")
   paymentGateway      OrganizationPaymentGateway?
+  smtpConfig          OrganizationSmtpConfig?
+  evolutionConfig     OrganizationEvolutionConfig?
   customPlans         Plan[]                     @relation("OrganizationPlans")
 
   addresses          OrganizationAddress[]
@@ -1083,6 +1085,51 @@ model OrganizationPaymentGateway {
   updatedAt      DateTime     @updatedAt
 
   @@index([organizationId])
+}
+
+model OrganizationSmtpConfig {
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  host           String
+  port           Int          @default(587)
+  user           String
+  pass           String
+  fromEmail      String
+  fromName       String?      @default("Pajotree")
+  secure         Boolean      @default(false) // true for 465, false for 587/25
+  ativo          Boolean      @default(true)
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+}
+
+model OrganizationEvolutionConfig {
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  apiUrl         String
+  apiKey         String
+  ativo          Boolean      @default(true)
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([token])
 }
 
 model AuditLog {

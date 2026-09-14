@@ -98,6 +98,12 @@ export default function LoginPage() {
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label htmlFor="login-password" className="block text-xs font-semibold text-slate-700">Senha</label>
+              <Link
+                href="/forgot-password"
+                className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold hover:underline"
+              >
+                Esqueceu a senha?
+              </Link>
             </div>
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
