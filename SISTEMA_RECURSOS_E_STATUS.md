@@ -1,0 +1,126 @@
+# 📋 Pajotree - Registro Oficial de Recursos, Arquitetura e Status do Sistema
+
+Este documento registra detalhadamente todos os módulos, recursos, arquitetura e integrações implementadas no **Pajotree SaaS**, garantindo rastreabilidade e histórico para que nenhuma funcionalidade seja perdida ou refeita.
+
+---
+
+## 🎨 1. Editor Visual (`/app/editor`)
+
+### Fundo da Página (Background):
+- **Upload de Imagem Local**: Suporte para envio de imagens do computador (PNG, JPG, WebP, GIF até 3 MB) com persistência em base64/URL e preview em tempo real.
+- **Inserção via URL Direta**: Campo para colar URLs externas de imagens (`https://...`).
+- **6 Presets HD Integrados**:
+  1. *Dark Gradient Mesh*
+  2. *Cyber Neon City*
+  3. *Abstract Fluid*
+  4. *Deep Space Night*
+  5. *Studio Minimalist*
+  6. *Nordic Mountain*
+- **Gradientes & Cores Sólidas**: 6 presets modernos (*Galáxia Escura*, *Obsidiana Minimal*, *Sunset Violet*, *Emerald Forest*, *Ocean Deep*, *Minimal Clean*) + seletor hexadecimal personalizado.
+- **Botões de Gestão da Imagem**: Indicador de imagem ativa, botão *Trocar Foto* e botão *Remover Imagem*.
+
+### Foto de Perfil / Logomarca:
+- Upload com drag-and-drop ou clique (PNG, JPG, WebP até 3 MB).
+- Exibição de avatar com iniciais caso não haja foto.
+- Botões de *Trocar Foto* e *Remover Foto*.
+- Sincronização automática com `organization.logoUrl`.
+
+### Tipografia & Fontes:
+- Carregamento dinâmico do Google Fonts:
+  - **Inter** (Moderno & Neutro)
+  - **Poppins** (Geométrico & Jovial)
+  - **Roboto** (Clássico & Limpo)
+  - **Montserrat** (Elegante & Marcante)
+  - **DM Sans** (Minimalista Tech)
+  - **Open Sans** (Amigável & Legível)
+  - **Lato** (Corporativo & Equilibrado)
+  - **Nunito** (Arredondado & Suave)
+  - **Playfair Display** (Sofisticado & Editorial)
+
+### Estilos de Botão:
+- Arredondado (`rounded-xl`), Suave (`rounded-md`), Pílula (`rounded-full`), Quadrado (`rounded-none`) e Efeito Vidro Glassmorphism (`backdrop-blur-md bg-white/10`).
+
+### Live Preview Interativo:
+- Alternância entre visualização **Mobile (Smartphone)**, **Tablet** e **Desktop**.
+- Renderizador público idêntico à página final (`/p/[slug]`).
+
+---
+
+## 🔗 2. Links Rastreáveis & Gerador de WhatsApp (`/app/links`)
+
+- **Aba de Link / Site Tradicional**: URL de destino com auto-prepend de `https://`.
+- **Aba de WhatsApp**:
+  - Campo específico para **DDD + Telefone** (ex: `11 99999-9999`).
+  - Campo para **Mensagem personalizada pré-preenchida** (ex: *"Olá, vim pelo link da bio!"*).
+  - Geração automática e codificada do link oficial `https://wa.me/55...`.
+- **Eventos de Conversão do Meta Pixel em Português**:
+  - `Contact`: Iniciar Conversa no WhatsApp
+  - `Schedule`: Agendamento de Consulta / Reunião
+  - `Lead`: Cadastro / Captação de Lead
+  - `ViewContent`: Visualização de Conteúdo
+  - `LinkClick`: Clique no Link
+- **Sugestão Inteligente**: Ao escolher o ícone do WhatsApp, o evento de conversão padrão é configurado automaticamente para *Contact*.
+
+---
+
+## 📊 3. Analytics & Rastreamento (`/app/analytics`)
+
+- **Filtros por Período**:
+  - **Hoje** (`today`)
+  - **Ontem** (`yesterday`)
+  - **7 Dias** (`7d`)
+  - **30 Dias** (`30d`)
+  - **Este Mês** (`this_month`)
+  - **Mês Anterior** (`last_month`)
+  - **90 Dias** (`90d`)
+  - **Todo o Período** (`all`)
+  - **Personalizado** (`custom`): com seletor de data inicial (`De:`) e data final (`Até:`).
+- **Métricas Chave**: Total de Visitas, Visitantes Únicos, Cliques nos Links, Leads Convertidos e Taxa de Conversão.
+- **Gráfico de Evolução Temporal Diária**: Linha com contagem de acessos dia a dia.
+- **Fontes de Tráfego & UTMs**: Rastreamento de origens (Instagram, Facebook, Google, Direto).
+- **Dispositivos**: Divisão por Mobile, Desktop e Tablet.
+- **Gestão de Pixels**: Conexão de Meta Pixels e Google Analytics 4 (GA4).
+
+---
+
+## 👑 4. Permissões, Planos & Super Admin
+
+- **Super Admin (Painel Mestre)**:
+  - Acesso irrestrito a `/admin` (Visão Geral, Empresas, Planos, Assinaturas & Faturamento).
+  - Associação automática com organização master sem erro 401.
+  - Limites ilimitados no `PlanLimitService` (99.999 páginas, links, leads, conexões).
+  - Selo especial no painel de faturamento com atalho para a gestão de planos.
+- **White Label**:
+  - Painel do usuário: `/app/settings/white-label` para personalizar a marca.
+  - Painel do Super Admin: `/admin/plans` para habilitar ou desabilitar permissão de *Domínio Próprio* e *Remoção da marca Pajotree* por plano e por cliente.
+
+---
+
+## 🏦 5. Integração com Banco Inter API Cobrança v3 (Bolepix)
+
+### Arquitetura:
+- **Cliente mTLS & OAuth 2.0**: [src/lib/banco-inter.ts](file:///c:/Users/AdminUser/Documentos/PROJETOS_SISTEMAS/pajotree/src/lib/banco-inter.ts) com suporte a TLSv1.2/1.3, normalização de `.crt` / `.key` e cache de token OAuth em memória.
+- **Emissão de Bolepix Híbrido**: Emissão de boleto com Linha Digitável, Código de Barras e Pix Copia e Cola.
+- **Download de PDF Oficial**: Endpoint [src/app/api/banco-inter/pdf/route.ts](file:///c:/Users/AdminUser/Documentos/PROJETOS_SISTEMAS/pajotree/src/app/api/banco-inter/pdf/route.ts).
+- **Webhook de Baixa Automática em Tempo Real**: [src/app/api/webhooks/banco-inter/route.ts](file:///c:/Users/AdminUser/Documentos/PROJETOS_SISTEMAS/pajotree/src/app/api/webhooks/banco-inter/route.ts).
+- **Painel Mestre de Configuração**: Nova aba no Super Admin em `/admin/billing` com status da conexão, botão para *Testar Conexão mTLS* e *Registrar Webhook Oficial*.
+- **Checkout no Painel do Cliente**: Em `/app/billing`, modal completo com opções para copiar a Linha Digitável, Pix Copia e Cola e Baixar o Boleto em PDF.
+
+---
+
+## 🗄️ 6. Resumo das Rotas e Arquivos Principais
+
+| Módulo | Arquivo Principal | Descrição |
+|---|---|---|
+| **Editor Visual** | `src/app/app/editor/page.tsx` | Editor completo com upload de fundo, presets e fontes |
+| **Página Pública** | `src/components/public-page/page-renderer.tsx` | Renderizador público dos links e fundo |
+| **Links & WhatsApp** | `src/app/app/links/page.tsx` | Gestor de links e gerador WhatsApp |
+| **Analytics API** | `src/app/api/analytics/route.ts` | Endpoint de métricas com suporte a intervalos de datas |
+| **Analytics UI** | `src/app/app/analytics/page.tsx` | Dashboard de métricas e filtros por período |
+| **Banco Inter Lib** | `src/lib/banco-inter.ts` | Conexão mTLS, OAuth2, Bolepix e Webhooks |
+| **Webhook Inter** | `src/app/api/webhooks/banco-inter/route.ts` | Baixa instantânea e ativação de assinaturas |
+| **PDF Inter** | `src/app/api/banco-inter/pdf/route.ts` | Streaming binário do PDF oficial |
+| **Admin Inter API** | `src/app/api/admin/banco-inter/route.ts` | Teste de conexão e registro de webhook |
+| **Billing Admin** | `src/app/admin/billing/page.tsx` | Gestão de faturamento e credenciais do Banco Inter |
+| **Billing Tenant** | `src/app/app/billing/page.tsx` | Upgrades de plano e emissão de Bolepix |
+| **Auth & Super Admin** | `src/lib/auth.ts` | Contexto de autenticação e organização master |

@@ -649,45 +649,47 @@ export default function VisualEditorPage() {
               </div>
 
               {/* Personalização do Fundo */}
-              <div className="space-y-3 p-4 bg-slate-50/70 border border-slate-200/80 rounded-2xl">
-                <div className="flex items-center justify-between">
+              <div className="space-y-4 p-4 bg-slate-50/70 border border-slate-200/80 rounded-2xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                     <Sliders className="w-3.5 h-3.5 text-indigo-600" />
                     <span>Fundo da Página</span>
                   </label>
-                  <div className="flex p-0.5 bg-slate-200/80 rounded-lg text-[11px] font-semibold">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBgMode("gradient");
-                        if (backgroundType === "image") {
-                          setBackgroundType("gradient");
-                          if (backgroundValue.startsWith("data:image/") || backgroundValue.startsWith("http")) {
-                            setBackgroundValue("linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)");
-                          }
-                        }
-                      }}
-                      className={`px-2.5 py-1 rounded-md transition ${
-                        bgMode === "gradient"
-                          ? "bg-white text-indigo-600 shadow-xs font-bold"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      Gradiente / Cor
-                    </button>
+
+                  {/* Tabs de Seleção de Tipo de Fundo */}
+                  <div className="flex p-1 bg-slate-200/80 rounded-xl text-xs font-bold">
                     <button
                       type="button"
                       onClick={() => {
                         setBgMode("image");
                         setBackgroundType("image");
                       }}
-                      className={`px-2.5 py-1 rounded-md transition ${
+                      className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
                         bgMode === "image"
-                          ? "bg-white text-indigo-600 shadow-xs font-bold"
+                          ? "bg-indigo-600 text-white shadow-xs"
                           : "text-slate-600 hover:text-slate-900"
                       }`}
                     >
-                      Imagem de Fundo
+                      <ImageIcon className="w-3.5 h-3.5" />
+                      <span>Imagem de Fundo</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBgMode("gradient");
+                        setBackgroundType("gradient");
+                        if (!backgroundValue || backgroundValue.startsWith("data:image/") || backgroundValue.startsWith("http")) {
+                          setBackgroundValue("linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)");
+                        }
+                      }}
+                      className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                        bgMode === "gradient"
+                          ? "bg-indigo-600 text-white shadow-xs"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      <Palette className="w-3.5 h-3.5" />
+                      <span>Gradiente / Cor</span>
                     </button>
                   </div>
                 </div>
