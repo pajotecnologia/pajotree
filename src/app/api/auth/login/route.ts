@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { verifyPassword, setSessionCookie } from "@/lib/auth";
+import { verifyPassword, signToken, setSessionCookie } from "@/lib/auth";
 import { apiError } from "@/lib/api-response";
 import { AuditService } from "@/server/services/audit.service";
 import { ensureDefaultSuperAdmin } from "@/server/services/admin-bootstrap.service";
@@ -47,12 +47,23 @@ export async function POST(req: Request) {
     });
 
     const primaryOrg = user.organizations[0]?.organization;
-    await setSessionCookie({
+    const token = signToken({
       userId: user.id,
       email: user.email,
       isSuperAdmin: user.isSuperAdmin,
       activeOrganizationId: primaryOrg?.id,
     });
+
+    try {
+      await setSessionCookie({
+        userId: user.id,
+        email: user.email,
+        isSuperAdmin: user.isSuperAdmin,
+        activeOrganizationId: primaryOrg?.id,
+      });
+    } catch {
+      // Ignored if called in edge/context where cookies() is read-only
+    }
 
     await AuditService.log({
       organizationId: primaryOrg?.id || null,
@@ -62,13 +73,23 @@ export async function POST(req: Request) {
       entityId: user.id,
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       user: { id: user.id, name: user.name, email: user.email, isSuperAdmin: user.isSuperAdmin },
       organization: primaryOrg
         ? { id: primaryOrg.id, name: primaryOrg.name, status: primaryOrg.status }
         : null,
     });
+
+    response.cookies.set("pajotree_session", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+
+    return response;
   } catch (error) {
     console.error("Erro no login:", error instanceof Error ? error.message : "Erro desconhecido");
     return apiError("INTERNAL_ERROR", "Ocorreu um erro ao processar o login. Tente novamente.", 500);
