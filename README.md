@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PAJOTREE
 
-## Getting Started
+SaaS multi-tenant da PAJO TECNOLOGIA para criação e gestão de páginas, links, captação de leads, CRM, analytics, QR Codes e automações.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 + App Router
+- React 19
+- TypeScript em modo strict
+- Tailwind CSS 4
+- Prisma + PostgreSQL
+- Zod para validação
+
+## Desenvolvimento
 
 ```bash
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Banco de dados
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Configure `DATABASE_URL` no ambiente e utilize os comandos Prisma apropriados para o ambiente. O seed está disponível em `prisma/seed.ts`:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run db:seed
+```
 
-## Learn More
+## Verificações
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run lint
+npm run typecheck
+npm run build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Arquitetura
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+O sistema utiliza organizações como fronteira de tenancy. Recursos de negócio devem ser sempre consultados e alterados com escopo da organização autenticada e com autorização baseada em RBAC.
 
-## Deploy on Vercel
+Principais domínios do projeto:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- autenticação e usuários;
+- organizações e permissões;
+- páginas e blocos;
+- links, short links e QR Codes;
+- analytics e campanhas;
+- leads e CRM;
+- automações;
+- planos, assinaturas e pagamentos;
+- integrações.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Segurança
+
+- Nunca versionar secrets ou arquivos `.env`.
+- Validar entradas de APIs antes de executar operações de negócio.
+- Verificar autenticação, associação à organização e permissão no backend.
+- Não expor tokens, senhas ou dados sensíveis em logs ou respostas.
+- Mudanças no schema Prisma devem ser não destrutivas e compatíveis com os dados existentes.
+
+## Diretrizes de contribuição
+
+Consulte `AGENTS.md` antes de alterações relacionadas ao Next.js. Preserve as bibliotecas e convenções existentes e prefira mudanças incrementais, testáveis e reversíveis.
