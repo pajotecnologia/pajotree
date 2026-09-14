@@ -14,6 +14,7 @@ import {
   X,
   Loader2,
 } from "lucide-react";
+import { APP_VERSION, APP_VENDOR } from "@/lib/app-meta";
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -84,8 +85,13 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
           </nav>
         </div>
 
-        <div className="p-3 sm:p-4 border-t border-slate-100">
+        <div className="p-3 sm:p-4 border-t border-slate-100 space-y-2">
           <Link href="/app" className="min-h-11 w-full py-2.5 px-3 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-xs font-semibold text-slate-700 hover:text-slate-900 flex items-center justify-center gap-2 transition shadow-2xs text-center"><ArrowLeft className="w-3.5 h-3.5 shrink-0" /><span>Voltar ao Painel da Empresa</span></Link>
+          <div className="text-center text-[10px] text-slate-400">
+            <span>v{APP_VERSION}</span>
+            <span className="mx-1">•</span>
+            <span>By {APP_VENDOR}</span>
+          </div>
         </div>
       </aside>
 

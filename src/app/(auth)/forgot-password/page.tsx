@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { Mail, ArrowLeft, Loader2, CheckCircle2, AlertCircle, Zap, ShieldCheck } from "lucide-react";
+import { APP_VERSION, APP_VENDOR } from "@/lib/app-meta";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -126,6 +127,12 @@ export default function ForgotPasswordPage() {
               </div>
             </form>
           )}
+        </div>
+
+        <div className="text-center text-[10px] text-slate-500">
+          <span>Versão {APP_VERSION}</span>
+          <span className="mx-1.5">•</span>
+          <span>By {APP_VENDOR}</span>
         </div>
       </div>
     </div>

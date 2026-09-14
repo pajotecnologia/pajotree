@@ -4,6 +4,7 @@ import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Lock, ArrowLeft, Loader2, CheckCircle2, AlertCircle, Zap, ShieldCheck, Eye, EyeOff } from "lucide-react";
+import { APP_VERSION, APP_VENDOR } from "@/lib/app-meta";
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
@@ -195,6 +196,12 @@ export default function ResetPasswordPage() {
           <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>}>
             <ResetPasswordForm />
           </Suspense>
+        </div>
+
+        <div className="text-center text-[10px] text-slate-500">
+          <span>Versão {APP_VERSION}</span>
+          <span className="mx-1.5">•</span>
+          <span>By {APP_VENDOR}</span>
         </div>
       </div>
     </div>

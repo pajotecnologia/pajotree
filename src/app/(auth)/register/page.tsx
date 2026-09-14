@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Zap, Loader2, AlertCircle, ArrowRight, Building, Mail, Lock, User, Phone, Upload, Image as ImageIcon, X, Eye, EyeOff } from "lucide-react";
+import { APP_VERSION, APP_VENDOR } from "@/lib/app-meta";
 
 const MAX_LOGO_SIZE = 2 * 1024 * 1024;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -226,9 +227,14 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        <div className="mt-6 text-center text-xs text-slate-500">
+        <div className="mt-6 pt-5 border-t border-slate-100 text-center text-xs text-slate-500">
           <span>Já possui uma conta? </span>
           <Link href="/login" className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">Fazer login</Link>
+          <div className="mt-3 text-[10px] text-slate-400 leading-relaxed">
+            <span>Versão {APP_VERSION}</span>
+            <span className="mx-1.5">•</span>
+            <span>By {APP_VENDOR}</span>
+          </div>
         </div>
       </div>
     </div>
