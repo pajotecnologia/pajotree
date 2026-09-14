@@ -6,7 +6,6 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Iniciando o Seed do Banco de Dados Pajotree...");
 
-  // 1. Criar Permissões do Sistema
   const permissionsList = [
     { key: "page.view", description: "Visualizar páginas da organização" },
     { key: "page.edit", description: "Criar, editar e publicar páginas" },
@@ -36,11 +35,12 @@ async function main() {
   }
   console.log("✓ Permissões criadas/atualizadas.");
 
-  // 2. Criar Planos e Limites
+  // Planos comerciais sincronizados com a tabela de preços da landing page.
+  // MASTER permanece interno e exclusivo do Super Admin.
   const plansData = [
     {
       name: "FREE",
-      description: "Ideal para começar a centralizar seus links e capturar os primeiros leads.",
+      description: "Para quem está começando a organizar sua presença online.",
       priceMonthly: 0,
       priceYearly: 0,
       trialDays: 0,
@@ -63,7 +63,7 @@ async function main() {
     },
     {
       name: "START",
-      description: "Para profissionais e pequenas empresas que precisam de WhatsApp e mais alcance.",
+      description: "Ideal para autônomos e pequenos negócios que atendem no WhatsApp.",
       priceMonthly: 39.9,
       priceYearly: 399.0,
       trialDays: 14,
@@ -86,9 +86,9 @@ async function main() {
     },
     {
       name: "PRO",
-      description: "O mais popular. CRM completo, WhatsApp integrado, pixels ilimitados por link e automação.",
+      description: "A máquina completa de conversão com WhatsApp, CRM e Analytics.",
       priceMonthly: 89.9,
-      priceYearly: 899.0,
+      priceYearly: 898.8,
       trialDays: 14,
       features: {
         maxPages: 10,
@@ -109,9 +109,9 @@ async function main() {
     },
     {
       name: "BUSINESS",
-      description: "Para grandes operações com alta demanda, múltiplos atendentes e escala total.",
+      description: "Para agências e empresas de alta escala com múltiplos canais.",
       priceMonthly: 199.9,
-      priceYearly: 1999.0,
+      priceYearly: 1998.0,
       trialDays: 14,
       features: {
         maxPages: 50,
@@ -182,97 +182,47 @@ async function main() {
       },
     });
   }
-  console.log("✓ Planos e Limites configurados, incluindo MASTER para o Super Admin.");
+  console.log("✓ Planos comerciais sincronizados com a landing page, incluindo MASTER interno.");
 
-  // 3. Criar Temas Globais
   const defaultThemes = [
     {
       name: "Neon Cyberpunk",
       description: "Visual dark moderno com detalhes em neon roxo e ciano de alto contraste.",
-      configJson: JSON.stringify({
-        backgroundType: "gradient",
-        backgroundValue: "linear-gradient(135deg, #090d16 0%, #111827 50%, #1e1b4b 100%)",
-        primaryColor: "#6366f1",
-        secondaryColor: "#06b6d4",
-        textColor: "#f8fafc",
-        buttonStyle: "rounded-xl",
-        fontFamily: "Inter",
-      }),
+      configJson: JSON.stringify({ backgroundType: "gradient", backgroundValue: "linear-gradient(135deg, #090d16 0%, #111827 50%, #1e1b4b 100%)", primaryColor: "#6366f1", secondaryColor: "#06b6d4", textColor: "#f8fafc", buttonStyle: "rounded-xl", fontFamily: "Inter" }),
     },
     {
       name: "Minimalist Light",
       description: "Elegante, limpo e profissional com tons neutros e suaves.",
-      configJson: JSON.stringify({
-        backgroundType: "color",
-        backgroundValue: "#f8fafc",
-        primaryColor: "#0f172a",
-        secondaryColor: "#3b82f6",
-        textColor: "#0f172a",
-        buttonStyle: "rounded-lg",
-        fontFamily: "Inter",
-      }),
+      configJson: JSON.stringify({ backgroundType: "color", backgroundValue: "#f8fafc", primaryColor: "#0f172a", secondaryColor: "#3b82f6", textColor: "#0f172a", buttonStyle: "rounded-lg", fontFamily: "Inter" }),
     },
     {
       name: "Emerald Luxury",
       description: "Paleta esmeralda sofisticada para marcas de alto padrão.",
-      configJson: JSON.stringify({
-        backgroundType: "gradient",
-        backgroundValue: "linear-gradient(135deg, #022c22 0%, #064e3b 50%, #047857 100%)",
-        primaryColor: "#10b981",
-        secondaryColor: "#34d399",
-        textColor: "#ffffff",
-        buttonStyle: "pill",
-        fontFamily: "Inter",
-      }),
+      configJson: JSON.stringify({ backgroundType: "gradient", backgroundValue: "linear-gradient(135deg, #022c22 0%, #064e3b 50%, #047857 100%)", primaryColor: "#10b981", secondaryColor: "#34d399", textColor: "#ffffff", buttonStyle: "pill", fontFamily: "Inter" }),
     },
     {
       name: "Sunset Orange",
       description: "Gradiente vibrante e enérgico com tons quentes de pôr do sol.",
-      configJson: JSON.stringify({
-        backgroundType: "gradient",
-        backgroundValue: "linear-gradient(135deg, #7c2d12 0%, #c2410c 50%, #ea580c 100%)",
-        primaryColor: "#f97316",
-        secondaryColor: "#fbbf24",
-        textColor: "#ffffff",
-        buttonStyle: "rounded-xl",
-        fontFamily: "Inter",
-      }),
+      configJson: JSON.stringify({ backgroundType: "gradient", backgroundValue: "linear-gradient(135deg, #7c2d12 0%, #c2410c 50%, #ea580c 100%)", primaryColor: "#f97316", secondaryColor: "#fbbf24", textColor: "#ffffff", buttonStyle: "rounded-xl", fontFamily: "Inter" }),
     },
   ];
 
   for (const theme of defaultThemes) {
     const existing = await prisma.theme.findFirst({ where: { name: theme.name } });
     if (!existing) {
-      await prisma.theme.create({
-        data: {
-          name: theme.name,
-          description: theme.description,
-          configJson: theme.configJson,
-          isGlobal: true,
-        },
-      });
+      await prisma.theme.create({ data: { name: theme.name, description: theme.description, configJson: theme.configJson, isGlobal: true } });
     }
   }
   console.log("✓ Temas visuais globais criados.");
 
-  // 4. Criar Usuário Super Admin Inicial
   const adminEmail = process.env.ADMIN_DEFAULT_EMAIL || "admin@pajotree.com";
   const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || "AdminPassword123!";
   const passwordHash = await bcrypt.hash(adminPassword, 10);
 
   const superAdmin = await prisma.user.upsert({
     where: { email: adminEmail },
-    update: {
-      isSuperAdmin: true,
-      name: "Super Administrador",
-    },
-    create: {
-      name: "Super Administrador",
-      email: adminEmail,
-      passwordHash: passwordHash,
-      isSuperAdmin: true,
-      status: "ACTIVE",
-    },
+    update: { isSuperAdmin: true, name: "Super Administrador" },
+    create: { name: "Super Administrador", email: adminEmail, passwordHash, isSuperAdmin: true, status: "ACTIVE" },
   });
 
   console.log(`✓ Super Admin pronto: ${superAdmin.email}`);
