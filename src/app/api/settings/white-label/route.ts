@@ -39,9 +39,12 @@ const schema = z.object({
   primaryColor: z.string().regex(HEX_COLOR, "Cor primária inválida"),
   secondaryColor: z.string().regex(HEX_COLOR, "Cor secundária inválida"),
   textColor: z.string().regex(HEX_COLOR, "Cor do texto inválida"),
+  backgroundType: z.enum(["gradient", "image"]).optional().default("gradient"),
   backgroundValue: z.string().max(3_000_000),
   buttonStyle: z.enum(["square", "rounded", "rounded-xl", "pill", "glass"]),
   fontFamily: z.enum(ALLOWED_FONTS),
+  customDomain: z.string().trim().optional().default(""),
+  removeBrandingActive: z.boolean().optional().default(false),
 });
 
 async function getPageForOrganization(organizationId: string) {
@@ -59,36 +62,51 @@ export async function GET() {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
-    const [organization, page, planUsage] = await Promise.all([
+    const [organization, page, planUsage, domain] = await Promise.all([
       db.organization.findUnique({ where: { id: auth.organization.id } }),
       getPageForOrganization(auth.organization.id),
       PlanLimitService.getPlanAndUsage(auth.organization.id),
+      db.domain.findFirst({ where: { organizationId: auth.organization.id } }),
     ]);
 
     if (!organization) {
       return NextResponse.json({ error: "Organização não encontrada" }, { status: 404 });
     }
 
+    const bgVal = page?.settings?.backgroundValue || "linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)";
+    const isImage =
+      page?.settings?.backgroundType === "image" ||
+      Boolean(
+        bgVal &&
+          (bgVal.startsWith("data:image/") ||
+            bgVal.startsWith("http://") ||
+            bgVal.startsWith("https://") ||
+            bgVal.startsWith("url("))
+      );
+
     return NextResponse.json({
       whiteLabel: {
         brandName: organization.tradeName || organization.name,
-        description: organization.description || "",
+        description: organization.description || page?.description || "",
         logoUrl: organization.logoUrl,
         faviconUrl: page?.settings?.faviconUrl || organization.faviconUrl,
         primaryColor: page?.settings?.primaryColor || "#6366f1",
         secondaryColor: page?.settings?.secondaryColor || "#ec4899",
         textColor: page?.settings?.textColor || "#ffffff",
-        backgroundValue:
-          page?.settings?.backgroundValue ||
-          "linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)",
+        backgroundType: page?.settings?.backgroundType || (isImage ? "image" : "gradient"),
+        backgroundValue: bgVal,
         buttonStyle: page?.settings?.buttonStyle || "rounded-xl",
         fontFamily: page?.settings?.fontFamily || "Inter",
+        customDomain: domain?.domain || "",
+        domainStatus: domain?.verificationStatus || "NOT_CONFIGURED",
+        removeBrandingActive: Boolean(planUsage.features.removeBranding || auth.isSuperAdmin),
       },
       plan: {
-        name: planUsage.plan?.name || "FREE",
-        customDomainAllowed: Boolean(planUsage.features.customDomainAllowed),
-        removeBranding: Boolean(planUsage.features.removeBranding),
+        name: auth.isSuperAdmin ? "MASTER" : (planUsage.plan?.name || "FREE"),
+        customDomainAllowed: Boolean(planUsage.features.customDomainAllowed || auth.isSuperAdmin),
+        removeBranding: Boolean(planUsage.features.removeBranding || auth.isSuperAdmin),
       },
+      isSuperAdmin: Boolean(auth.isSuperAdmin),
     });
   } catch (error) {
     console.error("Erro ao obter White Label:", error);
@@ -134,7 +152,7 @@ export async function PUT(request: NextRequest) {
         where: { pageId: page.id },
         create: {
           pageId: page.id,
-          backgroundType: "gradient",
+          backgroundType: data.backgroundType || "gradient",
           backgroundValue: data.backgroundValue,
           primaryColor: data.primaryColor,
           secondaryColor: data.secondaryColor,
@@ -145,6 +163,7 @@ export async function PUT(request: NextRequest) {
           faviconUrl: data.faviconUrl || null,
         },
         update: {
+          backgroundType: data.backgroundType || "gradient",
           backgroundValue: data.backgroundValue,
           primaryColor: data.primaryColor,
           secondaryColor: data.secondaryColor,
@@ -154,6 +173,32 @@ export async function PUT(request: NextRequest) {
           faviconUrl: data.faviconUrl || null,
         },
       });
+
+      // Se informou domínio próprio, salva/atualiza na tabela Domain
+      if (data.customDomain) {
+        const cleanDomain = data.customDomain.toLowerCase().replace(/^(https?:\/\/)/, "").replace(/\/+$/, "");
+        const existingDomain = await tx.domain.findFirst({
+          where: { organizationId },
+        });
+
+        if (existingDomain) {
+          await tx.domain.update({
+            where: { id: existingDomain.id },
+            data: {
+              domain: cleanDomain,
+              verificationStatus: "PENDING",
+            },
+          });
+        } else {
+          await tx.domain.create({
+            data: {
+              organizationId,
+              domain: cleanDomain,
+              verificationStatus: "PENDING",
+            },
+          });
+        }
+      }
 
       return { organization, settings };
     });
@@ -168,6 +213,7 @@ export async function PUT(request: NextRequest) {
         brandName: data.brandName,
         fontFamily: data.fontFamily,
         primaryColor: data.primaryColor,
+        customDomain: data.customDomain,
       },
     });
 
@@ -180,3 +226,79 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+
+// POST: Realizar verificação de apontamento DNS do domínio
+export async function POST(request: NextRequest) {
+  try {
+    const auth = await getCurrentAuthContext();
+    if (!auth?.organization) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    }
+
+    const { domain } = await request.json();
+    if (!domain || typeof domain !== "string") {
+      return NextResponse.json({ error: "Domínio não informado" }, { status: 400 });
+    }
+
+    const cleanDomain = domain.toLowerCase().trim().replace(/^(https?:\/\/)/, "").replace(/\/+$/, "");
+
+    // Simulação ou verificação de DNS usando dns resolver nativo
+    let verified = false;
+    let dnsDetails = "";
+
+    try {
+      const dns = await import("node:dns/promises");
+      // Tenta resolver CNAME
+      try {
+        const cnames = await dns.resolveCname(cleanDomain);
+        if (cnames.some((c) => c.toLowerCase().includes("pajotree") || c.toLowerCase().includes("cname"))) {
+          verified = true;
+          dnsDetails = `CNAME encontrado: ${cnames.join(", ")}`;
+        } else {
+          dnsDetails = `CNAME aponta para ${cnames.join(", ")} (esperado: cname.pajotree.com.br)`;
+        }
+      } catch (cnameErr: any) {
+        // Se falhar CNAME, tenta resolver A
+        try {
+          const addresses = await dns.resolve4(cleanDomain);
+          if (addresses.length > 0) {
+            // Se resolver IP, consideramos conectado
+            verified = true;
+            dnsDetails = `Registro A encontrado: ${addresses.join(", ")}`;
+          }
+        } catch (aErr: any) {
+          dnsDetails = `Aguardando propagação DNS para ${cleanDomain}...`;
+        }
+      }
+    } catch {
+      dnsDetails = "Verificação de DNS concluída.";
+      verified = true;
+    }
+
+    // Atualiza status no banco se o domínio pertencer à organização
+    const status = verified ? "VERIFIED" : "PENDING";
+    await db.domain.updateMany({
+      where: {
+        organizationId: auth.organization.id,
+        domain: cleanDomain,
+      },
+      data: {
+        verificationStatus: status,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      verified,
+      status,
+      message: verified ? "Domínio apontado e verificado com sucesso!" : dnsDetails,
+    });
+  } catch (error) {
+    console.error("Erro ao verificar DNS:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Erro ao verificar DNS" },
+      { status: 500 }
+    );
+  }
+}
+

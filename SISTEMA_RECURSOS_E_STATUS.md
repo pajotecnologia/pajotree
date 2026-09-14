@@ -113,11 +113,39 @@ Este documento registra detalhadamente todos os módulos, recursos, arquitetura 
 
 ---
 
-## 🗄️ 6. Resumo das Rotas e Arquivos Principais
+## 🏷️ 6. White Label & Domínio Próprio (`/app/settings/white-label`)
+
+### Recursos Visuais & Tipografia:
+- **Fontes Dinâmicas em Tempo Real**: Seleção entre as 9 principais fontes do Google Fonts com injeção de `<link>` dinâmica no preview e na página pública.
+- **Upload de Imagem de Fundo**: Suporte a envio de imagens personalizadas do computador (PNG, JPG, WebP) com base64 e preview instantâneo.
+- **6 Wallpapers HD Curados**: Presets de alta definição (Dark Mesh, Cyber Neon, Fluid Art, Deep Space, Minimalist, Nordic Mountains) com 1 clique.
+- **Gradientes & Cores**: 6 presets modernos + campos hexadecimais para cores primária, secundária e texto.
+- **Estilos de Botão**: Arredondado moderno, suave, pílula, quadrado e glassmorphism.
+
+### Sincronização de Dados da Empresa:
+- Reutilização e preenchimento automático das informações cadastrais da organização (Logomarca/Avatar, Nome Fantasia e Descrição Institucional).
+- Botão *"Sincronizar com Empresa"* para puxar dados cadastrais atualizados a qualquer momento.
+
+### Domínio Próprio & Guia DNS Interativo:
+- Configuração de subdomínio/domínio personalizado (`links.minhaempresa.com.br`).
+- Tabela interativa com registros DNS:
+  - **Tipo CNAME**: Entrada `links`, Destino `cname.pajotree.com.br`, TTL `3600` (com botão de cópia com 1 clique).
+  - **Tipo A (Opcional)**: Entrada `@`, Destino `76.76.21.21`, TTL `3600`.
+- **Verificador de Apontamento DNS**: Botão *"Testar Apontamento DNS"* que consulta registros de DNS em tempo real via API backend e atualiza status para `VERIFIED` ou `PENDING`.
+
+### Remoção de Marca Pajotree:
+- Switch/Toggle *"Remover Marca 'Criado com Pajotree'"* que oculta o selo do rodapé.
+- Atualização em tempo real no simulador de celular (Live Phone Preview).
+
+---
+
+## 🗄️ 7. Resumo das Rotas e Arquivos Principais
 
 | Módulo | Arquivo Principal | Descrição |
 |---|---|---|
 | **Editor Visual** | `src/app/app/editor/page.tsx` | Editor completo com upload de fundo, presets e fontes |
+| **White Label UI** | `src/app/app/settings/white-label/page.tsx` | Identidade visual, DNS, upload de fundo e remoção de marca |
+| **White Label API** | `src/app/api/settings/white-label/route.ts` | GET/PUT de White Label e POST de verificação de DNS |
 | **Página Pública** | `src/components/public-page/page-renderer.tsx` | Renderizador público dos links e fundo |
 | **Links & WhatsApp** | `src/app/app/links/page.tsx` | Gestor de links e gerador WhatsApp |
 | **Analytics API** | `src/app/api/analytics/route.ts` | Endpoint de métricas com suporte a intervalos de datas |
@@ -129,3 +157,4 @@ Este documento registra detalhadamente todos os módulos, recursos, arquitetura 
 | **Billing Admin** | `src/app/admin/billing/page.tsx` | Gestão de faturamento e credenciais do Banco Inter |
 | **Billing Tenant** | `src/app/app/billing/page.tsx` | Upgrades de plano e emissão de Bolepix |
 | **Auth & Super Admin** | `src/lib/auth.ts` | Contexto de autenticação e organização master |
+
