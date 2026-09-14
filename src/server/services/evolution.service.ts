@@ -63,6 +63,77 @@ export class EvolutionService {
   }
 
   /**
+   * Deletes / disconnects an instance from Evolution API and database.
+   */
+  static async deleteInstance(instanceId: string, organizationId: string) {
+    const instance = await db.whatsappInstance.findFirst({
+      where: { id: instanceId, organizationId },
+    });
+
+    if (!instance) {
+      throw new Error("Instância WhatsApp não encontrada.");
+    }
+
+    const apiUrl = (instance.apiUrl || this.defaultApiUrl).replace(/\/+$/, "");
+    const apiKey = instance.credentialsEncrypted
+      ? decryptSecret(instance.credentialsEncrypted)
+      : this.defaultApiKey;
+
+    if (apiUrl && apiKey) {
+      try {
+        await fetch(`${apiUrl}/instance/logout/${instance.instanceName}`, {
+          method: "DELETE",
+          headers: { apikey: apiKey },
+        });
+        await fetch(`${apiUrl}/instance/delete/${instance.instanceName}`, {
+          method: "DELETE",
+          headers: { apikey: apiKey },
+        });
+      } catch (e) {
+        console.warn("Aviso ao remover instância no Evolution API:", e);
+      }
+    }
+
+    await db.whatsappInstance.delete({
+      where: { id: instance.id },
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Updates an instance's name or custom server settings.
+   */
+  static async updateInstance(params: {
+    instanceId: string;
+    organizationId: string;
+    name?: string;
+    apiUrl?: string;
+    apiKey?: string;
+  }) {
+    const instance = await db.whatsappInstance.findFirst({
+      where: { id: params.instanceId, organizationId: params.organizationId },
+    });
+
+    if (!instance) {
+      throw new Error("Instância WhatsApp não encontrada.");
+    }
+
+    const encryptedKey = params.apiKey ? encryptSecret(params.apiKey) : undefined;
+
+    const updated = await db.whatsappInstance.update({
+      where: { id: params.instanceId },
+      data: {
+        ...(params.name ? { name: params.name } : {}),
+        ...(params.apiUrl ? { apiUrl: params.apiUrl.replace(/\/+$/, "") } : {}),
+        ...(encryptedKey !== undefined ? { credentialsEncrypted: encryptedKey } : {}),
+      },
+    });
+
+    return updated;
+  }
+
+  /**
    * Generates a pairing QR Code string for an instance from Evolution API.
    */
   static async getQrCode(instanceName: string, organizationId?: string) {

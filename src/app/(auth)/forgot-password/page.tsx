@@ -3,9 +3,11 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { Mail, ArrowLeft, Loader2, CheckCircle2, AlertCircle, Zap, ShieldCheck } from "lucide-react";
-import { APP_VERSION, APP_VENDOR } from "@/lib/app-meta";
+import { APP_VERSION } from "@/lib/app-meta";
+import { useBranding } from "@/lib/use-branding";
 
 export default function ForgotPasswordPage() {
+  const branding = useBranding();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -44,11 +46,33 @@ export default function ForgotPasswordPage() {
         {/* Brand Header */}
         <div className="text-center space-y-2">
           <Link href="/login" className="inline-flex items-center gap-2.5 group">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition">
-              <Zap className="w-5 h-5 text-white fill-white" />
-            </div>
+            {branding.logoUrl ? (
+              <img
+                src={branding.logoUrl}
+                alt={branding.brandName}
+                className="w-10 h-10 rounded-xl object-contain bg-white border border-slate-700 shadow-md group-hover:scale-105 transition"
+              />
+            ) : branding.isWhiteLabel ? (
+              <div
+                className="w-10 h-10 rounded-xl text-white font-black text-lg flex items-center justify-center shadow-md group-hover:scale-105 transition"
+                style={{ backgroundColor: branding.primaryColor }}
+              >
+                {branding.brandName.charAt(0).toUpperCase()}
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition">
+                <Zap className="w-5 h-5 text-white fill-white" />
+              </div>
+            )}
+
             <span className="font-extrabold text-2xl tracking-tight text-white">
-              Pajo<span className="text-indigo-400">tree</span>
+              {branding.isWhiteLabel ? (
+                <span>{branding.brandName}</span>
+              ) : (
+                <>
+                  Pajo<span className="text-indigo-400">tree</span>
+                </>
+              )}
             </span>
           </Link>
           <h1 className="text-xl font-extrabold text-white tracking-tight">Recuperar Senha</h1>
@@ -110,7 +134,8 @@ export default function ForgotPasswordPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                style={{ backgroundColor: branding.isWhiteLabel ? branding.primaryColor : undefined }}
+                className="w-full py-3.5 rounded-xl bg-indigo-600 hover:opacity-90 text-white font-bold text-sm transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
                 <span>{loading ? "Enviando Instruções..." : "Enviar Link de Recuperação"}</span>
@@ -132,7 +157,7 @@ export default function ForgotPasswordPage() {
         <div className="text-center text-[10px] text-slate-500">
           <span>Versão {APP_VERSION}</span>
           <span className="mx-1.5">•</span>
-          <span>By {APP_VENDOR}</span>
+          <span>By {branding.vendorName}</span>
         </div>
       </div>
     </div>

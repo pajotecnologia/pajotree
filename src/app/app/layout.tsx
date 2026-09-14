@@ -85,6 +85,19 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
   const organization = authData?.organization;
   const plan = authData?.planDetails?.plan?.name || "START";
 
+  const isWhiteLabel = Boolean(
+    authData?.isWhiteLabelPartner ||
+    authData?.isWhiteLabelClient ||
+    authData?.whiteLabelParent ||
+    organization?.isWhiteLabel ||
+    organization?.logoUrl
+  );
+
+  const displayLogo = authData?.whiteLabelParent?.logoUrl || organization?.logoUrl || null;
+  const brandName = authData?.whiteLabelParent?.tradeName || authData?.whiteLabelParent?.name || (isWhiteLabel ? (organization?.tradeName || organization?.name) : "Pajotree");
+  const subTitle = authData?.whiteLabelParent ? (organization?.name || "Minha Empresa") : (isWhiteLabel ? "Painel da Empresa" : (organization?.name || "Minha Empresa"));
+  const vendorCredit = isWhiteLabel ? brandName : APP_VENDOR;
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex overflow-x-clip font-sans">
       {sidebarOpen && <div onClick={() => setSidebarOpen(false)} className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 lg:hidden" aria-hidden="true" />}
@@ -92,24 +105,28 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
       <aside className={`fixed inset-y-0 left-0 w-64 max-w-[85vw] bg-white border-r border-slate-200 z-50 flex flex-col justify-between transition-transform duration-300 lg:static lg:translate-x-0 shadow-sm ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="min-h-0">
           <div className="h-16 px-4 sm:px-5 flex items-center justify-between border-b border-slate-100">
-            <Link href="/app" className="flex items-center gap-2.5 min-w-0">
-              {authData?.whiteLabelParent?.logoUrl ? (
+            <Link href="/app" className="flex items-center gap-2.5 min-w-0" title={brandName}>
+              {displayLogo ? (
                 <img
-                  src={authData.whiteLabelParent.logoUrl}
-                  alt={authData.whiteLabelParent.name}
+                  src={displayLogo}
+                  alt={brandName}
                   className="w-8 h-8 rounded-lg object-contain bg-white border border-slate-200 shrink-0"
                 />
+              ) : isWhiteLabel ? (
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white font-extrabold text-sm shadow-sm shrink-0">
+                  {brandName?.charAt(0)?.toUpperCase() || "E"}
+                </div>
               ) : (
                 <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm shadow-indigo-200 shrink-0">
                   <Zap className="w-4 h-4 text-white fill-white" />
                 </div>
               )}
               <div className="leading-tight min-w-0">
-                <span className="font-extrabold text-base tracking-tight text-slate-900 block">
-                  {authData?.whiteLabelParent?.tradeName || authData?.whiteLabelParent?.name || "Pajotree"}
+                <span className="font-extrabold text-base tracking-tight text-slate-900 block truncate">
+                  {brandName}
                 </span>
                 <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold block truncate max-w-[130px]">
-                  {organization?.name || "Minha Empresa"}
+                  {subTitle}
                 </span>
               </div>
             </Link>
@@ -154,7 +171,7 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
             <div className="truncate max-w-[150px] min-w-0">
               <span className="text-slate-800 font-semibold block truncate text-xs">{authData?.user?.name}</span>
               <span className="text-slate-400 text-[10px] block truncate">{authData?.user?.email}</span>
-              <span className="text-slate-400 text-[9px] block mt-0.5">v{APP_VERSION} • By {APP_VENDOR}</span>
+              <span className="text-slate-400 text-[9px] block mt-0.5">v{APP_VERSION} • By {vendorCredit}</span>
             </div>
             <button type="button" onClick={handleLogout} title="Sair da Conta" aria-label="Sair da Conta" className="min-h-11 min-w-11 p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition flex items-center justify-center"><LogOut className="w-4 h-4" /></button>
           </div>

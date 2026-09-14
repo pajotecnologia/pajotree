@@ -48,6 +48,7 @@ export default async function PublicPage({ params, searchParams }: Props) {
           plan: { include: { features: true } },
           metaPixels: { where: { status: "ACTIVE" } },
           googleIntegrations: { where: { status: "ACTIVE" } },
+          whiteLabelParent: true,
         },
       },
       settings: true,
@@ -93,12 +94,22 @@ export default async function PublicPage({ params, searchParams }: Props) {
   // Apenas remove a marca se o plano permitir E o usuário tiver ativado explicitamente a opção
   const shouldRemoveBranding = canRemoveBranding && Boolean(userCustomConfig.removeBranding);
 
+  const isWhiteLabel = Boolean(page.organization.isWhiteLabel || page.organization.whiteLabelParentId);
+  const brandName = page.organization.whiteLabelParent?.tradeName || page.organization.whiteLabelParent?.name || (isWhiteLabel ? (page.organization.tradeName || page.organization.name) : "Pajotree");
+  const brandLogoUrl = page.organization.whiteLabelParent?.logoUrl || (isWhiteLabel ? page.organization.logoUrl : null);
+  const brandUrl = page.organization.whiteLabelParent
+    ? `/wl/${page.organization.whiteLabelParent.id}`
+    : (page.organization.isWhiteLabel ? `/wl/${page.organization.id}` : "/");
+
   const publicPage = {
     ...page,
     organization: {
       ...page.organization,
       name: page.organization.tradeName || page.organization.name,
       removeBranding: shouldRemoveBranding,
+      brandName,
+      brandLogoUrl,
+      brandUrl,
     },
   };
 

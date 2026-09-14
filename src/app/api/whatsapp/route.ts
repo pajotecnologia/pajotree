@@ -108,6 +108,68 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Ação: Atualizar Conexão
+    if (action === "update_instance") {
+      const { instanceId, name, apiUrl, apiKey } = body;
+      if (!instanceId) {
+        return NextResponse.json({ error: "ID da conexão obrigatório" }, { status: 400 });
+      }
+
+      const updated = await EvolutionService.updateInstance({
+        instanceId,
+        organizationId: orgId,
+        name,
+        apiUrl,
+        apiKey,
+      });
+
+      return NextResponse.json({ success: true, instance: updated });
+    }
+
+    // Ação: Excluir / Desconectar Conexão
+    if (action === "delete_instance") {
+      const { instanceId } = body;
+      if (!instanceId) {
+        return NextResponse.json({ error: "ID da conexão obrigatório" }, { status: 400 });
+      }
+
+      await EvolutionService.deleteInstance(instanceId, orgId);
+      return NextResponse.json({ success: true, message: "Conexão WhatsApp removida com sucesso!" });
+    }
+
+    // Ação: Obter / Atualizar QR Code
+    if (action === "refresh_qr") {
+      const { instanceName, instanceId } = body;
+      let targetInstanceName = instanceName;
+
+      if (!targetInstanceName && instanceId) {
+        const inst = await db.whatsappInstance.findFirst({
+          where: { id: instanceId, organizationId: orgId },
+        });
+        targetInstanceName = inst?.instanceName;
+      }
+
+      if (!targetInstanceName) {
+        return NextResponse.json({ error: "Instância não encontrada" }, { status: 404 });
+      }
+
+      const qrData = await EvolutionService.getQrCode(targetInstanceName, orgId);
+      let qrDataUrl = qrData.qrCodeData;
+      if (!qrDataUrl.startsWith("data:image/")) {
+        qrDataUrl = await QRCode.toDataURL(qrData.qrCodeData, {
+          width: 300,
+          margin: 2,
+          color: { dark: "#000000", light: "#ffffff" },
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        pairingCode: qrData.pairingCode,
+        qrCodeUrl: qrDataUrl,
+      });
+    }
+
     // Ação: Enviar Mensagem
     if (action === "send_message") {
       const { instanceId, remoteJid, text } = body;
@@ -131,5 +193,58 @@ export async function POST(request: NextRequest) {
       { error: error.message || "Erro ao processar requisição" },
       { status: 400 }
     );
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const auth = await getCurrentAuthContext();
+    if (!auth || !auth.organization) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    }
+
+    const orgId = auth.organization.id;
+    const body = await request.json();
+    const { instanceId, name, apiUrl, apiKey } = body;
+
+    if (!instanceId) {
+      return NextResponse.json({ error: "ID da conexão obrigatório" }, { status: 400 });
+    }
+
+    const updated = await EvolutionService.updateInstance({
+      instanceId,
+      organizationId: orgId,
+      name,
+      apiUrl,
+      apiKey,
+    });
+
+    return NextResponse.json({ success: true, instance: updated });
+  } catch (error: any) {
+    console.error("Erro ao atualizar instância WhatsApp:", error);
+    return NextResponse.json({ error: error.message || "Erro ao atualizar" }, { status: 400 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const auth = await getCurrentAuthContext();
+    if (!auth || !auth.organization) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    }
+
+    const orgId = auth.organization.id;
+    const { searchParams } = new URL(request.url);
+    const instanceId = searchParams.get("instanceId") || searchParams.get("id");
+
+    if (!instanceId) {
+      return NextResponse.json({ error: "ID da conexão obrigatório" }, { status: 400 });
+    }
+
+    await EvolutionService.deleteInstance(instanceId, orgId);
+    return NextResponse.json({ success: true, message: "Conexão WhatsApp removida com sucesso!" });
+  } catch (error: any) {
+    console.error("Erro ao excluir instância WhatsApp:", error);
+    return NextResponse.json({ error: error.message || "Erro ao excluir" }, { status: 400 });
   }
 }

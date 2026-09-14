@@ -40,6 +40,7 @@ model Organization {
   isWhiteLabel        Boolean                    @default(false)
   whiteLabelDomain    String?
   whiteLabelParentId  String?
+  whiteLabelLandingJson String?                  @db.Text
   whiteLabelParent    Organization?              @relation("WhiteLabelTenants", fields: [whiteLabelParentId], references: [id], onDelete: SetNull)
   whiteLabelClients   Organization[]             @relation("WhiteLabelTenants")
   paymentGateway      OrganizationPaymentGateway?

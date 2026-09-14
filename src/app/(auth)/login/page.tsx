@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Zap, Loader2, AlertCircle, ArrowRight, Lock, Mail, Eye, EyeOff } from "lucide-react";
-import { APP_VERSION, APP_VENDOR } from "@/lib/app-meta";
+import { APP_VERSION } from "@/lib/app-meta";
+import { useBranding } from "@/lib/use-branding";
 
 interface LoginErrorResponse {
   error?: {
@@ -15,6 +16,7 @@ interface LoginErrorResponse {
 
 export default function LoginPage() {
   const router = useRouter();
+  const branding = useBranding();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -66,11 +68,33 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-8 shadow-xl relative z-10">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2.5 mb-4 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center shadow-md shadow-indigo-500/20 group-hover:scale-105 transition">
-              <Zap className="w-5 h-5 text-white fill-white" />
-            </div>
+            {branding.logoUrl ? (
+              <img
+                src={branding.logoUrl}
+                alt={branding.brandName}
+                className="w-10 h-10 rounded-xl object-contain bg-white border border-slate-200 shadow-md group-hover:scale-105 transition"
+              />
+            ) : branding.isWhiteLabel ? (
+              <div
+                className="w-10 h-10 rounded-xl text-white font-black text-lg flex items-center justify-center shadow-md group-hover:scale-105 transition"
+                style={{ backgroundColor: branding.primaryColor }}
+              >
+                {branding.brandName.charAt(0).toUpperCase()}
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center shadow-md shadow-indigo-500/20 group-hover:scale-105 transition">
+                <Zap className="w-5 h-5 text-white fill-white" />
+              </div>
+            )}
+
             <span className="font-extrabold text-2xl tracking-tight text-slate-900">
-              Pajo<span className="text-indigo-600">tree</span>
+              {branding.isWhiteLabel ? (
+                <span>{branding.brandName}</span>
+              ) : (
+                <>
+                  Pajo<span className="text-indigo-600">tree</span>
+                </>
+              )}
             </span>
           </Link>
           <h2 className="text-xl font-bold text-slate-900">Acesse sua conta</h2>
@@ -121,7 +145,12 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <button type="submit" disabled={loading} className="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-600/20 transition flex items-center justify-center gap-2 disabled:opacity-50 mt-2 cursor-pointer">
+          <button
+            type="submit"
+            disabled={loading}
+            style={{ backgroundColor: branding.isWhiteLabel ? branding.primaryColor : undefined }}
+            className="w-full py-3.5 px-4 bg-indigo-600 hover:opacity-90 active:scale-98 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-600/20 transition flex items-center justify-center gap-2 disabled:opacity-50 mt-2 cursor-pointer"
+          >
             {loading ? (
               <><Loader2 className="w-4 h-4 animate-spin" /><span>Entrando...</span></>
             ) : (
@@ -136,7 +165,7 @@ export default function LoginPage() {
           <div className="mt-3 text-[10px] text-slate-400 leading-relaxed">
             <span>Versão {APP_VERSION}</span>
             <span className="mx-1.5">•</span>
-            <span>By {APP_VENDOR}</span>
+            <span>By {branding.vendorName}</span>
           </div>
         </div>
       </div>

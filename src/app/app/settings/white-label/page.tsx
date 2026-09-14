@@ -125,7 +125,7 @@ const DEFAULTS: WhiteLabelData = {
 };
 
 export default function WhiteLabelPage() {
-  const [activeTab, setActiveTab] = useState<"branding" | "payments" | "plans" | "clients">("branding");
+  const [activeTab, setActiveTab] = useState<"branding" | "payments" | "plans" | "clients" | "landing">("branding");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -140,6 +140,25 @@ export default function WhiteLabelPage() {
   const [dnsResult, setDnsResult] = useState<{ verified: boolean; message: string } | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bgImageInputRef = useRef<HTMLInputElement>(null);
+
+  // Landing Page State
+  const [landingConfig, setLandingConfig] = useState({
+    headline: "",
+    subtitle: "",
+    badgeText: "🚀 O Sistema Completo de Conversão",
+    ctaText: "Começar Gratuitamente",
+    ctaSecondaryText: "Falar com Especialista",
+    whatsappContact: "",
+    themeColor: "#4f46e5",
+    showHero: true,
+    showFeatures: true,
+    showPricing: true,
+    showTestimonials: true,
+    showFaq: true,
+  });
+  const [landingPublicUrl, setLandingPublicUrl] = useState("");
+  const [savingLanding, setSavingLanding] = useState(false);
+  const [copiedLandingUrl, setCopiedLandingUrl] = useState(false);
 
   // Banco Inter / Gateway State
   const [gatewayForm, setGatewayForm] = useState({
@@ -180,12 +199,13 @@ export default function WhiteLabelPage() {
   async function loadAllData() {
     setLoading(true);
     try {
-      const [wlRes, gwRes, plansRes, clientsRes, meRes] = await Promise.all([
+      const [wlRes, gwRes, plansRes, clientsRes, meRes, landRes] = await Promise.all([
         fetch("/api/settings/white-label"),
         fetch("/api/white-label/gateway"),
         fetch("/api/white-label/plans"),
         fetch("/api/white-label/clients"),
         fetch("/api/auth/me"),
+        fetch("/api/white-label/landing"),
       ]);
 
       if (meRes.ok) {
@@ -202,6 +222,16 @@ export default function WhiteLabelPage() {
         });
         setHasPlanAccess(Boolean(data.plan?.removeBranding || data.isSuperAdmin));
         setPlanName(data.plan?.name || "START");
+      }
+
+      if (landRes.ok) {
+        const landData = await landRes.json();
+        if (landData.config) {
+          setLandingConfig((prev) => ({ ...prev, ...landData.config }));
+        }
+        if (landData.publicUrl) {
+          setLandingPublicUrl(landData.publicUrl);
+        }
       }
 
       if (gwRes.ok) {
@@ -487,6 +517,28 @@ export default function WhiteLabelPage() {
     }
   }
 
+  async function handleSaveLanding(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingLanding(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch("/api/white-label/landing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(landingConfig),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao salvar página.");
+      setSuccess("Landing Page de vendas atualizada com sucesso!");
+      setTimeout(() => setSuccess(null), 4000);
+    } catch (err: any) {
+      setError(err.message || "Erro ao salvar landing page.");
+    } finally {
+      setSavingLanding(false);
+    }
+  }
+
   function handleCopy(text: string, key: string) {
     navigator.clipboard.writeText(text);
     setCopiedDns(key);
@@ -496,6 +548,10 @@ export default function WhiteLabelPage() {
   const referralUrl = typeof window !== "undefined"
     ? `${window.location.origin}/register?ref=${orgId}`
     : `https://pajotree.com/register?ref=${orgId}`;
+
+  const defaultLandingUrl = landingPublicUrl || (typeof window !== "undefined"
+    ? `${window.location.origin}/wl/${orgId}`
+    : `/wl/${orgId}`);
 
   if (loading) {
     return (
@@ -592,6 +648,19 @@ export default function WhiteLabelPage() {
           >
             <Users className="w-4 h-4" />
             <span>4. Meus Clientes ({clientsData.clients.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("landing")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition ${
+              activeTab === "landing"
+                ? "bg-white text-slate-900 shadow-md"
+                : "bg-white/10 text-white hover:bg-white/20"
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-purple-300" />
+            <span>5. Landing Page de Vendas</span>
           </button>
         </div>
       </div>
@@ -918,7 +987,7 @@ export default function WhiteLabelPage() {
 
                 {!form.removeBrandingActive && (
                   <div className="text-center pt-6 opacity-60 text-[10px] font-bold">
-                    <span>Criado com Pajotree</span>
+                    <span>Criado com {form.brandName || "Minha Empresa"}</span>
                   </div>
                 )}
               </div>
@@ -1567,6 +1636,261 @@ export default function WhiteLabelPage() {
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 5: LANDING PAGE DE VENDAS PARA O PARCEIRO                             */}
+      {/* ========================================================================= */}
+      {activeTab === "landing" && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <form onSubmit={handleSaveLanding} className="lg:col-span-7 space-y-6">
+            {/* Link Público de Divulgação */}
+            <div className="bg-gradient-to-tr from-purple-900 to-indigo-950 p-6 rounded-3xl text-white border border-purple-500/30 shadow-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-purple-300">
+                  <Globe className="w-4 h-4" />
+                  <span>Sua Landing Page Exclusiva</span>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
+                  Online e Pronta para Vender
+                </span>
+              </div>
+
+              <div>
+                <p className="text-xs text-purple-200/80 mb-2">
+                  Divulgue este link para novos clientes se cadastrarem e assinarem seus planos comerciais:
+                </p>
+                <div className="flex items-center gap-2 bg-black/40 border border-white/15 rounded-2xl p-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={defaultLandingUrl}
+                    className="bg-transparent border-none text-xs text-purple-100 font-mono flex-1 outline-none px-2 select-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(defaultLandingUrl);
+                      setCopiedLandingUrl(true);
+                      setTimeout(() => setCopiedLandingUrl(false), 2000);
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-sm"
+                  >
+                    {copiedLandingUrl ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedLandingUrl ? "Copiado!" : "Copiar"}</span>
+                  </button>
+                  <a
+                    href={defaultLandingUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition"
+                    title="Abrir Landing Page em nova aba"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Configurações de Texto & Conteúdo */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5">
+              <div className="border-b border-slate-100 pb-3">
+                <h3 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
+                  <Edit3 className="w-4 h-4 text-indigo-600" />
+                  <span>Textos Principais da Página</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Personalize as chamadas de impacto para atrair mais clientes para os seus planos.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Selo / Badge de Destaque</label>
+                  <input
+                    type="text"
+                    value={landingConfig.badgeText}
+                    onChange={(e) => setLandingConfig({ ...landingConfig, badgeText: e.target.value })}
+                    placeholder="Ex: 🚀 A Melhor Solução de Bio Links e CRM"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-indigo-600 font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Título Principal (Headline) *</label>
+                  <input
+                    type="text"
+                    required
+                    value={landingConfig.headline}
+                    onChange={(e) => setLandingConfig({ ...landingConfig, headline: e.target.value })}
+                    placeholder={`Ex: Acelere as Vendas da sua Empresa com ${form.brandName}`}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-indigo-600 font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Subtítulo / Descrição da Solução</label>
+                  <textarea
+                    rows={3}
+                    value={landingConfig.subtitle}
+                    onChange={(e) => setLandingConfig({ ...landingConfig, subtitle: e.target.value })}
+                    placeholder="Ex: Crie páginas de alta performance, atenda leads no WhatsApp e gerencie oportunidades em um único lugar."
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-indigo-600 resize-none font-medium"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Texto do Botão Principal</label>
+                    <input
+                      type="text"
+                      value={landingConfig.ctaText}
+                      onChange={(e) => setLandingConfig({ ...landingConfig, ctaText: e.target.value })}
+                      placeholder="Ex: Criar Minha Conta Grátis"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-indigo-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">WhatsApp para Leads / Suporte</label>
+                    <input
+                      type="text"
+                      value={landingConfig.whatsappContact}
+                      onChange={(e) => setLandingConfig({ ...landingConfig, whatsappContact: e.target.value })}
+                      placeholder="Ex: 11999999999"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-indigo-600 font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Seções Ativas */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+              <h3 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-indigo-600" />
+                <span>Seções Visíveis na Página</span>
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <label className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 cursor-pointer hover:bg-slate-100/70 transition">
+                  <span>Apresentação & Recursos</span>
+                  <input
+                    type="checkbox"
+                    checked={landingConfig.showFeatures}
+                    onChange={(e) => setLandingConfig({ ...landingConfig, showFeatures: e.target.checked })}
+                    className="w-4 h-4 text-indigo-600 rounded-sm"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 cursor-pointer hover:bg-slate-100/70 transition">
+                  <span>Tabela de Planos e Preços</span>
+                  <input
+                    type="checkbox"
+                    checked={landingConfig.showPricing}
+                    onChange={(e) => setLandingConfig({ ...landingConfig, showPricing: e.target.checked })}
+                    className="w-4 h-4 text-indigo-600 rounded-sm"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 cursor-pointer hover:bg-slate-100/70 transition">
+                  <span>Depoimentos de Clientes</span>
+                  <input
+                    type="checkbox"
+                    checked={landingConfig.showTestimonials}
+                    onChange={(e) => setLandingConfig({ ...landingConfig, showTestimonials: e.target.checked })}
+                    className="w-4 h-4 text-indigo-600 rounded-sm"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 cursor-pointer hover:bg-slate-100/70 transition">
+                  <span>Perguntas Frequentes (FAQ)</span>
+                  <input
+                    type="checkbox"
+                    checked={landingConfig.showFaq}
+                    onChange={(e) => setLandingConfig({ ...landingConfig, showFaq: e.target.checked })}
+                    className="w-4 h-4 text-indigo-600 rounded-sm"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={savingLanding}
+              className="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            >
+              {savingLanding ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+              <span>Salvar Landing Page de Vendas</span>
+            </button>
+          </form>
+
+          {/* Preview da Landing Page */}
+          <div className="lg:col-span-5 space-y-4">
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4 sticky top-24">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-indigo-600" />
+                  <span>Prévia da Sua Página</span>
+                </span>
+                <a
+                  href={defaultLandingUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-indigo-600 hover:underline font-bold inline-flex items-center gap-1"
+                >
+                  <span>Ver Página Completa</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+
+              <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/70 space-y-4">
+                <div className="flex items-center gap-3">
+                  {form.logoUrl ? (
+                    <img src={form.logoUrl} alt="Logo" className="w-8 h-8 rounded-lg object-contain bg-white border border-slate-200" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white font-black text-xs flex items-center justify-center">
+                      {form.brandName?.charAt(0) || "W"}
+                    </div>
+                  )}
+                  <div>
+                    <h4 className="font-bold text-xs text-slate-900">{form.brandName}</h4>
+                    <span className="text-[10px] text-slate-400">Landing Page de Planos</span>
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 inline-block">
+                    {landingConfig.badgeText || "🚀 Destaque"}
+                  </span>
+                  <h5 className="font-extrabold text-sm text-slate-900 leading-tight">
+                    {landingConfig.headline || `A Plataforma Completa de Vendas para ${form.brandName}`}
+                  </h5>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    {landingConfig.subtitle || "Páginas com alta conversão, atendimento centralizado e CRM sob medida."}
+                  </p>
+                  <div className="pt-2 flex items-center gap-2">
+                    <span className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-[10px] font-bold">
+                      {landingConfig.ctaText || "Começar Agora"}
+                    </span>
+                    {customPlans.length > 0 && (
+                      <span className="text-[10px] text-slate-500 font-medium">
+                        {customPlans.length} {customPlans.length === 1 ? "plano disponível" : "planos disponíveis"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-purple-50 border border-purple-100 text-[11px] text-purple-900 space-y-1">
+                  <span className="font-bold block">💡 Dica de Conversão:</span>
+                  <p className="text-purple-700 text-[10px] leading-relaxed">
+                    Personalize os planos na aba <strong>3. Gerenciar Meus Planos</strong> e ative sua chave Pix na aba <strong>2. Pagamentos</strong> para receber automaticamente de cada novo cliente!
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

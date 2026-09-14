@@ -5,6 +5,7 @@ const migrationStatements = [
   `ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "isWhiteLabel" BOOLEAN DEFAULT false`,
   `ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "whiteLabelDomain" TEXT`,
   `ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "whiteLabelParentId" TEXT`,
+  `ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "whiteLabelLandingJson" TEXT`,
 
   // 2. Plan Columns
   `ALTER TABLE "Plan" ADD COLUMN IF NOT EXISTS "organizationId" TEXT`,

@@ -4,9 +4,10 @@ import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Lock, ArrowLeft, Loader2, CheckCircle2, AlertCircle, Zap, ShieldCheck, Eye, EyeOff } from "lucide-react";
-import { APP_VERSION, APP_VENDOR } from "@/lib/app-meta";
+import { APP_VERSION } from "@/lib/app-meta";
+import { useBranding } from "@/lib/use-branding";
 
-function ResetPasswordForm() {
+function ResetPasswordForm({ primaryColor }: { primaryColor?: string }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token") || "";
@@ -90,7 +91,8 @@ function ResetPasswordForm() {
         </div>
         <Link
           href="/login"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 transition shadow-lg"
+          style={{ backgroundColor: primaryColor }}
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:opacity-90 transition shadow-lg"
         >
           <span>Ir para o Login Agora</span>
         </Link>
@@ -151,7 +153,8 @@ function ResetPasswordForm() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+        style={{ backgroundColor: primaryColor }}
+        className="w-full py-3.5 rounded-xl bg-indigo-600 hover:opacity-90 text-white font-bold text-sm transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
       >
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
         <span>{loading ? "Salvando Nova Senha..." : "Salvar Nova Senha"}</span>
@@ -170,40 +173,70 @@ function ResetPasswordForm() {
   );
 }
 
+function ResetPasswordContent() {
+  const branding = useBranding();
+
+  return (
+    <div className="w-full max-w-md relative z-10 space-y-6">
+      <div className="text-center space-y-2">
+        <Link href="/login" className="inline-flex items-center gap-2.5 group">
+          {branding.logoUrl ? (
+            <img
+              src={branding.logoUrl}
+              alt={branding.brandName}
+              className="w-10 h-10 rounded-xl object-contain bg-white border border-slate-700 shadow-md group-hover:scale-105 transition"
+            />
+          ) : branding.isWhiteLabel ? (
+            <div
+              className="w-10 h-10 rounded-xl text-white font-black text-lg flex items-center justify-center shadow-md group-hover:scale-105 transition"
+              style={{ backgroundColor: branding.primaryColor }}
+            >
+              {branding.brandName.charAt(0).toUpperCase()}
+            </div>
+          ) : (
+            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition">
+              <Zap className="w-5 h-5 text-white fill-white" />
+            </div>
+          )}
+
+          <span className="font-extrabold text-2xl tracking-tight text-white">
+            {branding.isWhiteLabel ? (
+              <span>{branding.brandName}</span>
+            ) : (
+              <>
+                Pajo<span className="text-indigo-400">tree</span>
+              </>
+            )}
+          </span>
+        </Link>
+        <h1 className="text-xl font-extrabold text-white tracking-tight">Criar Nova Senha</h1>
+        <p className="text-xs text-slate-400 max-w-xs mx-auto">
+          Digite sua nova senha de acesso abaixo para concluir a redefinição
+        </p>
+      </div>
+
+      <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+        <ResetPasswordForm primaryColor={branding.isWhiteLabel ? branding.primaryColor : undefined} />
+      </div>
+
+      <div className="text-center text-[10px] text-slate-500">
+        <span>Versão {APP_VERSION}</span>
+        <span className="mx-1.5">•</span>
+        <span>By {branding.vendorName}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function ResetPasswordPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4 relative overflow-hidden font-sans">
       <div className="absolute top-1/4 -left-32 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-md relative z-10 space-y-6">
-        <div className="text-center space-y-2">
-          <Link href="/login" className="inline-flex items-center gap-2.5 group">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition">
-              <Zap className="w-5 h-5 text-white fill-white" />
-            </div>
-            <span className="font-extrabold text-2xl tracking-tight text-white">
-              Pajo<span className="text-indigo-400">tree</span>
-            </span>
-          </Link>
-          <h1 className="text-xl font-extrabold text-white tracking-tight">Criar Nova Senha</h1>
-          <p className="text-xs text-slate-400 max-w-xs mx-auto">
-            Digite sua nova senha de acesso abaixo para concluir a redefinição
-          </p>
-        </div>
-
-        <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
-          <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>}>
-            <ResetPasswordForm />
-          </Suspense>
-        </div>
-
-        <div className="text-center text-[10px] text-slate-500">
-          <span>Versão {APP_VERSION}</span>
-          <span className="mx-1.5">•</span>
-          <span>By {APP_VENDOR}</span>
-        </div>
-      </div>
+      <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>}>
+        <ResetPasswordContent />
+      </Suspense>
     </div>
   );
 }

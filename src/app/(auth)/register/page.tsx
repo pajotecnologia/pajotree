@@ -2,15 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Zap, Loader2, AlertCircle, ArrowRight, Building, Mail, Lock, User, Phone, Upload, Image as ImageIcon, X, Eye, EyeOff } from "lucide-react";
-import { APP_VERSION, APP_VENDOR } from "@/lib/app-meta";
+import { APP_VERSION } from "@/lib/app-meta";
+import { useBranding } from "@/lib/use-branding";
 
 const MAX_LOGO_SIZE = 2 * 1024 * 1024;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const branding = useBranding();
+  const refParam = searchParams?.get("ref") || "";
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -73,6 +78,7 @@ export default function RegisterPage() {
           whatsapp,
           segment,
           logoDataUrl,
+          whiteLabelRef: branding.orgId || refParam || undefined,
         }),
       });
 
@@ -97,16 +103,40 @@ export default function RegisterPage() {
       <div className="w-full max-w-lg bg-white border border-slate-200 rounded-3xl p-8 sm:p-10 shadow-xl relative z-10">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2.5 mb-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center shadow-md shadow-indigo-500/20 group-hover:scale-105 transition">
-              <Zap className="w-5 h-5 text-white fill-white" />
-            </div>
+            {branding.logoUrl ? (
+              <img
+                src={branding.logoUrl}
+                alt={branding.brandName}
+                className="w-10 h-10 rounded-xl object-contain bg-white border border-slate-200 shadow-md group-hover:scale-105 transition"
+              />
+            ) : branding.isWhiteLabel ? (
+              <div
+                className="w-10 h-10 rounded-xl text-white font-black text-lg flex items-center justify-center shadow-md group-hover:scale-105 transition"
+                style={{ backgroundColor: branding.primaryColor }}
+              >
+                {branding.brandName.charAt(0).toUpperCase()}
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center shadow-md shadow-indigo-500/20 group-hover:scale-105 transition">
+                <Zap className="w-5 h-5 text-white fill-white" />
+              </div>
+            )}
+
             <span className="font-extrabold text-2xl tracking-tight text-slate-900">
-              Pajo<span className="text-indigo-600">tree</span>
+              {branding.isWhiteLabel ? (
+                <span>{branding.brandName}</span>
+              ) : (
+                <>
+                  Pajo<span className="text-indigo-600">tree</span>
+                </>
+              )}
             </span>
           </Link>
           <h2 className="text-2xl font-bold text-slate-900">Crie sua conta profissional</h2>
           <p className="text-xs text-slate-500 mt-1">
-            Comece agora com 14 dias de teste grátis no plano PRO
+            {branding.isWhiteLabel
+              ? `Junte-se a ${branding.brandName} e impulsione seu negócio`
+              : "Comece agora com 14 dias de teste grátis no plano PRO"}
           </p>
         </div>
 
@@ -218,7 +248,12 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <button type="submit" disabled={loading} className="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-600/20 transition flex items-center justify-center gap-2 disabled:opacity-50 mt-4 cursor-pointer">
+          <button
+            type="submit"
+            disabled={loading}
+            style={{ backgroundColor: branding.isWhiteLabel ? branding.primaryColor : undefined }}
+            className="w-full py-3.5 px-4 bg-indigo-600 hover:opacity-90 active:scale-98 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-600/20 transition flex items-center justify-center gap-2 disabled:opacity-50 mt-4 cursor-pointer"
+          >
             {loading ? (
               <><Loader2 className="w-4 h-4 animate-spin" /><span>Configurando sua empresa...</span></>
             ) : (
@@ -229,11 +264,11 @@ export default function RegisterPage() {
 
         <div className="mt-6 pt-5 border-t border-slate-100 text-center text-xs text-slate-500">
           <span>Já possui uma conta? </span>
-          <Link href="/login" className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">Fazer login</Link>
+          <Link href={refParam ? `/login?ref=${refParam}` : "/login"} className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">Fazer login</Link>
           <div className="mt-3 text-[10px] text-slate-400 leading-relaxed">
             <span>Versão {APP_VERSION}</span>
             <span className="mx-1.5">•</span>
-            <span>By {APP_VENDOR}</span>
+            <span>By {branding.vendorName}</span>
           </div>
         </div>
       </div>
