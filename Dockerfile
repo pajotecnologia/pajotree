@@ -7,7 +7,9 @@ WORKDIR /app
 FROM base AS deps
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
-RUN npm ci
+# The build requires TypeScript declaration packages from devDependencies.
+# Explicitly include them even when the deployment environment sets production=true.
+RUN npm ci --include=dev
 
 # 3. Builder
 FROM base AS builder
