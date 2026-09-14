@@ -59,35 +59,39 @@ export async function PUT(request: NextRequest) {
       } catch (error) {
         return NextResponse.json({ error: error instanceof Error ? error.message : "Domínio personalizado não disponível." }, { status: 403 });
       }
-    }
 
-    const updated = await db.organization.update({
-      where: { id: orgId },
-      data: {
-        name: data.name,
-        tradeName: data.tradeName || null,
-        document: data.document || null,
-        phone: data.phone || null,
-        whatsapp: data.whatsapp || null,
-        website: data.website || null,
-        segment: data.segment || null,
-        description: data.description || null,
-        logoUrl: data.logoUrl || null,
-      },
-    });
-
-    if (customDomain) {
       const conflictingDomain = await db.domain.findUnique({ where: { domain: customDomain } });
       if (conflictingDomain && conflictingDomain.organizationId !== orgId) {
         return NextResponse.json({ error: "Este domínio já está vinculado a outra organização." }, { status: 409 });
       }
-
-      await db.domain.upsert({
-        where: { domain: customDomain },
-        create: { organizationId: orgId, domain: customDomain, verificationStatus: "PENDING" },
-        update: { organizationId: orgId },
-      });
     }
+
+    const updated = await db.$transaction(async (tx) => {
+      const organization = await tx.organization.update({
+        where: { id: orgId },
+        data: {
+          name: data.name,
+          tradeName: data.tradeName || null,
+          document: data.document || null,
+          phone: data.phone || null,
+          whatsapp: data.whatsapp || null,
+          website: data.website || null,
+          segment: data.segment || null,
+          description: data.description || null,
+          logoUrl: data.logoUrl || null,
+        },
+      });
+
+      if (customDomain) {
+        await tx.domain.upsert({
+          where: { domain: customDomain },
+          create: { organizationId: orgId, domain: customDomain, verificationStatus: "PENDING" },
+          update: { organizationId: orgId },
+        });
+      }
+
+      return organization;
+    });
 
     await AuditService.log({
       organizationId: orgId,
