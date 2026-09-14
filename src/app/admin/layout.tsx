@@ -61,7 +61,7 @@ export default function SuperAdminLayout({
     { label: "Visão Geral Global", href: "/admin", icon: LayoutDashboard },
     { label: "Gestão de Empresas", href: "/admin/organizations", icon: Building2 },
     { label: "Gestão de Planos", href: "/admin/plans", icon: CreditCard },
-    { label: "Assinatura & Faturamento", href: "/app/billing", icon: CreditCard },
+    { label: "Assinatura & Faturamento", href: "/admin/plans", icon: CreditCard },
   ];
 
   return (
@@ -105,13 +105,13 @@ export default function SuperAdminLayout({
           </div>
 
           <nav className="p-3 space-y-1" aria-label="Navegação administrativa">
-            {navItems.map((item) => {
-              const active = pathname === item.href;
+            {navItems.map((item, index) => {
+              const active = pathname === item.href && (index !== 2 || pathname === "/admin/plans");
               const Icon = item.icon;
 
               return (
                 <Link
-                  key={item.href}
+                  key={`${item.label}-${item.href}`}
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
                   className={`min-h-11 flex items-center gap-3 px-3.5 rounded-xl text-xs font-semibold transition ${
