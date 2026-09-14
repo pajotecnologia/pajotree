@@ -60,7 +60,8 @@ export default function SuperAdminLayout({
   const navItems = [
     { label: "Visão Geral Global", href: "/admin", icon: LayoutDashboard },
     { label: "Gestão de Empresas", href: "/admin/organizations", icon: Building2 },
-    { label: "Planos & Recursos", href: "/app/billing", icon: CreditCard },
+    { label: "Gestão de Planos", href: "/admin/plans", icon: CreditCard },
+    { label: "Assinatura & Faturamento", href: "/app/billing", icon: CreditCard },
   ];
 
   return (
