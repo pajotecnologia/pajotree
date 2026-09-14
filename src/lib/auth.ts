@@ -3,8 +3,16 @@ import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { db } from "./db";
 
-const JWT_SECRET = process.env.JWT_SECRET || "pajotree-jwt-production-secret-key-at-least-32-chars";
+const JWT_SECRET = process.env.JWT_SECRET;
 const COOKIE_NAME = "pajotree_session";
+
+function getJwtSecret(): string {
+  if (!JWT_SECRET || JWT_SECRET.length < 32) {
+    throw new Error("JWT_SECRET must be configured with at least 32 characters");
+  }
+
+  return JWT_SECRET;
+}
 
 export interface SessionPayload {
   userId: string;
@@ -22,12 +30,12 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export function signToken(payload: SessionPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: "7d" });
 }
 
 export function verifyToken(token: string): SessionPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as SessionPayload;
+    return jwt.verify(token, getJwtSecret()) as SessionPayload;
   } catch {
     return null;
   }
