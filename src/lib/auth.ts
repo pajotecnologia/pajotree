@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { db } from "./db";
+import { ensureDatabaseSchema } from "./db-migrate";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const COOKIE_NAME = "pajotree_session";
@@ -81,6 +82,12 @@ export async function clearSessionCookie() {
 export async function getCurrentAuthContext() {
   const session = await getSession();
   if (!session) return null;
+
+  try {
+    await ensureDatabaseSchema();
+  } catch {
+    // Non-blocking
+  }
 
   const user = await db.user.findUnique({
     where: { id: session.userId },
