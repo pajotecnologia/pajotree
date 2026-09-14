@@ -19,21 +19,33 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     async function loadAuth() {
       try {
-        const [authRes, leadsRes] = await Promise.all([
-          fetch("/api/auth/me"),
-          fetch("/api/leads"),
-        ]);
-        if (!authRes.ok) { router.push("/login"); return; }
+        const authRes = await fetch("/api/auth/me");
+        if (!authRes.ok) {
+          router.push("/login");
+          return;
+        }
         const data = await authRes.json();
-        if (!data.authenticated) { router.push("/login"); return; }
+        if (!data.authenticated) {
+          router.push("/login");
+          return;
+        }
         setAuthData(data);
 
-        if (leadsRes.ok) {
-          const leadsData = await leadsRes.json();
-          setNewLeadsCount(leadsData.newLeadsCount || 0);
+        // Carrega contagem de leads de forma independente e não-bloqueante
+        try {
+          const leadsRes = await fetch("/api/leads");
+          if (leadsRes.ok) {
+            const leadsData = await leadsRes.json();
+            setNewLeadsCount(leadsData.newLeadsCount || 0);
+          }
+        } catch {
+          // Non-blocking
         }
-      } catch { router.push("/login"); }
-      finally { setLoading(false); }
+      } catch {
+        router.push("/login");
+      } finally {
+        setLoading(false);
+      }
     }
     loadAuth();
   }, [router, pathname]);

@@ -114,9 +114,14 @@ export async function POST(req: Request) {
         : null,
     });
 
+    const isCookieSecure =
+      process.env.COOKIE_SECURE === "true" ||
+      (process.env.NODE_ENV === "production" &&
+        Boolean(process.env.NEXT_PUBLIC_APP_URL?.startsWith("https://")));
+
     response.cookies.set("pajotree_session", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isCookieSecure,
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24 * 7,

@@ -53,12 +53,17 @@ export async function getSession(): Promise<SessionPayload | null> {
   return verifyToken(token);
 }
 
+const isCookieSecure =
+  process.env.COOKIE_SECURE === "true" ||
+  (process.env.NODE_ENV === "production" &&
+    Boolean(process.env.NEXT_PUBLIC_APP_URL?.startsWith("https://")));
+
 export async function setSessionCookie(payload: SessionPayload) {
   const token = signToken(payload);
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isCookieSecure,
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 7, // 7 days
@@ -69,7 +74,7 @@ export async function clearSessionCookie() {
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, "", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isCookieSecure,
     sameSite: "lax",
     path: "/",
     maxAge: 0,
@@ -89,59 +94,84 @@ export async function getCurrentAuthContext() {
     // Non-blocking
   }
 
-  const user = await db.user.findUnique({
-    where: { id: session.userId },
-    include: {
-      organizations: {
-        include: {
-          organization: {
-            include: {
-              plan: {
-                include: {
-                  features: true,
+  let user: any = null;
+  try {
+    user = await db.user.findUnique({
+      where: { id: session.userId },
+      include: {
+        organizations: {
+          include: {
+            organization: {
+              include: {
+                plan: {
+                  include: {
+                    features: true,
+                  },
                 },
-              },
-              whiteLabelParent: {
-                select: {
-                  id: true,
-                  name: true,
-                  tradeName: true,
-                  logoUrl: true,
-                  faviconUrl: true,
+                whiteLabelParent: {
+                  select: {
+                    id: true,
+                    name: true,
+                    tradeName: true,
+                    logoUrl: true,
+                    faviconUrl: true,
+                  },
                 },
-              },
-              paymentGateway: {
-                select: {
-                  ativo: true,
-                  provider: true,
-                  ambiente: true,
+                paymentGateway: {
+                  select: {
+                    ativo: true,
+                    provider: true,
+                    ambiente: true,
+                  },
                 },
               },
             },
-          },
-          role: {
-            include: {
-              permissions: {
-                include: {
-                  permission: true,
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true,
+                  },
                 },
               },
             },
           },
         },
       },
-    },
-  });
+    });
+  } catch (queryErr) {
+    console.warn("Aviso ao carregar contexto completo, tentando fallback simplificado:", queryErr);
+    try {
+      user = await db.user.findUnique({
+        where: { id: session.userId },
+        include: {
+          organizations: {
+            include: {
+              organization: true,
+              role: true,
+            },
+          },
+        },
+      });
+    } catch {
+      user = await db.user.findUnique({
+        where: { id: session.userId },
+      });
+    }
+  }
 
   if (!user || user.status !== "ACTIVE") return null;
 
+  // Garante array de organizações mesmo em queries simplificadas
+  const organizations = user.organizations || [];
+
   // Resolve active organization: either from session or the first organization user belongs to
-  let activeOrgUser = user.organizations.find(
-    (ou) => ou.organizationId === session.activeOrganizationId
+  let activeOrgUser = organizations.find(
+    (ou: any) => ou.organizationId === session.activeOrganizationId
   );
 
-  if (!activeOrgUser && user.organizations.length > 0) {
-    activeOrgUser = user.organizations[0];
+  if (!activeOrgUser && organizations.length > 0) {
+    activeOrgUser = organizations[0];
   }
 
   // If user is a Super Admin and has no organization association yet, ensure/link master organization
@@ -242,8 +272,8 @@ export async function getCurrentAuthContext() {
 
   const permissions = new Set<string>();
   if (activeOrgUser?.role?.permissions) {
-    activeOrgUser.role.permissions.forEach((rp) => {
-      permissions.add(rp.permission.key);
+    activeOrgUser.role.permissions.forEach((rp: any) => {
+      if (rp.permission?.key) permissions.add(rp.permission.key);
     });
   }
 
