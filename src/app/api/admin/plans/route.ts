@@ -21,6 +21,8 @@ const featureSchema = z.object({
   removeBranding: z.boolean(),
 });
 
+type FeatureData = z.infer<typeof featureSchema>;
+
 const planBaseSchema = z.object({
   name: z.string().trim().min(2).max(60),
   description: z.string().trim().max(500).nullable().optional(),
@@ -49,6 +51,16 @@ async function requireSuperAdmin() {
 function normalizePlan<T extends { features: unknown }>(plan: T) {
   const features = Array.isArray(plan.features) ? plan.features[0] ?? null : plan.features;
   return { ...plan, features };
+}
+
+function getFirstFeature(features: unknown): FeatureData | null {
+  if (!features) return null;
+  if (Array.isArray(features)) return getFirstFeature(features[0]);
+  if (typeof features !== "object") return null;
+
+  const candidate = features as Record<string, unknown>;
+  const parsed = featureSchema.safeParse(candidate);
+  return parsed.success ? parsed.data : null;
 }
 
 export async function GET() {
@@ -90,7 +102,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Plano de origem não encontrado" }, { status: 404 });
       }
 
-      const sourceFeatures = source.features[0];
+      const sourceFeature = getFirstFeature(source.features);
       const exists = await db.plan.findUnique({ where: { name: duplicate.data.name } });
       if (exists) {
         return NextResponse.json({ error: "Já existe um plano com este nome" }, { status: 409 });
@@ -103,24 +115,9 @@ export async function POST(request: NextRequest) {
           priceMonthly: source.priceMonthly,
           priceYearly: source.priceYearly,
           trialDays: source.trialDays,
-          features: sourceFeatures
+          features: sourceFeature
             ? {
-                create: {
-                  maxPages: sourceFeatures.maxPages,
-                  maxLinks: sourceFeatures.maxLinks,
-                  maxUsers: sourceFeatures.maxUsers,
-                  maxLeads: sourceFeatures.maxLeads,
-                  maxForms: sourceFeatures.maxForms,
-                  maxWhatsappInstances: sourceFeatures.maxWhatsappInstances,
-                  maxMetaPixels: sourceFeatures.maxMetaPixels,
-                  maxAutomations: sourceFeatures.maxAutomations,
-                  maxStorageMb: sourceFeatures.maxStorageMb,
-                  customDomainAllowed: sourceFeatures.customDomainAllowed,
-                  crmAllowed: sourceFeatures.crmAllowed,
-                  whatsappInboxAllowed: sourceFeatures.whatsappInboxAllowed,
-                  advancedAnalytics: sourceFeatures.advancedAnalytics,
-                  removeBranding: sourceFeatures.removeBranding,
-                },
+                create: sourceFeature,
               }
             : undefined,
         },
