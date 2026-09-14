@@ -41,6 +41,8 @@ function clean(value: string | null | undefined) {
   return value?.trim() || null;
 }
 
+import { ensureDatabaseSchema } from "@/lib/db-migrate";
+
 async function requireSuperAdmin() {
   const auth = await getCurrentAuthContext();
   if (!auth || !auth.isSuperAdmin) return null;
@@ -54,34 +56,58 @@ export async function GET() {
       return NextResponse.json({ error: "Acesso restrito ao Super Admin" }, { status: 403 });
     }
 
-    const organizations = await db.organization.findMany({
-      include: {
-        plan: true,
-        addresses: true,
-        whiteLabelParent: { select: { id: true, name: true } },
-        _count: {
-          select: {
-            users: true,
-            leads: true,
-            links: true,
-            whatsappInstances: true,
-            whiteLabelClients: true,
+    try {
+      await ensureDatabaseSchema();
+    } catch {
+      // Non-blocking
+    }
+
+    let organizations = [];
+    try {
+      organizations = await db.organization.findMany({
+        include: {
+          plan: true,
+          addresses: true,
+          whiteLabelParent: { select: { id: true, name: true } },
+          _count: {
+            select: {
+              users: true,
+              leads: true,
+              links: true,
+              whatsappInstances: true,
+              whiteLabelClients: true,
+            },
           },
         },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+        orderBy: { createdAt: "desc" },
+      });
+    } catch (queryErr) {
+      console.warn("Aviso ao listar organizações completas, usando query simplificada:", queryErr);
+      organizations = await db.organization.findMany({
+        include: {
+          plan: true,
+          addresses: true,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    }
 
     // MASTER é um plano interno do Super Admin e nunca deve ser atribuído a empresas.
-    const plans = await db.plan.findMany({
-      where: { name: { not: "MASTER" } },
-      orderBy: { priceMonthly: "asc" },
-    });
+    let plans: any[] = [];
+    try {
+      plans = await db.plan.findMany({
+        where: { name: { not: "MASTER" } },
+        orderBy: { priceMonthly: "asc" },
+      });
+    } catch (planErr) {
+      console.warn("Aviso ao listar planos para empresas:", planErr);
+    }
 
     return NextResponse.json({ organizations, plans });
-  } catch (error) {
+  } catch (error: any) {
+    const msg = error instanceof Error ? error.message : "Erro desconhecido";
     console.error("Erro ao listar organizações admin:", error);
-    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
+    return NextResponse.json({ error: `Erro ao carregar empresas: ${msg}` }, { status: 500 });
   }
 }
 

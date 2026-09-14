@@ -63,6 +63,8 @@ function getFirstFeature(features: unknown): FeatureData | null {
   return parsed.success ? parsed.data : null;
 }
 
+import { ensureDatabaseSchema } from "@/lib/db-migrate";
+
 export async function GET() {
   try {
     const auth = await requireSuperAdmin();
@@ -70,15 +72,31 @@ export async function GET() {
       return NextResponse.json({ error: "Acesso restrito ao Super Admin" }, { status: 403 });
     }
 
-    const plans = await db.plan.findMany({
-      include: { features: true, _count: { select: { organizations: true } } },
-      orderBy: [{ priceMonthly: "asc" }, { name: "asc" }],
-    });
+    try {
+      await ensureDatabaseSchema();
+    } catch {
+      // Non-blocking
+    }
+
+    let plans = [];
+    try {
+      plans = await db.plan.findMany({
+        include: { features: true, _count: { select: { organizations: true } } },
+        orderBy: [{ priceMonthly: "asc" }, { name: "asc" }],
+      });
+    } catch (queryErr) {
+      console.warn("Aviso ao listar planos completos, usando fallback:", queryErr);
+      plans = await db.plan.findMany({
+        include: { features: true },
+        orderBy: [{ priceMonthly: "asc" }, { name: "asc" }],
+      });
+    }
 
     return NextResponse.json({ plans: plans.map(normalizePlan) });
-  } catch (error) {
+  } catch (error: any) {
+    const msg = error instanceof Error ? error.message : "Erro desconhecido";
     console.error("Erro ao listar planos admin:", error);
-    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
+    return NextResponse.json({ error: `Erro ao carregar planos: ${msg}` }, { status: 500 });
   }
 }
 

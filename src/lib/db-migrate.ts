@@ -11,11 +11,15 @@ export async function ensureDatabaseSchema(): Promise<void> {
   migrationRun = true;
 
   try {
-    // 1. Organization Columns
+    // 1. Organization, Plan & Lead Columns
     await db.$executeRawUnsafe(`
       ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "isWhiteLabel" BOOLEAN DEFAULT false;
       ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "whiteLabelDomain" TEXT;
       ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "whiteLabelParentId" TEXT;
+      ALTER TABLE "Plan" ADD COLUMN IF NOT EXISTS "organizationId" TEXT;
+      ALTER TABLE "Plan" ADD COLUMN IF NOT EXISTS "status" TEXT DEFAULT 'ACTIVE';
+      ALTER TABLE "Lead" ADD COLUMN IF NOT EXISTS "visualizado" BOOLEAN DEFAULT false;
+      ALTER TABLE "Lead" ADD COLUMN IF NOT EXISTS "dataVisualizacao" TIMESTAMP(3);
     `);
 
     // 2. PasswordResetToken Table

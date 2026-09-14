@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
 import { getCurrentAuthContext } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { ensureDatabaseSchema } from "@/lib/db-migrate";
 
 export async function GET() {
   try {
     const auth = await getCurrentAuthContext();
     if (!auth || !auth.isSuperAdmin) {
       return NextResponse.json({ error: "Acesso restrito ao Super Administrador" }, { status: 403 });
+    }
+
+    try {
+      await ensureDatabaseSchema();
+    } catch {
+      // Non-blocking
     }
 
     const [
