@@ -172,6 +172,90 @@ export async function getGlobalInterConfig(): Promise<BancoInterConfig> {
 }
 
 /**
+ * Obtém a configuração do Banco Inter para uma organização específica (Multi-Tenancy White Label)
+ * 1. Verifica se a própria organização tem gateway cadastrado e ativo
+ * 2. Se for sub-tenant / cliente de um White Label, busca o gateway da organização pai (White Label)
+ * 3. Fallback: Configuração global / master do Super Admin
+ */
+export async function getOrganizationInterConfig(organizationId?: string): Promise<{
+  config: BancoInterConfig;
+  source: "ORGANIZATION" | "WHITE_LABEL_PARENT" | "GLOBAL";
+  ownerName?: string;
+}> {
+  if (!organizationId) {
+    const globalConfig = await getGlobalInterConfig();
+    return { config: globalConfig, source: "GLOBAL" };
+  }
+
+  try {
+    const org = await db.organization.findUnique({
+      where: { id: organizationId },
+      include: {
+        paymentGateway: true,
+        whiteLabelParent: {
+          include: { paymentGateway: true },
+        },
+      },
+    });
+
+    // 1. Próprio Gateway da Organização
+    if (
+      org?.paymentGateway &&
+      org.paymentGateway.ativo &&
+      org.paymentGateway.clientId &&
+      org.paymentGateway.clientSecret &&
+      org.paymentGateway.certCrt &&
+      org.paymentGateway.certKey
+    ) {
+      return {
+        config: {
+          clientId: org.paymentGateway.clientId,
+          clientSecret: org.paymentGateway.clientSecret,
+          certCrt: org.paymentGateway.certCrt,
+          certKey: org.paymentGateway.certKey,
+          ambiente: (org.paymentGateway.ambiente as "PRODUCAO" | "SANDBOX") || "PRODUCAO",
+          contaCorrente: org.paymentGateway.contaCorrente || undefined,
+          ativo: true,
+        },
+        source: "ORGANIZATION",
+        ownerName: org.name,
+      };
+    }
+
+    // 2. Gateway do Parceiro White Label Pai
+    if (
+      org?.whiteLabelParent?.paymentGateway &&
+      org.whiteLabelParent.paymentGateway.ativo &&
+      org.whiteLabelParent.paymentGateway.clientId &&
+      org.whiteLabelParent.paymentGateway.clientSecret &&
+      org.whiteLabelParent.paymentGateway.certCrt &&
+      org.whiteLabelParent.paymentGateway.certKey
+    ) {
+      const parentGateway = org.whiteLabelParent.paymentGateway;
+      return {
+        config: {
+          clientId: parentGateway.clientId!,
+          clientSecret: parentGateway.clientSecret!,
+          certCrt: parentGateway.certCrt!,
+          certKey: parentGateway.certKey!,
+          ambiente: (parentGateway.ambiente as "PRODUCAO" | "SANDBOX") || "PRODUCAO",
+          contaCorrente: parentGateway.contaCorrente || undefined,
+          ativo: true,
+        },
+        source: "WHITE_LABEL_PARENT",
+        ownerName: org.whiteLabelParent.name,
+      };
+    }
+  } catch (err) {
+    console.error("Erro ao resolver gateway Banco Inter da organização:", err);
+  }
+
+  // 3. Fallback Global / Super Admin
+  const globalConfig = await getGlobalInterConfig();
+  return { config: globalConfig, source: "GLOBAL" };
+}
+
+/**
  * Obtém o Bearer Token OAuth 2.0 (com renovação automática e cache em memória)
  */
 export async function getInterOAuthToken(config: BancoInterConfig, cacheKey: string = "global"): Promise<string> {
@@ -226,6 +310,7 @@ export async function emitirBolepixInter({
   mensagem1,
   mensagem2,
   config,
+  organizationId,
 }: {
   identifier: string;
   valor: number;
@@ -244,8 +329,9 @@ export async function emitirBolepixInter({
   mensagem1?: string;
   mensagem2?: string;
   config?: BancoInterConfig;
+  organizationId?: string;
 }): Promise<BolepixResponse> {
-  const activeConfig = config || (await getGlobalInterConfig());
+  const activeConfig = config || (await getOrganizationInterConfig(organizationId)).config;
 
   const valorNominal = Number(valor.toFixed(2));
   if (valorNominal < 2.50) {
@@ -336,8 +422,12 @@ export async function emitirBolepixInter({
 /**
  * 2. Consulta Detalhes de uma Cobrança
  */
-export async function consultarBolepixInter(codigoSolicitacao: string, config?: BancoInterConfig) {
-  const activeConfig = config || (await getGlobalInterConfig());
+export async function consultarBolepixInter(
+  codigoSolicitacao: string,
+  config?: BancoInterConfig,
+  organizationId?: string
+) {
+  const activeConfig = config || (await getOrganizationInterConfig(organizationId)).config;
   const token = await getInterOAuthToken(activeConfig);
   const agent = createInterHttpsAgent(activeConfig.certCrt, activeConfig.certKey);
   const baseUrl = activeConfig.ambiente === "SANDBOX" ? INTER_URLS.SANDBOX : INTER_URLS.PRODUCAO;
@@ -368,8 +458,12 @@ export async function consultarBolepixInter(codigoSolicitacao: string, config?: 
 /**
  * 3. Download do PDF Oficial (Sem x-conta-corrente)
  */
-export async function baixarPdfBoletoInter(codigoSolicitacao: string, config?: BancoInterConfig): Promise<string> {
-  const activeConfig = config || (await getGlobalInterConfig());
+export async function baixarPdfBoletoInter(
+  codigoSolicitacao: string,
+  config?: BancoInterConfig,
+  organizationId?: string
+): Promise<string> {
+  const activeConfig = config || (await getOrganizationInterConfig(organizationId)).config;
   const token = await getInterOAuthToken(activeConfig);
   const agent = createInterHttpsAgent(activeConfig.certCrt, activeConfig.certKey);
   const baseUrl = activeConfig.ambiente === "SANDBOX" ? INTER_URLS.SANDBOX : INTER_URLS.PRODUCAO;
@@ -396,8 +490,12 @@ export async function baixarPdfBoletoInter(codigoSolicitacao: string, config?: B
 /**
  * 4. Registro de Webhook no Banco Inter (Retorna HTTP 204)
  */
-export async function registrarWebhookInter(webhookUrl: string, config?: BancoInterConfig) {
-  const activeConfig = config || (await getGlobalInterConfig());
+export async function registrarWebhookInter(
+  webhookUrl: string,
+  config?: BancoInterConfig,
+  organizationId?: string
+) {
+  const activeConfig = config || (await getOrganizationInterConfig(organizationId)).config;
   const token = await getInterOAuthToken(activeConfig);
   const agent = createInterHttpsAgent(activeConfig.certCrt, activeConfig.certKey);
   const baseUrl = activeConfig.ambiente === "SANDBOX" ? INTER_URLS.SANDBOX : INTER_URLS.PRODUCAO;

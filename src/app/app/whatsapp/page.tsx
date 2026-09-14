@@ -33,6 +33,9 @@ export default function WhatsAppPage() {
   // New Connection Modal
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [connectionName, setConnectionName] = useState("");
+  const [customApiUrl, setCustomApiUrl] = useState("");
+  const [customApiKey, setCustomApiKey] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -76,6 +79,8 @@ export default function WhatsAppPage() {
         body: JSON.stringify({
           action: "create_instance",
           name: connectionName || "Atendimento Principal",
+          apiUrl: customApiUrl.trim() || undefined,
+          apiKey: customApiKey.trim() || undefined,
         }),
       });
 
@@ -142,15 +147,15 @@ export default function WhatsAppPage() {
         </div>
         <div>
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Desbloqueie o WhatsApp & Central de Atendimento
+            Desbloqueie o WhatsApp & Chat Inbox
           </h2>
           <p className="text-sm text-slate-500 mt-2 leading-relaxed">
-            Conecte números da Evolution API, converse com clientes direto pelo navegador e unifique suas mensagens com o CRM. Disponível nos planos START, PRO e BUSINESS.
+            Conecte seu WhatsApp para receber mensagens dos leads diretamente no painel e responder em tempo real.
           </p>
         </div>
         <Link
           href="/app/billing"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-xs transition"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-xs transition"
         >
           <Sparkles className="w-4 h-4" />
           <span>Fazer Upgrade Agora</span>
@@ -163,138 +168,147 @@ export default function WhatsAppPage() {
   const conversations = activeInstance?.conversations || [];
 
   return (
-    <div className="space-y-6 h-[calc(100vh-130px)] flex flex-col">
-      {/* Top Header */}
+    <div className="space-y-6 h-[calc(100vh-130px)] flex flex-col min-w-0 pb-2">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            WhatsApp & Central de Atendimento
-          </h1>
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-6 h-6 text-emerald-600" />
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+              WhatsApp & Central de Mensagens
+            </h1>
+          </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Gerencie conexões da Evolution API e converse com clientes em tempo real.
+            Conexão com WhatsApp Web / Baileys via microserviço Evolution API para chat em tempo real.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={() => {
-              setModalError(null);
-              setQrCodeUrl(null);
-              setShowConnectModal(true);
-            }}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Conectar WhatsApp</span>
-          </button>
-        </div>
+        <button
+          onClick={() => {
+            setShowConnectModal(true);
+            setQrCodeUrl(null);
+            setModalError(null);
+          }}
+          className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs self-start sm:self-auto"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Nova Conexão WhatsApp</span>
+        </button>
       </div>
 
-      {/* Main Inbox Container */}
+      {/* Main Inbox Layout (2 columns) */}
       <div className="flex-1 bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs flex flex-col md:flex-row min-h-0">
-        {/* Left Column: Conversations List */}
-        <div className="w-full md:w-80 border-r border-slate-200 flex flex-col shrink-0 bg-slate-50/50">
-          <div className="p-4 border-b border-slate-200/80 flex items-center justify-between bg-white">
-            <span className="text-xs font-bold text-slate-800">Conversas Recentes</span>
-            <span className="px-2 py-0.5 bg-slate-100 rounded-md text-[10px] font-bold text-slate-600">
-              {conversations.length}
-            </span>
+        {/* Left: Instances & Conversations */}
+        <div className="w-full md:w-80 border-r border-slate-200 flex flex-col bg-slate-50/50 shrink-0">
+          <div className="p-3.5 border-b border-slate-200 bg-white">
+            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+              Conexões Ativas ({instances.length})
+            </h3>
           </div>
 
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-            {conversations.length > 0 ? (
-              conversations.map((conv: any) => {
-                const isSelected = activeConversation?.id === conv.id;
-                const lastMsg = conv.messages?.[0];
+          <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+            {instances.length > 0 ? (
+              instances.map((inst) => {
+                const isSelected = activeInstance?.id === inst.id;
+                const isConnected = inst.status === "CONNECTED";
 
                 return (
-                  <button
-                    key={conv.id}
-                    onClick={() => setActiveConversation(conv)}
-                    className={`w-full p-4 text-left flex items-start gap-3 transition ${
-                      isSelected ? "bg-indigo-50/80 border-l-3 border-indigo-600" : "hover:bg-slate-50/60"
+                  <div
+                    key={inst.id}
+                    onClick={() => {
+                      setActiveInstance(inst);
+                      if (inst.conversations?.length > 0) {
+                        setActiveConversation(inst.conversations[0]);
+                      } else {
+                        setActiveConversation(null);
+                      }
+                    }}
+                    className={`p-3 rounded-xl cursor-pointer transition border text-left ${
+                      isSelected
+                        ? "bg-emerald-50/80 border-emerald-200 shadow-2xs"
+                        : "bg-white border-slate-200/70 hover:bg-slate-50"
                     }`}
                   >
-                    <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 font-bold flex items-center justify-center text-xs shrink-0">
-                      {conv.contact.name?.charAt(0).toUpperCase() || "W"}
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-slate-900 truncate max-w-[140px]">
+                        {inst.name}
+                      </span>
+                      <span
+                        className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                          isConnected
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        {isConnected ? "Conectado" : "Aguardando"}
+                      </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-xs font-bold text-slate-900 truncate">
-                          {conv.contact.name || conv.contact.remoteJid.split("@")[0]}
-                        </span>
-                        {conv.unread > 0 && (
-                          <span className="w-4 h-4 rounded-full bg-emerald-600 text-[9px] font-extrabold text-white flex items-center justify-center">
-                            {conv.unread}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-slate-500 truncate">
-                        {lastMsg?.content || "Nenhuma mensagem recente"}
-                      </p>
-                    </div>
-                  </button>
+                    <span className="text-[10px] text-slate-400 font-mono block mt-1 truncate">
+                      {inst.instanceName}
+                    </span>
+                  </div>
                 );
               })
             ) : (
-              <div className="p-8 text-center text-xs text-slate-400">
-                Nenhuma conversa recebida ainda. Conecte seu número escaneando o QR Code.
+              <div className="p-6 text-center text-xs text-slate-400 space-y-2">
+                <MessageSquare className="w-8 h-8 text-slate-300 mx-auto" />
+                <p>Nenhuma conexão WhatsApp configurada.</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Right Column: Chat Window */}
+        {/* Right: Active Chat Area */}
         {activeConversation ? (
-          <div className="flex-1 flex flex-col min-w-0 bg-white">
+          <div className="flex-1 flex flex-col min-w-0 bg-slate-50/30">
             {/* Chat Header */}
-            <div className="h-16 px-6 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/30">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-700 font-bold flex items-center justify-center text-xs border border-emerald-100">
-                  {activeConversation.contact.name?.charAt(0).toUpperCase()}
+            <div className="p-3.5 px-6 border-b border-slate-200 bg-white flex items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">
+                  <User className="w-4 h-4" />
                 </div>
-                <div>
-                  <span className="font-bold text-xs text-slate-900 block">
-                    {activeConversation.contact.name}
-                  </span>
-                  <span className="text-[10px] text-slate-400 block font-mono">
-                    {activeConversation.contact.remoteJid}
+                <div className="min-w-0">
+                  <h4 className="font-bold text-xs text-slate-900 truncate">
+                    {activeConversation.contact?.name || activeConversation.contact?.remoteJid}
+                  </h4>
+                  <span className="text-[10px] text-emerald-600 block font-mono">
+                    {activeConversation.contact?.remoteJid}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-3 flex flex-col-reverse bg-slate-50/30">
+            {/* Messages Thread */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 flex flex-col-reverse">
               {activeConversation.messages && activeConversation.messages.length > 0 ? (
                 activeConversation.messages.map((msg: any) => {
                   const isMe = msg.direction === "outgoing";
                   return (
                     <div
                       key={msg.id}
-                      className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                      className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
                     >
                       <div
-                        className={`max-w-sm rounded-2xl p-3.5 text-xs shadow-2xs ${
+                        className={`max-w-md p-3 rounded-2xl text-xs leading-relaxed shadow-2xs ${
                           isMe
-                            ? "bg-indigo-600 text-white rounded-br-xs"
-                            : "bg-white text-slate-800 rounded-bl-xs border border-slate-200/80"
+                            ? "bg-emerald-600 text-white rounded-br-xs"
+                            : "bg-white border border-slate-200 text-slate-800 rounded-bl-xs"
                         }`}
                       >
-                        <p className="leading-relaxed">{msg.content}</p>
-                        <span className={`text-[9px] block text-right mt-1 ${isMe ? "text-indigo-200" : "text-slate-400"}`}>
-                          {new Date(msg.createdAt).toLocaleTimeString("pt-BR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
+                        {msg.content}
                       </div>
+                      <span className="text-[9px] text-slate-400 mt-1 px-1 font-mono">
+                        {new Date(msg.createdAt).toLocaleTimeString("pt-BR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
                     </div>
                   );
                 })
               ) : (
                 <div className="py-12 text-center text-xs text-slate-400">
-                  Inicie a conversa enviando uma mensagem abaixo.
+                  Nenhuma mensagem trocada ainda nesta conversa.
                 </div>
               )}
             </div>
@@ -306,7 +320,7 @@ export default function WhatsAppPage() {
             >
               <input
                 type="text"
-                placeholder="Digite sua mensagem de resposta..."
+                placeholder="Digite sua mensagem..."
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 shadow-2xs"
@@ -314,7 +328,7 @@ export default function WhatsAppPage() {
               <button
                 type="submit"
                 disabled={sendingMessage || !chatInput.trim()}
-                className="p-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl shadow-xs transition"
+                className="p-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl shadow-xs transition"
               >
                 {sendingMessage ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -335,10 +349,10 @@ export default function WhatsAppPage() {
       {/* Modal Conexão QR Code */}
       {showConnectModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 shadow-xl text-center">
-            <h3 className="font-bold text-base text-slate-900 mb-2">Conectar Novo WhatsApp</h3>
-            <p className="text-xs text-slate-500 mb-6">
-              Escaneie o QR Code no seu aplicativo WhatsApp (Aparelhos Conectados).
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 shadow-xl text-center max-h-[90vh] overflow-y-auto">
+            <h3 className="font-bold text-base text-slate-900 mb-1">Conectar Aparelho WhatsApp</h3>
+            <p className="text-xs text-slate-500 mb-5">
+              Conexão via WhatsApp Web / Baileys usando o microserviço <b>Evolution API</b>.
             </p>
 
             {modalError && (
@@ -352,16 +366,56 @@ export default function WhatsAppPage() {
               <form onSubmit={handleStartConnection} className="space-y-4 text-left">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Nome da Conexão
+                    Nome da Conexão / Canal *
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="Ex: Comercial Principal"
+                    placeholder="Ex: WhatsApp Comercial ou Atendimento"
                     value={connectionName}
                     onChange={(e) => setConnectionName(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-500 shadow-2xs"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500 shadow-2xs"
                   />
+                </div>
+
+                {/* Opções Avançadas de Servidor Evolution API */}
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                    className="text-[11px] font-semibold text-indigo-600 hover:underline flex items-center gap-1"
+                  >
+                    <span>{showAdvanced ? "Ocultar Parâmetros de Servidor" : "⚙️ Configurar Servidor Evolution API Próprio (Opcional)"}</span>
+                  </button>
+
+                  {showAdvanced && (
+                    <div className="mt-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">URL do Servidor Evolution API</label>
+                        <input
+                          type="url"
+                          placeholder="http://localhost:8080 ou https://evolution.seuservidor.com"
+                          value={customApiUrl}
+                          onChange={(e) => setCustomApiUrl(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">Global API Key do Evolution</label>
+                        <input
+                          type="password"
+                          placeholder="Chave secreta configurada no seu Docker Evolution"
+                          value={customApiKey}
+                          onChange={(e) => setCustomApiKey(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-3 bg-emerald-50/70 border border-emerald-100 rounded-xl text-[11px] text-emerald-900 leading-relaxed">
+                  💡 <b>Como funciona:</b> Ao clicar em Gerar QR Code, a Evolution API cria uma sessão do WhatsApp Web. Abra seu WhatsApp no celular &gt; <b>Aparelhos Conectados</b> &gt; <b>Conectar um Aparelho</b> e aponte para o código.
                 </div>
 
                 <button
@@ -372,12 +426,12 @@ export default function WhatsAppPage() {
                   {connecting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Gerando QR Code...</span>
+                      <span>Iniciando Sessão Evolution...</span>
                     </>
                   ) : (
                     <>
                       <QrCode className="w-4 h-4" />
-                      <span>Gerar QR Code</span>
+                      <span>Gerar QR Code de Conexão</span>
                     </>
                   )}
                 </button>
@@ -393,14 +447,20 @@ export default function WhatsAppPage() {
                     className="w-48 h-48 mx-auto"
                   />
                 </div>
-                <p className="text-xs text-emerald-600 font-medium animate-pulse">
-                  Aguardando leitura do QR Code...
-                </p>
+                <div className="space-y-1">
+                  <p className="text-xs text-emerald-700 font-bold animate-pulse flex items-center justify-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                    <span>Aguardando leitura no WhatsApp...</span>
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    Abra o WhatsApp &gt; Configurações &gt; Aparelhos Conectados &gt; Conectar Aparelho.
+                  </p>
+                </div>
                 <button
                   onClick={() => setShowConnectModal(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-xl"
+                  className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-sm transition"
                 >
-                  Fechar
+                  Concluído / Fechar
                 </button>
               </div>
             )}

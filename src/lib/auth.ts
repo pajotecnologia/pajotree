@@ -90,6 +90,22 @@ export async function getCurrentAuthContext() {
                   features: true,
                 },
               },
+              whiteLabelParent: {
+                select: {
+                  id: true,
+                  name: true,
+                  tradeName: true,
+                  logoUrl: true,
+                  faviconUrl: true,
+                },
+              },
+              paymentGateway: {
+                select: {
+                  ativo: true,
+                  provider: true,
+                  ambiente: true,
+                },
+              },
             },
           },
           role: {
@@ -182,6 +198,22 @@ export async function getCurrentAuthContext() {
             organization: {
               include: {
                 plan: { include: { features: true } },
+                whiteLabelParent: {
+                  select: {
+                    id: true,
+                    name: true,
+                    tradeName: true,
+                    logoUrl: true,
+                    faviconUrl: true,
+                  },
+                },
+                paymentGateway: {
+                  select: {
+                    ativo: true,
+                    provider: true,
+                    ambiente: true,
+                  },
+                },
               },
             },
             role: {

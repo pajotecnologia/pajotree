@@ -83,7 +83,17 @@ async function main() {
   ];
 
   for (const p of plansData) {
-    const plan = await prisma.plan.upsert({ where: { name: p.name }, update: { description: p.description, priceMonthly: p.priceMonthly, priceYearly: p.priceYearly, trialDays: p.trialDays }, create: { name: p.name, description: p.description, priceMonthly: p.priceMonthly, priceYearly: p.priceYearly, trialDays: p.trialDays } });
+    let plan = await prisma.plan.findFirst({ where: { name: p.name, organizationId: null } });
+    if (plan) {
+      plan = await prisma.plan.update({
+        where: { id: plan.id },
+        data: { description: p.description, priceMonthly: p.priceMonthly, priceYearly: p.priceYearly, trialDays: p.trialDays },
+      });
+    } else {
+      plan = await prisma.plan.create({
+        data: { name: p.name, description: p.description, priceMonthly: p.priceMonthly, priceYearly: p.priceYearly, trialDays: p.trialDays },
+      });
+    }
     await prisma.planFeature.upsert({ where: { planId: plan.id }, update: p.features, create: { planId: plan.id, ...p.features } });
   }
   console.log("✓ Planos comerciais sincronizados, incluindo WHITE LABEL e MASTER interno.");

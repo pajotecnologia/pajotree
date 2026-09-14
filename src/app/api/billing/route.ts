@@ -18,10 +18,12 @@ export async function GET() {
     }
 
     const orgId = auth.organization.id;
+    const parentId = auth.organization.whiteLabelParentId;
 
     const [planAndUsage, allPlans, subscription] = await Promise.all([
       PlanLimitService.getPlanAndUsage(orgId),
       db.plan.findMany({
+        where: parentId ? { organizationId: parentId, status: "ACTIVE" } : { organizationId: null },
         include: { features: true },
         orderBy: { priceMonthly: "asc" },
       }),
@@ -37,6 +39,7 @@ export async function GET() {
       allPlans,
       subscription,
       isSuperAdmin: auth.isSuperAdmin,
+      isWhiteLabelClient: Boolean(parentId),
     });
   } catch (error) {
     console.error("Erro ao obter dados de faturamento:", error);
@@ -88,6 +91,7 @@ export async function POST(request: NextRequest) {
         const bolepix = await emitirBolepixInter({
           identifier: payment.id,
           valor: price,
+          organizationId: orgId,
           dataVencimento: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
           pagador: {
             nome: pagador?.nome || auth.organization.name,
@@ -100,7 +104,7 @@ export async function POST(request: NextRequest) {
             cep: pagador?.cep || undefined,
           },
           mensagem1: `Upgrade para Plano ${targetPlan.name}`,
-          mensagem2: `Pajotree SaaS - Ciclo ${billingCycle === "yearly" ? "Anual" : "Mensal"}`,
+          mensagem2: `Assinatura - Ciclo ${billingCycle === "yearly" ? "Anual" : "Mensal"}`,
         });
 
         await db.payment.update({

@@ -37,6 +37,14 @@ model Organization {
   planId      String?
   plan        Plan?              @relation(fields: [planId], references: [id])
   
+  isWhiteLabel        Boolean                    @default(false)
+  whiteLabelDomain    String?
+  whiteLabelParentId  String?
+  whiteLabelParent    Organization?              @relation("WhiteLabelTenants", fields: [whiteLabelParentId], references: [id], onDelete: SetNull)
+  whiteLabelClients   Organization[]             @relation("WhiteLabelTenants")
+  paymentGateway      OrganizationPaymentGateway?
+  customPlans         Plan[]                     @relation("OrganizationPlans")
+
   addresses          OrganizationAddress[]
   users              OrganizationUser[]
   roles              Role[]
@@ -72,6 +80,7 @@ model Organization {
 
   @@index([status])
   @@index([planId])
+  @@index([whiteLabelParentId])
 }
 
 model OrganizationAddress {
@@ -920,13 +929,15 @@ model AutomationExecution {
 // ==========================================
 
 model Plan {
-  id            String        @id @default(cuid())
-  name          String        @unique // FREE, START, PRO, BUSINESS
-  description   String?
-  priceMonthly  Decimal       @default(0.0) @db.Decimal(10, 2)
-  priceYearly   Decimal       @default(0.0) @db.Decimal(10, 2)
-  trialDays     Int           @default(14)
-  status        String        @default("ACTIVE")
+  id             String         @id @default(cuid())
+  name           String
+  description    String?
+  priceMonthly   Decimal        @default(0.0) @db.Decimal(10, 2)
+  priceYearly    Decimal        @default(0.0) @db.Decimal(10, 2)
+  trialDays      Int            @default(14)
+  status         String         @default("ACTIVE")
+  organizationId String?
+  organization   Organization?  @relation("OrganizationPlans", fields: [organizationId], references: [id], onDelete: Cascade)
 
   features      PlanFeature[]
   organizations Organization[]
@@ -934,6 +945,8 @@ model Plan {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
 }
 
 model PlanFeature {
@@ -1049,6 +1062,27 @@ model Domain {
 
   @@index([organizationId])
   @@index([domain])
+}
+
+model OrganizationPaymentGateway {
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  provider       String       @default("BANCO_INTER") // BANCO_INTER, MERCADOPAGO, ASAAS, STRIPE
+  clientId       String?
+  clientSecret   String?
+  certCrt        String?      @db.Text
+  certKey        String?      @db.Text
+  chavePix       String?
+  contaCorrente  String?
+  ambiente       String       @default("PRODUCAO") // PRODUCAO, SANDBOX
+  ativo          Boolean      @default(false)
+  webhookUrl     String?
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
 }
 
 model AuditLog {

@@ -15,6 +15,7 @@ const registerSchema = z.object({
   whatsapp: z.string().optional(),
   segment: z.string().optional(),
   logoDataUrl: z.string().max(MAX_LOGO_DATA_URL_LENGTH, "A logomarca é muito grande").nullable().optional(),
+  whiteLabelRef: z.string().optional(),
 });
 
 function validateLogoDataUrl(value: string | null | undefined): string | null {
@@ -62,25 +63,42 @@ export async function POST(req: Request) {
       );
     }
 
-    const { name, email, password, companyName, whatsapp, segment } = parsed.data;
+    const { name, email, password, companyName, whatsapp, segment, whiteLabelRef } = parsed.data;
     const logoUrl = validateLogoDataUrl(parsed.data.logoDataUrl);
 
-    const existingUser = await db.user.findUnique({
-      where: { email: email.toLowerCase() },
-    });
+    // Identifica se o cadastro veio através de um parceiro White Label (via link de indicação ou domínio)
+    let parentOrgId: string | null = null;
+    let defaultPlan: any = null;
 
-    if (existingUser) {
-      return NextResponse.json(
-        { error: "Este e-mail já está cadastrado na plataforma." },
-        { status: 409 }
-      );
+    if (whiteLabelRef) {
+      const parentOrg = await db.organization.findFirst({
+        where: {
+          OR: [
+            { id: whiteLabelRef },
+            { name: { equals: whiteLabelRef, mode: "insensitive" } },
+          ],
+        },
+        include: {
+          customPlans: {
+            where: { status: "ACTIVE" },
+            orderBy: { priceMonthly: "asc" },
+          },
+        },
+      });
+
+      if (parentOrg) {
+        parentOrgId = parentOrg.id;
+        if (parentOrg.customPlans.length > 0) {
+          defaultPlan = parentOrg.customPlans[0];
+        }
+      }
     }
 
-    const passwordHash = await hashPassword(password);
-
-    const startPlan = await db.plan.findUnique({ where: { name: "START" } });
-    const freePlan = await db.plan.findUnique({ where: { name: "FREE" } });
-    const defaultPlan = startPlan || freePlan;
+    if (!defaultPlan) {
+      const startPlan = await db.plan.findFirst({ where: { name: "START", organizationId: null } });
+      const freePlan = await db.plan.findFirst({ where: { name: "FREE", organizationId: null } });
+      defaultPlan = startPlan || freePlan;
+    }
 
     let baseSlug = generateSlug(companyName);
     if (!baseSlug || RESERVED_SLUGS.includes(baseSlug)) {
@@ -93,6 +111,8 @@ export async function POST(req: Request) {
       slug = `${baseSlug}-${counter}`;
       counter++;
     }
+
+    const passwordHash = await hashPassword(password);
 
     const result = await db.$transaction(async (tx) => {
       const user = await tx.user.create({
@@ -114,6 +134,7 @@ export async function POST(req: Request) {
           logoUrl,
           status: "TRIAL",
           planId: defaultPlan?.id || null,
+          whiteLabelParentId: parentOrgId,
         },
       });
 

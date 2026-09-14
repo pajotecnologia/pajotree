@@ -23,8 +23,8 @@ export class PlanLimitService {
     // Default to FREE plan if none assigned
     let features = org.plan?.features?.[0];
     if (!features) {
-      const freePlan = await db.plan.findUnique({
-        where: { name: "FREE" },
+      const freePlan = await db.plan.findFirst({
+        where: { name: "FREE", organizationId: null },
         include: { features: true },
       });
       features = freePlan?.features?.[0];

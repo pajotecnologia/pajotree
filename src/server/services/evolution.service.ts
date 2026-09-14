@@ -2,8 +2,8 @@ import { db } from "@/lib/db";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
 
 export class EvolutionService {
-  private static defaultApiUrl = process.env.DEFAULT_EVOLUTION_API_URL || "http://localhost:8080";
-  private static defaultApiKey = process.env.DEFAULT_EVOLUTION_API_KEY || "";
+  private static defaultApiUrl = process.env.DEFAULT_EVOLUTION_API_URL || process.env.EVOLUTION_API_URL || "http://localhost:8080";
+  private static defaultApiKey = process.env.DEFAULT_EVOLUTION_API_KEY || process.env.EVOLUTION_API_KEY || "";
 
   /**
    * Creates a new instance in the Evolution API.
@@ -15,8 +15,34 @@ export class EvolutionService {
     apiUrl?: string;
     apiKey?: string;
   }) {
-    const apiUrl = params.apiUrl || this.defaultApiUrl;
+    const apiUrl = (params.apiUrl || this.defaultApiUrl).replace(/\/+$/, "");
     const apiKey = params.apiKey || this.defaultApiKey;
+
+    // Se configurada a API do Evolution, tenta criar a instância remotamente
+    if (apiUrl && apiKey) {
+      try {
+        const createRes = await fetch(`${apiUrl}/instance/create`, {
+          method: "POST",
+          headers: {
+            apikey: apiKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            instanceName: params.instanceName,
+            token: apiKey,
+            qrcode: true,
+            integration: "WHATSAPP-BAILEYS",
+          }),
+        });
+
+        if (!createRes.ok) {
+          const errText = await createRes.text();
+          console.warn(`Evolution API /instance/create retornou ${createRes.status}:`, errText);
+        }
+      } catch (e) {
+        console.warn("Evolution API create instance fetch error:", e);
+      }
+    }
 
     // Encrypt apiKey before saving
     const encryptedKey = apiKey ? encryptSecret(apiKey) : null;
@@ -37,7 +63,7 @@ export class EvolutionService {
   }
 
   /**
-   * Generates a pairing QR Code string for an instance.
+   * Generates a pairing QR Code string for an instance from Evolution API.
    */
   static async getQrCode(instanceName: string, organizationId?: string) {
     try {
@@ -52,7 +78,7 @@ export class EvolutionService {
         });
       }
 
-      const apiUrl = instance?.apiUrl || this.defaultApiUrl;
+      const apiUrl = (instance?.apiUrl || this.defaultApiUrl).replace(/\/+$/, "");
       const apiKey = instance?.credentialsEncrypted
         ? decryptSecret(instance.credentialsEncrypted)
         : this.defaultApiKey;
@@ -73,20 +99,25 @@ export class EvolutionService {
 
           if (qrBase64) {
             return {
+              isRealEvolution: true,
               pairingCode,
               qrCodeData: qrBase64,
             };
           }
+        } else {
+          console.warn(`Evolution API /instance/connect retornou status ${res.status}`);
         }
       }
     } catch (err) {
       console.warn("Evolution API connect request fallback:", err);
     }
 
-    // Retorna string formatada para pareamento
+    // Fallback explicativo quando a Evolution API não estiver conectada
     return {
-      pairingCode: "PJTR-9988",
+      isRealEvolution: false,
+      pairingCode: "DEMO-MODE",
       qrCodeData: `https://wa.me/pajotree_connect_${instanceName}`,
+      message: "Servidor Evolution API não configurado ou inacessível no momento.",
     };
   }
 
@@ -104,6 +135,31 @@ export class EvolutionService {
 
     if (!instance) {
       throw new Error("Instância WhatsApp não encontrada.");
+    }
+
+    const apiUrl = (instance.apiUrl || this.defaultApiUrl).replace(/\/+$/, "");
+    const apiKey = instance.credentialsEncrypted
+      ? decryptSecret(instance.credentialsEncrypted)
+      : this.defaultApiKey;
+
+    // Se houver conexão real com Evolution, envia mensagem HTTP
+    if (apiUrl && apiKey) {
+      try {
+        const formattedNumber = params.remoteJid.replace(/\D/g, "");
+        await fetch(`${apiUrl}/message/sendText/${instance.instanceName}`, {
+          method: "POST",
+          headers: {
+            apikey: apiKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            number: formattedNumber,
+            text: params.text,
+          }),
+        });
+      } catch (err) {
+        console.warn("Evolution API sendText fetch warning:", err);
+      }
     }
 
     // Save message locally in conversation

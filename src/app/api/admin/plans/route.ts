@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
       }
 
       const sourceFeature = getFirstFeature(source.features);
-      const exists = await db.plan.findUnique({ where: { name: duplicate.data.name } });
+      const exists = await db.plan.findFirst({ where: { name: duplicate.data.name, organizationId: null } });
       if (exists) {
         return NextResponse.json({ error: "Já existe um plano com este nome" }, { status: 409 });
       }
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Dados do plano inválidos", details: parsed.error.flatten() }, { status: 400 });
     }
 
-    const exists = await db.plan.findUnique({ where: { name: parsed.data.name } });
+    const exists = await db.plan.findFirst({ where: { name: parsed.data.name, organizationId: null } });
     if (exists) {
       return NextResponse.json({ error: "Já existe um plano com este nome" }, { status: 409 });
     }
@@ -191,7 +191,7 @@ export async function PUT(request: NextRequest) {
     }
 
     if (planData.name && planData.name !== existing.name) {
-      const nameConflict = await db.plan.findUnique({ where: { name: planData.name } });
+      const nameConflict = await db.plan.findFirst({ where: { name: planData.name, organizationId: null } });
       if (nameConflict && nameConflict.id !== id) {
         return NextResponse.json({ error: "Já existe um plano com este nome" }, { status: 409 });
       }

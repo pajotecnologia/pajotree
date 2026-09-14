@@ -81,8 +81,25 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
         <div className="min-h-0">
           <div className="h-16 px-4 sm:px-5 flex items-center justify-between border-b border-slate-100">
             <Link href="/app" className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm shadow-indigo-200 shrink-0"><Zap className="w-4 h-4 text-white fill-white" /></div>
-              <div className="leading-tight min-w-0"><span className="font-extrabold text-base tracking-tight text-slate-900 block">Pajo<span className="text-indigo-600">tree</span></span><span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold block truncate max-w-[130px]">{organization?.name || "Minha Empresa"}</span></div>
+              {authData?.whiteLabelParent?.logoUrl ? (
+                <img
+                  src={authData.whiteLabelParent.logoUrl}
+                  alt={authData.whiteLabelParent.name}
+                  className="w-8 h-8 rounded-lg object-contain bg-white border border-slate-200 shrink-0"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm shadow-indigo-200 shrink-0">
+                  <Zap className="w-4 h-4 text-white fill-white" />
+                </div>
+              )}
+              <div className="leading-tight min-w-0">
+                <span className="font-extrabold text-base tracking-tight text-slate-900 block">
+                  {authData?.whiteLabelParent?.tradeName || authData?.whiteLabelParent?.name || "Pajotree"}
+                </span>
+                <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold block truncate max-w-[130px]">
+                  {organization?.name || "Minha Empresa"}
+                </span>
+              </div>
             </Link>
             <button type="button" aria-label="Fechar menu" onClick={() => setSidebarOpen(false)} className="lg:hidden min-h-11 min-w-11 p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center"><X className="w-5 h-5" /></button>
           </div>
@@ -137,6 +154,26 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-2 min-w-0">
             <button type="button" aria-label="Abrir menu" onClick={() => setSidebarOpen(true)} className="lg:hidden min-h-11 min-w-11 p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 flex items-center justify-center"><Menu className="w-5 h-5" /></button>
             <h1 className="text-sm font-bold text-slate-800 hidden sm:block truncate">{organization?.name || "Painel de Controle"}</h1>
+            
+            {/* White Label Partner Signal */}
+            {authData?.isWhiteLabelPartner && (
+              <Link
+                href="/app/settings/white-label"
+                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 text-purple-900 text-xs font-bold hover:shadow-xs transition"
+                title="Configurar Pagamentos, Planos e Marca White Label"
+              >
+                <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse" />
+                <span>Modo White Label: <strong className="text-indigo-700">{organization?.tradeName || organization?.name}</strong></span>
+              </Link>
+            )}
+
+            {/* White Label Client Signal */}
+            {authData?.isWhiteLabelClient && (
+              <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium">
+                <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                <span>Ambiente: <strong className="text-slate-900">{authData?.whiteLabelParent?.tradeName || authData?.whiteLabelParent?.name}</strong></span>
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2 max-w-full">
             {newLeadsCount > 0 && (

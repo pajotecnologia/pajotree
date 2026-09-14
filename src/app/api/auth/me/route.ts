@@ -19,6 +19,11 @@ export async function GET() {
       }
     }
 
+    const org = authContext.organization;
+    const isWlPlan = planAndUsage?.plan?.name?.toUpperCase().includes("WHITE") || Boolean(planAndUsage?.features?.removeBranding && planAndUsage?.features?.customDomainAllowed);
+    const isWhiteLabelPartner = Boolean(org?.isWhiteLabel || isWlPlan || authContext.isSuperAdmin);
+    const isWhiteLabelClient = Boolean(org?.whiteLabelParentId);
+
     return NextResponse.json({
       authenticated: true,
       user: authContext.user,
@@ -26,6 +31,9 @@ export async function GET() {
       role: authContext.role,
       permissions: authContext.permissions,
       isSuperAdmin: authContext.isSuperAdmin,
+      isWhiteLabelPartner,
+      isWhiteLabelClient,
+      whiteLabelParent: org?.whiteLabelParent || null,
       planDetails: planAndUsage,
     });
   } catch (error: any) {
