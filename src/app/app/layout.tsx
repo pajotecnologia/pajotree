@@ -4,27 +4,9 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard,
-  Palette,
-  Link2,
-  Users2,
-  KanbanSquare,
-  MessageSquare,
-  FileText,
-  BarChart3,
-  QrCode,
-  Settings,
-  CreditCard,
-  LogOut,
-  ExternalLink,
-  Zap,
-  Menu,
-  X,
-  Sparkles,
-  ChevronRight,
-  ShieldAlert,
-  Brush,
+  LayoutDashboard, Palette, Link2, Users2, KanbanSquare, MessageSquare, FileText, BarChart3, QrCode, Settings, CreditCard, LogOut, ExternalLink, Zap, Menu, X, Sparkles, ChevronRight, ShieldAlert, Brush,
 } from "lucide-react";
+import { APP_VERSION, APP_VENDOR } from "@/lib/app-meta";
 
 export default function TenantAppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -37,21 +19,12 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
     async function loadAuth() {
       try {
         const res = await fetch("/api/auth/me");
-        if (!res.ok) {
-          router.push("/login");
-          return;
-        }
+        if (!res.ok) { router.push("/login"); return; }
         const data = await res.json();
-        if (!data.authenticated) {
-          router.push("/login");
-          return;
-        }
+        if (!data.authenticated) { router.push("/login"); return; }
         setAuthData(data);
-      } catch {
-        router.push("/login");
-      } finally {
-        setLoading(false);
-      }
+      } catch { router.push("/login"); }
+      finally { setLoading(false); }
     }
     loadAuth();
   }, [router]);
@@ -81,9 +54,7 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 animate-pulse flex items-center justify-center shadow-md shadow-indigo-100">
-            <Zap className="w-5 h-5 text-white" />
-          </div>
+          <div className="w-10 h-10 rounded-xl bg-indigo-600 animate-pulse flex items-center justify-center shadow-md shadow-indigo-100"><Zap className="w-5 h-5 text-white" /></div>
           <span className="text-xs text-slate-500 font-medium">Carregando painel...</span>
         </div>
       </div>
@@ -102,10 +73,7 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
           <div className="h-16 px-5 flex items-center justify-between border-b border-slate-100">
             <Link href="/app" className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm shadow-indigo-200"><Zap className="w-4 h-4 text-white fill-white" /></div>
-              <div className="leading-tight">
-                <span className="font-extrabold text-base tracking-tight text-slate-900 block">Pajo<span className="text-indigo-600">tree</span></span>
-                <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold block truncate max-w-[130px]">{organization?.name || "Minha Empresa"}</span>
-              </div>
+              <div className="leading-tight"><span className="font-extrabold text-base tracking-tight text-slate-900 block">Pajo<span className="text-indigo-600">tree</span></span><span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold block truncate max-w-[130px]">{organization?.name || "Minha Empresa"}</span></div>
             </Link>
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"><X className="w-5 h-5" /></button>
           </div>
@@ -125,7 +93,11 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
             <ChevronRight className="w-3.5 h-3.5 text-indigo-500 group-hover:translate-x-0.5 transition" />
           </Link>
           <div className="flex items-center justify-between p-1.5 text-xs">
-            <div className="truncate max-w-[150px]"><span className="text-slate-800 font-semibold block truncate text-xs">{authData?.user?.name}</span><span className="text-slate-400 text-[10px] block truncate">{authData?.user?.email}</span></div>
+            <div className="truncate max-w-[150px]">
+              <span className="text-slate-800 font-semibold block truncate text-xs">{authData?.user?.name}</span>
+              <span className="text-slate-400 text-[10px] block truncate">{authData?.user?.email}</span>
+              <span className="text-slate-400 text-[9px] block mt-0.5">v{APP_VERSION} • By {APP_VENDOR}</span>
+            </div>
             <button onClick={handleLogout} title="Sair da Conta" className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"><LogOut className="w-4 h-4" /></button>
           </div>
         </div>
