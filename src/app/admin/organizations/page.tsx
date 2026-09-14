@@ -273,9 +273,24 @@ export default function AdminOrganizationsPage() {
               <tr><th className="p-4 pl-6">Empresa</th><th className="p-4">Plano</th><th className="p-4">Consumo</th><th className="p-4">Status</th><th className="p-4 text-right pr-6">Ações</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
-              {filtered.length > 0 ? filtered.map((org) => (
+              {filtered.length > 0 ? filtered.map((org: any) => (
                 <tr key={org.id} className="hover:bg-slate-50/60 transition">
-                  <td data-label="Empresa" className="p-4 pl-6"><span className="font-bold text-slate-900 block break-words">{org.name}</span><span className="text-[11px] text-slate-500 block break-all">{org.email}</span></td>
+                  <td data-label="Empresa" className="p-4 pl-6">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 block break-words">{org.name}</span>
+                      {(org.isWhiteLabel || org.plan?.name?.toUpperCase().includes("WHITE")) && (
+                        <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold">
+                          White Label
+                        </span>
+                      )}
+                      {org.whiteLabelParent && (
+                        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px]">
+                          Via: {org.whiteLabelParent.name}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-slate-500 block break-all">{org.email}</span>
+                  </td>
                   <td data-label="Plano" className="p-4">
                     <select value={org.planId || ""} onChange={(e) => handleChangePlan(org.id, e.target.value)} disabled={updatingId === org.id} className="min-h-11 w-full sm:w-auto px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs text-amber-700 font-bold focus:outline-none focus:border-amber-500 shadow-sm">
                       <option value="">Sem plano</option>{plans.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}

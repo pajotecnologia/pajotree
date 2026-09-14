@@ -18,6 +18,7 @@ const organizationSchema = z.object({
   segment: z.string().trim().optional().nullable(),
   status: z.enum(["TRIAL", "ACTIVE", "SUSPENDED", "BLOCKED"]).default("TRIAL"),
   planId: z.string().trim().optional().nullable(),
+  isWhiteLabel: z.boolean().optional().default(false),
   address: z.object({
     zipCode: z.string().trim().optional().nullable(),
     street: z.string().trim().optional().nullable(),
@@ -57,12 +58,14 @@ export async function GET() {
       include: {
         plan: true,
         addresses: true,
+        whiteLabelParent: { select: { id: true, name: true } },
         _count: {
           select: {
             users: true,
             leads: true,
             links: true,
             whatsappInstances: true,
+            whiteLabelClients: true,
           },
         },
       },
