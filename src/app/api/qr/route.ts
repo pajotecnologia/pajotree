@@ -1,7 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getCurrentAuthContext } from "@/lib/auth";
 import { db } from "@/lib/db";
 import QRCode from "qrcode";
+
+function getPublicAppUrl(): string {
+  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+  // Evita URLs inválidas como https://tree.pajotech.com.br//p/slug
+  return configuredUrl.replace(/\/+$/, "");
+}
 
 export async function GET() {
   try {
@@ -17,7 +24,7 @@ export async function GET() {
     });
 
     const pageSlug = page?.slug || "minha-empresa";
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const appUrl = getPublicAppUrl();
     const targetUrl = `${appUrl}/p/${pageSlug}`;
 
     const qrDataUrl = await QRCode.toDataURL(targetUrl, {
