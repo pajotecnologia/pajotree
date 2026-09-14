@@ -46,6 +46,11 @@ async function requireSuperAdmin() {
   return auth;
 }
 
+function normalizePlan<T extends { features: unknown }>(plan: T) {
+  const features = Array.isArray(plan.features) ? plan.features[0] ?? null : plan.features;
+  return { ...plan, features };
+}
+
 export async function GET() {
   try {
     const auth = await requireSuperAdmin();
@@ -58,7 +63,7 @@ export async function GET() {
       orderBy: [{ priceMonthly: "asc" }, { name: "asc" }],
     });
 
-    return NextResponse.json({ plans });
+    return NextResponse.json({ plans: plans.map(normalizePlan) });
   } catch (error) {
     console.error("Erro ao listar planos admin:", error);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
@@ -85,6 +90,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Plano de origem não encontrado" }, { status: 404 });
       }
 
+      const sourceFeatures = source.features[0];
       const exists = await db.plan.findUnique({ where: { name: duplicate.data.name } });
       if (exists) {
         return NextResponse.json({ error: "Já existe um plano com este nome" }, { status: 409 });
@@ -97,23 +103,23 @@ export async function POST(request: NextRequest) {
           priceMonthly: source.priceMonthly,
           priceYearly: source.priceYearly,
           trialDays: source.trialDays,
-          features: source.features
+          features: sourceFeatures
             ? {
                 create: {
-                  maxPages: source.features.maxPages,
-                  maxLinks: source.features.maxLinks,
-                  maxUsers: source.features.maxUsers,
-                  maxLeads: source.features.maxLeads,
-                  maxForms: source.features.maxForms,
-                  maxWhatsappInstances: source.features.maxWhatsappInstances,
-                  maxMetaPixels: source.features.maxMetaPixels,
-                  maxAutomations: source.features.maxAutomations,
-                  maxStorageMb: source.features.maxStorageMb,
-                  customDomainAllowed: source.features.customDomainAllowed,
-                  crmAllowed: source.features.crmAllowed,
-                  whatsappInboxAllowed: source.features.whatsappInboxAllowed,
-                  advancedAnalytics: source.features.advancedAnalytics,
-                  removeBranding: source.features.removeBranding,
+                  maxPages: sourceFeatures.maxPages,
+                  maxLinks: sourceFeatures.maxLinks,
+                  maxUsers: sourceFeatures.maxUsers,
+                  maxLeads: sourceFeatures.maxLeads,
+                  maxForms: sourceFeatures.maxForms,
+                  maxWhatsappInstances: sourceFeatures.maxWhatsappInstances,
+                  maxMetaPixels: sourceFeatures.maxMetaPixels,
+                  maxAutomations: sourceFeatures.maxAutomations,
+                  maxStorageMb: sourceFeatures.maxStorageMb,
+                  customDomainAllowed: sourceFeatures.customDomainAllowed,
+                  crmAllowed: sourceFeatures.crmAllowed,
+                  whatsappInboxAllowed: sourceFeatures.whatsappInboxAllowed,
+                  advancedAnalytics: sourceFeatures.advancedAnalytics,
+                  removeBranding: sourceFeatures.removeBranding,
                 },
               }
             : undefined,
@@ -129,7 +135,7 @@ export async function POST(request: NextRequest) {
         metadata: { sourcePlanId: source.id, name: created.name },
       });
 
-      return NextResponse.json({ success: true, plan: created }, { status: 201 });
+      return NextResponse.json({ success: true, plan: normalizePlan(created) }, { status: 201 });
     }
 
     const parsed = planBaseSchema.safeParse(body);
@@ -162,7 +168,7 @@ export async function POST(request: NextRequest) {
       metadata: { name: created.name },
     });
 
-    return NextResponse.json({ success: true, plan: created }, { status: 201 });
+    return NextResponse.json({ success: true, plan: normalizePlan(created) }, { status: 201 });
   } catch (error) {
     console.error("Erro ao criar/duplicar plano admin:", error);
     return NextResponse.json({ error: "Erro interno ao salvar plano" }, { status: 500 });
@@ -195,20 +201,23 @@ export async function PUT(request: NextRequest) {
     }
 
     const updated = await db.$transaction(async (tx) => {
-      const plan = await tx.plan.update({
+      await tx.plan.update({
         where: { id },
         data: planData,
       });
 
       if (features) {
-        if (existing.features) {
+        if (existing.features[0]) {
           await tx.planFeature.update({ where: { planId: id }, data: features });
         } else {
           await tx.planFeature.create({ data: { planId: id, ...features } });
         }
       }
 
-      return tx.plan.findUnique({ where: { id }, include: { features: true, _count: { select: { organizations: true } } } });
+      return tx.plan.findUnique({
+        where: { id },
+        include: { features: true, _count: { select: { organizations: true } } },
+      });
     });
 
     await AuditService.log({
@@ -219,7 +228,7 @@ export async function PUT(request: NextRequest) {
       metadata: { changedFields: Object.keys(parsed.data).filter((key) => key !== "id") },
     });
 
-    return NextResponse.json({ success: true, plan: updated });
+    return NextResponse.json({ success: true, plan: updated ? normalizePlan(updated) : null });
   } catch (error) {
     console.error("Erro ao atualizar plano admin:", error);
     return NextResponse.json({ error: "Erro interno ao atualizar plano" }, { status: 500 });
