@@ -19,8 +19,110 @@
   }
 }
 
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Mobile-first interaction and overflow safeguards. */
+@media (max-width: 767px) {
+  button,
+  a[role="button"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  select {
+    min-height: 44px;
+  }
+
+  input,
+  textarea,
+  select {
+    max-width: 100%;
+  }
+
+  .responsive-data-table {
+    width: 100%;
+  }
+
+  .responsive-data-table thead {
+    display: none;
+  }
+
+  .responsive-data-table,
+  .responsive-data-table tbody,
+  .responsive-data-table tr,
+  .responsive-data-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .responsive-data-table tbody {
+    padding: 0.5rem;
+  }
+
+  .responsive-data-table tr {
+    margin-bottom: 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.875rem;
+    background: #ffffff;
+    overflow: hidden;
+  }
+
+  .responsive-data-table td {
+    display: grid;
+    grid-template-columns: minmax(6.5rem, 34%) minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.75rem 1rem !important;
+    border-bottom: 1px solid #f1f5f9;
+    text-align: left !important;
+    min-width: 0;
+  }
+
+  .responsive-data-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .responsive-data-table td::before {
+    content: attr(data-label);
+    color: #64748b;
+    font-size: 0.65rem;
+    line-height: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .responsive-data-table td[colspan] {
+    display: block;
+    text-align: center !important;
+  }
+
+  .responsive-data-table td[colspan]::before {
+    display: none;
+  }
+
+  .responsive-data-table td > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .responsive-data-table td .flex {
+    flex-wrap: wrap;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .responsive-data-table {
+    min-width: 720px;
+  }
 }
