@@ -139,11 +139,29 @@ Este documento registra detalhadamente todos os módulos, recursos, arquitetura 
 
 ---
 
-## 🗄️ 7. Resumo das Rotas e Arquivos Principais
+## 🏢 7. Configurações da Empresa (`/app/settings`)
+
+### Logomarca da Empresa:
+- **Upload Direto & Preview**: Envio de imagem (PNG, JPG, WebP até 2.5MB) via drag-and-drop ou seleção de arquivo local.
+- **Ações de Gestão**: Botão de *Upload / Trocar Logomarca* e *Remover Logomarca*.
+- **Persistência Centralizada**: Atualiza `organization.logoUrl` no banco de dados e sincroniza com o White Label e as páginas públicas.
+
+### Máscaras e Formatações em Tempo Real:
+- **CNPJ / CPF**: Máscara inteligente progressiva:
+  - Formato CNPJ (14 dígitos): `00.000.000/0000-00`
+  - Formato CPF (11 dígitos): `000.000.000-00`
+- **WhatsApp Oficial**: Formato brasileiro para celular de 9 dígitos: `(00) 90000-0000` (11 dígitos).
+- **Telefone Fixo**: Formato brasileiro padrão: `(00) 0000-0000` (10 dígitos).
+- Tipografia monoespaçada (`font-mono`) nos campos numéricos para alinhamento profissional.
+
+---
+
+## 🗄️ 8. Resumo das Rotas e Arquivos Principais
 
 | Módulo | Arquivo Principal | Descrição |
 |---|---|---|
 | **Editor Visual** | `src/app/app/editor/page.tsx` | Editor completo com upload de fundo, presets e fontes |
+| **Config. da Empresa** | `src/app/app/settings/page.tsx` | Upload de logo, máscaras para CNPJ, WhatsApp e Fixo |
 | **White Label UI** | `src/app/app/settings/white-label/page.tsx` | Identidade visual, DNS, upload de fundo e remoção de marca |
 | **White Label API** | `src/app/api/settings/white-label/route.ts` | GET/PUT de White Label e POST de verificação de DNS |
 | **Página Pública** | `src/components/public-page/page-renderer.tsx` | Renderizador público dos links e fundo |
@@ -157,4 +175,5 @@ Este documento registra detalhadamente todos os módulos, recursos, arquitetura 
 | **Billing Admin** | `src/app/admin/billing/page.tsx` | Gestão de faturamento e credenciais do Banco Inter |
 | **Billing Tenant** | `src/app/app/billing/page.tsx` | Upgrades de plano e emissão de Bolepix |
 | **Auth & Super Admin** | `src/lib/auth.ts` | Contexto de autenticação e organização master |
+
 
