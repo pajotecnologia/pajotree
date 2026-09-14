@@ -5,6 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Zap, Loader2, AlertCircle, ArrowRight, Lock, Mail } from "lucide-react";
 
+interface LoginErrorResponse {
+  error?: {
+    code?: string;
+    message?: string;
+  } | string;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -24,9 +31,17 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
+      const data: LoginErrorResponse & {
+        user?: { isSuperAdmin?: boolean };
+      } = await res.json();
+
       if (!res.ok) {
-        throw new Error(data.error || "Erro ao efetuar login");
+        const apiError = data.error;
+        const message =
+          typeof apiError === "string"
+            ? apiError
+            : apiError?.message || "Erro ao efetuar login";
+        throw new Error(message);
       }
 
       if (data.user?.isSuperAdmin) {
@@ -35,8 +50,8 @@ export default function LoginPage() {
         router.push("/app");
       }
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || "Credenciais inválidas");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Credenciais inválidas");
     } finally {
       setLoading(false);
     }
