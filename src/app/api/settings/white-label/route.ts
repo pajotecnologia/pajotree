@@ -84,6 +84,14 @@ export async function GET() {
             bgVal.startsWith("url("))
       );
 
+    let userConfig: any = {};
+    try {
+      userConfig = JSON.parse(page?.settings?.customCss || "{}");
+    } catch {}
+
+    const canRemoveBranding = Boolean(planUsage.features.removeBranding || auth.isSuperAdmin);
+    const removeBrandingActive = canRemoveBranding && Boolean(userConfig.removeBranding);
+
     return NextResponse.json({
       whiteLabel: {
         brandName: organization.tradeName || organization.name,
@@ -99,12 +107,12 @@ export async function GET() {
         fontFamily: page?.settings?.fontFamily || "Inter",
         customDomain: domain?.domain || "",
         domainStatus: domain?.verificationStatus || "NOT_CONFIGURED",
-        removeBrandingActive: Boolean(planUsage.features.removeBranding || auth.isSuperAdmin),
+        removeBrandingActive,
       },
       plan: {
         name: auth.isSuperAdmin ? "MASTER" : (planUsage.plan?.name || "FREE"),
         customDomainAllowed: Boolean(planUsage.features.customDomainAllowed || auth.isSuperAdmin),
-        removeBranding: Boolean(planUsage.features.removeBranding || auth.isSuperAdmin),
+        removeBranding: canRemoveBranding,
       },
       isSuperAdmin: Boolean(auth.isSuperAdmin),
     });
@@ -137,6 +145,10 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Página pública não encontrada" }, { status: 404 });
     }
 
+    const customCssData = JSON.stringify({
+      removeBranding: Boolean(data.removeBrandingActive),
+    });
+
     const result = await db.$transaction(async (tx) => {
       const organization = await tx.organization.update({
         where: { id: organizationId },
@@ -161,6 +173,7 @@ export async function PUT(request: NextRequest) {
           fontFamily: data.fontFamily,
           layout: "classic",
           faviconUrl: data.faviconUrl || null,
+          customCss: customCssData,
         },
         update: {
           backgroundType: data.backgroundType || "gradient",
@@ -171,8 +184,10 @@ export async function PUT(request: NextRequest) {
           buttonStyle: data.buttonStyle,
           fontFamily: data.fontFamily,
           faviconUrl: data.faviconUrl || null,
+          customCss: customCssData,
         },
       });
+
 
       // Se informou domínio próprio, salva/atualiza na tabela Domain
       if (data.customDomain) {

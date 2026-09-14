@@ -177,7 +177,21 @@ export function PublicPageRenderer({ page }: PageProps) {
         {!page.blocks?.some((b) => b.type === "FORM") && <div className="w-full"><PublicContactForm pageSlug={page.slug} buttonColor={settings.primaryColor} textColor="#ffffff" /></div>}
       </main>
 
-      {!page.organization.removeBranding && <footer className="mt-8 text-center text-xs text-slate-400/80 flex items-center gap-1"><span>Criado com</span><a href="/" target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-400 hover:text-indigo-300 hover:underline">Pajotree</a></footer>}
+      {!page.organization?.removeBranding && (
+        <footer className="relative z-20 mt-12 mb-4 text-center text-xs text-slate-300 flex items-center justify-center gap-1.5 py-1.5 px-4 rounded-full bg-slate-950/70 border border-white/10 backdrop-blur-md shadow-sm mx-auto">
+          <span>Criado com</span>
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-bold text-indigo-400 hover:text-indigo-300 hover:underline inline-flex items-center gap-1"
+          >
+            <span>Pajotree</span>
+            <Sparkles className="w-3 h-3 text-indigo-400" />
+          </a>
+        </footer>
+      )}
     </div>
   );
 }
+

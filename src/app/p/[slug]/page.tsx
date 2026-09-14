@@ -82,14 +82,26 @@ export default async function PublicPage({ params, searchParams }: Props) {
   const defaultMetaPixel = page.organization.metaPixels.find((p) => p.isDefault) || page.organization.metaPixels[0];
   const gaIntegration = page.organization.googleIntegrations[0];
 
+  let userCustomConfig: any = {};
+  try {
+    userCustomConfig = JSON.parse(page.settings?.customCss || "{}");
+  } catch {}
+
+  const canRemoveBranding = Boolean(
+    page.organization.plan?.features?.[0]?.removeBranding
+  );
+  // Apenas remove a marca se o plano permitir E o usuário tiver ativado explicitamente a opção
+  const shouldRemoveBranding = canRemoveBranding && Boolean(userCustomConfig.removeBranding);
+
   const publicPage = {
     ...page,
     organization: {
       ...page.organization,
       name: page.organization.tradeName || page.organization.name,
-      removeBranding: Boolean(page.organization.plan?.features?.[0]?.removeBranding),
+      removeBranding: shouldRemoveBranding,
     },
   };
+
 
   return (
     <>
