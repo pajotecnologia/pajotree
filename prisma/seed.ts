@@ -130,6 +130,29 @@ async function main() {
         removeBranding: true,
       },
     },
+    {
+      name: "MASTER",
+      description: "Plano interno exclusivo do Super Admin para gestão global do Pajotree, sem cobrança e sem limitações de recursos.",
+      priceMonthly: 0,
+      priceYearly: 0,
+      trialDays: 0,
+      features: {
+        maxPages: 999999,
+        maxLinks: 999999,
+        maxUsers: 999999,
+        maxLeads: 999999,
+        maxForms: 999999,
+        maxWhatsappInstances: 999999,
+        maxMetaPixels: 999999,
+        maxAutomations: 999999,
+        maxStorageMb: 999999,
+        customDomainAllowed: true,
+        crmAllowed: true,
+        whatsappInboxAllowed: true,
+        advancedAnalytics: true,
+        removeBranding: true,
+      },
+    },
   ];
 
   for (const p of plansData) {
@@ -159,7 +182,7 @@ async function main() {
       },
     });
   }
-  console.log("✓ Planos e Limites configurados.");
+  console.log("✓ Planos e Limites configurados, incluindo MASTER para o Super Admin.");
 
   // 3. Criar Temas Globais
   const defaultThemes = [
