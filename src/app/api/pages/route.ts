@@ -15,6 +15,7 @@ export async function GET() {
     let page = await db.page.findFirst({
       where: { organizationId: orgId },
       include: {
+        organization: true,
         settings: true,
         links: {
           orderBy: { position: "asc" },
@@ -51,6 +52,7 @@ export async function GET() {
           },
         },
         include: {
+          organization: true,
           settings: true,
           links: { include: { shortLinks: true } },
           blocks: true,
@@ -77,10 +79,11 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, name, slug, title, description, settings } = body;
+    const { id, name, slug, title, description, settings, logoUrl } = body;
 
     const existingPage = await db.page.findFirst({
-      where: { id, organizationId: auth.organization.id },
+      where: id ? { id, organizationId: auth.organization.id } : { organizationId: auth.organization.id },
+      include: { settings: true, organization: true },
     });
 
     if (!existingPage) {
@@ -90,7 +93,7 @@ export async function PUT(request: NextRequest) {
     // Se o slug mudou, validar unicidade
     if (slug && slug !== existingPage.slug) {
       const slugExists = await db.page.findFirst({
-        where: { slug, NOT: { id } },
+        where: { slug, NOT: { id: existingPage.id } },
       });
       if (slugExists) {
         return NextResponse.json(
@@ -100,46 +103,56 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    // Se logoUrl foi enviado, atualiza na organização
+    if (logoUrl !== undefined) {
+      await db.organization.update({
+        where: { id: auth.organization.id },
+        data: { logoUrl: logoUrl || null },
+      });
+    }
+
+    if (settings) {
+      await db.pageSettings.upsert({
+        where: { pageId: existingPage.id },
+        create: {
+          pageId: existingPage.id,
+          themeId: settings.themeId || null,
+          backgroundType: settings.backgroundType || "gradient",
+          backgroundValue: settings.backgroundValue || "linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)",
+          primaryColor: settings.primaryColor || "#6366f1",
+          secondaryColor: settings.secondaryColor || "#ec4899",
+          textColor: settings.textColor || "#ffffff",
+          buttonStyle: settings.buttonStyle || "rounded-xl",
+          fontFamily: settings.fontFamily || "Inter",
+          layout: settings.layout || "classic",
+        },
+        update: {
+          themeId: settings.themeId !== undefined ? settings.themeId : undefined,
+          backgroundType: settings.backgroundType !== undefined ? settings.backgroundType : undefined,
+          backgroundValue: settings.backgroundValue !== undefined ? settings.backgroundValue : undefined,
+          primaryColor: settings.primaryColor !== undefined ? settings.primaryColor : undefined,
+          secondaryColor: settings.secondaryColor !== undefined ? settings.secondaryColor : undefined,
+          textColor: settings.textColor !== undefined ? settings.textColor : undefined,
+          buttonStyle: settings.buttonStyle !== undefined ? settings.buttonStyle : undefined,
+          fontFamily: settings.fontFamily !== undefined ? settings.fontFamily : undefined,
+          layout: settings.layout !== undefined ? settings.layout : undefined,
+        },
+      });
+    }
+
     const updatedPage = await db.page.update({
-      where: { id },
+      where: { id: existingPage.id },
       data: {
-        name: name || existingPage.name,
-        slug: slug || existingPage.slug,
+        name: name !== undefined ? name : existingPage.name,
+        slug: slug !== undefined ? slug : existingPage.slug,
         title: title !== undefined ? title : existingPage.title,
         description: description !== undefined ? description : existingPage.description,
-        settings: settings
-          ? {
-              upsert: {
-                create: {
-                  themeId: settings.themeId,
-                  backgroundType: settings.backgroundType || "gradient",
-                  backgroundValue: settings.backgroundValue || "linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)",
-                  primaryColor: settings.primaryColor || "#6366f1",
-                  secondaryColor: settings.secondaryColor || "#ec4899",
-                  textColor: settings.textColor || "#ffffff",
-                  buttonStyle: settings.buttonStyle || "rounded-xl",
-                  fontFamily: settings.fontFamily || "Inter",
-                  layout: settings.layout || "classic",
-                },
-                update: {
-                  themeId: settings.themeId,
-                  backgroundType: settings.backgroundType,
-                  backgroundValue: settings.backgroundValue,
-                  primaryColor: settings.primaryColor,
-                  secondaryColor: settings.secondaryColor,
-                  textColor: settings.textColor,
-                  buttonStyle: settings.buttonStyle,
-                  fontFamily: settings.fontFamily,
-                  layout: settings.layout,
-                },
-              },
-            }
-          : undefined,
       },
       include: {
+        organization: true,
         settings: true,
-        links: { include: { shortLinks: true } },
-        blocks: true,
+        links: { include: { shortLinks: true }, orderBy: { position: "asc" } },
+        blocks: { orderBy: { position: "asc" } },
       },
     });
 
@@ -148,7 +161,7 @@ export async function PUT(request: NextRequest) {
       userId: auth.user.id,
       action: "UPDATE_PAGE",
       entity: "Page",
-      entityId: id,
+      entityId: existingPage.id,
     });
 
     return NextResponse.json({ success: true, page: updatedPage });

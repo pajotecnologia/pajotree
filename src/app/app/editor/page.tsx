@@ -27,8 +27,21 @@ import {
   RefreshCw,
   Globe,
   Sliders,
+  User,
 } from "lucide-react";
 import { PublicPageRenderer } from "@/components/public-page/page-renderer";
+
+const FONT_OPTIONS = [
+  { label: "Inter (Moderno & Neutro)", value: "Inter" },
+  { label: "Poppins (Geométrico & Jovial)", value: "Poppins" },
+  { label: "Roboto (Clássico & Limpo)", value: "Roboto" },
+  { label: "Montserrat (Elegante & Marcante)", value: "Montserrat" },
+  { label: "DM Sans (Minimalista Tech)", value: "DM Sans" },
+  { label: "Open Sans (Amigável & Legível)", value: "Open Sans" },
+  { label: "Lato (Corporativo & Equilibrado)", value: "Lato" },
+  { label: "Nunito (Arredondado & Suave)", value: "Nunito" },
+  { label: "Playfair Display (Sofisticado & Editorial)", value: "Playfair Display" },
+];
 
 const GRADIENT_PRESETS = [
   { name: "Galáxia Escura", value: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)" },
@@ -72,6 +85,7 @@ export default function VisualEditorPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"mobile" | "tablet" | "desktop">("mobile");
   const [activeTab, setActiveTab] = useState<"design" | "blocks" | "seo">("design");
 
@@ -79,6 +93,7 @@ export default function VisualEditorPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [slug, setSlug] = useState("");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [backgroundType, setBackgroundType] = useState("gradient");
   const [backgroundValue, setBackgroundValue] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#6366f1");
@@ -86,6 +101,11 @@ export default function VisualEditorPage() {
   const [textColor, setTextColor] = useState("#ffffff");
   const [buttonStyle, setButtonStyle] = useState("rounded-xl");
   const [fontFamily, setFontFamily] = useState("Inter");
+
+  // Logo / Avatar states
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   // Background Image states
   const [bgMode, setBgMode] = useState<"gradient" | "image">("gradient");
@@ -112,6 +132,7 @@ export default function VisualEditorPage() {
           setTitle(json.page.title || "");
           setDescription(json.page.description || "");
           setSlug(json.page.slug || "");
+          setLogoUrl(json.page?.organization?.logoUrl || null);
 
           const settings = json.page.settings;
           if (settings) {
@@ -160,6 +181,40 @@ export default function VisualEditorPage() {
     } catch (e) {
       console.error("Erro ao aplicar tema:", e);
     }
+  };
+
+  const handleLogoUpload = (file: File) => {
+    setLogoError(null);
+    if (!["image/png", "image/jpeg", "image/webp", "image/gif"].includes(file.type)) {
+      setLogoError("Formato não suportado. Use PNG, JPG, WebP ou GIF.");
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      setLogoError("A imagem deve ter no máximo 3 MB.");
+      return;
+    }
+
+    setUploadingLogo(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setLogoUrl(reader.result);
+        setLogoError(null);
+      } else {
+        setLogoError("Não foi possível processar a imagem.");
+      }
+      setUploadingLogo(false);
+    };
+    reader.onerror = () => {
+      setLogoError("Erro ao ler o arquivo de foto.");
+      setUploadingLogo(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoUrl(null);
+    setLogoError(null);
   };
 
   const handleImageFileUpload = (file: File) => {
@@ -224,6 +279,7 @@ export default function VisualEditorPage() {
   const handleSave = async () => {
     if (!pageData) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const res = await fetch("/api/pages", {
         method: "PUT",
@@ -233,6 +289,7 @@ export default function VisualEditorPage() {
           title,
           description,
           slug,
+          logoUrl,
           settings: {
             backgroundType,
             backgroundValue,
@@ -245,14 +302,18 @@ export default function VisualEditorPage() {
         }),
       });
 
+      const json = await res.json();
       if (res.ok) {
-        const json = await res.json();
         setPageData(json.page);
         setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 2500);
+        setSaveError(null);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      } else {
+        setSaveError(json.error || "Não foi possível salvar as alterações.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao salvar:", err);
+      setSaveError(err.message || "Erro de conexão ao salvar.");
     } finally {
       setSaving(false);
     }
@@ -342,7 +403,11 @@ export default function VisualEditorPage() {
       fontFamily,
       layout: "classic",
     },
-    organization: pageData?.organization || { name: title || pageData?.name || "Minha Empresa" },
+    organization: {
+      ...(pageData?.organization || {}),
+      name: title || pageData?.name || "Minha Empresa",
+      logoUrl: logoUrl !== undefined ? logoUrl : pageData?.organization?.logoUrl,
+    },
     links: pageData?.links || [],
     blocks: pageData?.blocks || [],
   };
@@ -355,7 +420,10 @@ export default function VisualEditorPage() {
         <div className="flex items-center justify-between pb-4 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <Palette className="w-5 h-5 text-indigo-600" />
-            <h2 className="text-base font-bold text-slate-900">Editor Visual</h2>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 leading-none">Editor Visual</h2>
+              <span className="text-[11px] text-slate-500">Personalize seu link na bio em tempo real</span>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -365,6 +433,8 @@ export default function VisualEditorPage() {
               className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-xs ${
                 saveSuccess
                   ? "bg-emerald-600 text-white"
+                  : saving
+                  ? "bg-indigo-400 text-white cursor-not-allowed"
                   : "bg-indigo-600 hover:bg-indigo-700 text-white"
               }`}
             >
@@ -375,10 +445,30 @@ export default function VisualEditorPage() {
               ) : (
                 <Save className="w-3.5 h-3.5" />
               )}
-              <span>{saveSuccess ? "Salvo!" : "Salvar Alterações"}</span>
+              <span>{saving ? "Salvando..." : saveSuccess ? "Salvo com sucesso!" : "Salvar Alterações"}</span>
             </button>
           </div>
         </div>
+
+        {/* Feedback Banners */}
+        {saveError && (
+          <div className="mt-3 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{saveError}</span>
+            </div>
+            <button onClick={() => setSaveError(null)} className="text-rose-500 hover:text-rose-700">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {saveSuccess && (
+          <div className="mt-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+            <Check className="w-4 h-4 text-emerald-600" />
+            <span>Todas as alterações foram salvas com sucesso no banco de dados!</span>
+          </div>
+        )}
 
         {/* Abas do Editor */}
         <div className="flex items-center gap-2 py-3 border-b border-slate-100 text-xs font-semibold">
@@ -418,6 +508,80 @@ export default function VisualEditorPage() {
         <div className="flex-1 overflow-y-auto py-4 space-y-6 pr-1">
           {activeTab === "design" && (
             <div className="space-y-6">
+              {/* Foto de Perfil / Logo */}
+              <div className="p-4 bg-slate-50/70 border border-slate-200/80 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Foto do Perfil / Logomarca</span>
+                  </label>
+                  <span className="text-[10px] text-slate-500">PNG, JPG ou WebP até 3 MB</span>
+                </div>
+
+                {logoError && (
+                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{logoError}</span>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-4">
+                  <div className="relative group">
+                    <div className="w-16 h-16 rounded-full overflow-hidden bg-slate-900 border-2 border-indigo-500/40 shadow-md flex items-center justify-center shrink-0">
+                      {logoUrl ? (
+                        <img src={logoUrl} alt="Foto de perfil" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xl font-bold text-white">
+                          {(title || pageData?.name || "P").charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex-1 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => logoInputRef.current?.click()}
+                        disabled={uploadingLogo}
+                        className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5 transition"
+                      >
+                        {uploadingLogo ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Upload className="w-3.5 h-3.5" />
+                        )}
+                        <span>{logoUrl ? "Trocar Foto" : "Enviar Foto"}</span>
+                      </button>
+
+                      {logoUrl && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveLogo}
+                          className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-xs font-semibold transition flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Remover</span>
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Esta imagem será exibida no topo da sua página oficial de links.
+                    </p>
+                  </div>
+                </div>
+
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleLogoUpload(file);
+                  }}
+                />
+              </div>
               {/* Temas Rápidos */}
               <div>
                 <label className="block text-xs font-bold text-slate-800 mb-2">
@@ -745,6 +909,44 @@ export default function VisualEditorPage() {
                       }`}
                     >
                       {style.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tipografia & Fontes */}
+              <div className="p-4 bg-slate-50/70 border border-slate-200/80 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Type className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Tipografia & Fonte da Página</span>
+                  </label>
+                  <span className="text-[10px] text-slate-500 font-mono bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                    {fontFamily}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {FONT_OPTIONS.map((font) => (
+                    <button
+                      key={font.value}
+                      type="button"
+                      onClick={() => setFontFamily(font.value)}
+                      className={`p-2.5 rounded-xl border text-left transition ${
+                        fontFamily === font.value
+                          ? "bg-indigo-50/90 border-indigo-500 ring-1 ring-indigo-500 shadow-xs"
+                          : "bg-white border-slate-200 hover:border-indigo-300 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span
+                        className="text-sm font-semibold text-slate-900 block"
+                        style={{ fontFamily: font.value }}
+                      >
+                        {font.value}
+                      </span>
+                      <span className="text-[10px] text-slate-500 block truncate">
+                        {font.label.split("(")[1]?.replace(")", "") || font.value}
+                      </span>
                     </button>
                   ))}
                 </div>

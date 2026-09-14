@@ -117,6 +117,15 @@ export function PublicPageRenderer({ page }: PageProps) {
       style={containerStyle}
       className="min-h-screen w-full flex flex-col items-center justify-between p-4 sm:p-6 transition-colors duration-300 relative overflow-x-hidden"
     >
+      {settings.fontFamily && (
+        <link
+          rel="stylesheet"
+          href={`https://fonts.googleapis.com/css2?family=${encodeURIComponent(
+            settings.fontFamily
+          )}:wght@300;400;500;600;700;800&display=swap`}
+        />
+      )}
+
       {isImageBackground && (
         <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-[0.5px] pointer-events-none" />
       )}
