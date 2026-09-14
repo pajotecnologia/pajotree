@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getCurrentAuthContext } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { PlanLimitService } from "@/server/services/plan-limit.service";
 import { AuditService } from "@/server/services/audit.service";
+
+const changePlanSchema = z.object({
+  planId: z.string().min(1),
+  billingCycle: z.enum(["monthly", "yearly"]),
+});
 
 export async function GET() {
   try {
@@ -31,7 +37,7 @@ export async function GET() {
       allPlans,
       subscription,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Erro ao obter dados de faturamento:", error);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
@@ -44,56 +50,84 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
-    const orgId = auth.organization.id;
-    const body = await request.json();
-    const { planId, billingCycle } = body;
+    const parsed = changePlanSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Dados do upgrade inválidos" }, { status: 400 });
+    }
 
-    const targetPlan = await db.plan.findUnique({
-      where: { id: planId },
-      include: { features: true },
-    });
+    const { planId, billingCycle } = parsed.data;
+    const orgId = auth.organization.id;
+
+    const [targetPlan, currentPlan] = await Promise.all([
+      db.plan.findUnique({
+        where: { id: planId },
+        include: { features: true },
+      }),
+      auth.organization.planId
+        ? db.plan.findUnique({ where: { id: auth.organization.planId } })
+        : null,
+    ]);
 
     if (!targetPlan) {
       return NextResponse.json({ error: "Plano inválido" }, { status: 400 });
     }
 
-    // 1. Atualizar Organização
-    await db.organization.update({
-      where: { id: orgId },
-      data: {
-        planId: targetPlan.id,
-        status: "ACTIVE",
-      },
-    });
+    if (currentPlan?.id === targetPlan.id) {
+      return NextResponse.json({ error: "Este já é o plano atual" }, { status: 400 });
+    }
 
-    // 2. Criar Assinatura Ativa
-    const nextPeriod = new Date();
+    const currentPrice = currentPlan
+      ? Number(billingCycle === "yearly" ? currentPlan.priceYearly : currentPlan.priceMonthly)
+      : 0;
+    const targetPrice = Number(
+      billingCycle === "yearly" ? targetPlan.priceYearly : targetPlan.priceMonthly
+    );
+
+    if (currentPlan && targetPrice <= currentPrice) {
+      return NextResponse.json(
+        { error: "Esta ação permite apenas upgrade para um plano superior." },
+        { status: 400 }
+      );
+    }
+
+    const now = new Date();
+    const nextPeriod = new Date(now);
     nextPeriod.setDate(nextPeriod.getDate() + (billingCycle === "yearly" ? 365 : 30));
 
-    const subscription = await db.subscription.create({
-      data: {
-        organizationId: orgId,
-        planId: targetPlan.id,
-        status: "ACTIVE",
-        billingCycle: billingCycle || "monthly",
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: nextPeriod,
-      },
-    });
-
-    // 3. Registrar Pagamento Simulado
-    const amount = billingCycle === "yearly" ? targetPlan.priceYearly : targetPlan.priceMonthly;
-    if (Number(amount) > 0) {
-      await db.payment.create({
+    const subscription = await db.$transaction(async (tx) => {
+      await tx.organization.update({
+        where: { id: orgId },
         data: {
-          organizationId: orgId,
-          subscriptionId: subscription.id,
-          amount,
-          status: "PAID",
-          provider: "mercadopago",
+          planId: targetPlan.id,
+          status: "ACTIVE",
         },
       });
-    }
+
+      const createdSubscription = await tx.subscription.create({
+        data: {
+          organizationId: orgId,
+          planId: targetPlan.id,
+          status: "ACTIVE",
+          billingCycle,
+          currentPeriodStart: now,
+          currentPeriodEnd: nextPeriod,
+        },
+      });
+
+      if (targetPrice > 0) {
+        await tx.payment.create({
+          data: {
+            organizationId: orgId,
+            subscriptionId: createdSubscription.id,
+            amount: billingCycle === "yearly" ? targetPlan.priceYearly : targetPlan.priceMonthly,
+            status: "PAID",
+            provider: "mercadopago",
+          },
+        });
+      }
+
+      return createdSubscription;
+    });
 
     await AuditService.log({
       organizationId: orgId,
@@ -101,12 +135,17 @@ export async function POST(request: NextRequest) {
       action: "CHANGE_PLAN",
       entity: "Plan",
       entityId: targetPlan.id,
-      metadata: { planName: targetPlan.name, billingCycle },
+      metadata: {
+        planName: targetPlan.name,
+        billingCycle,
+        previousPlanId: currentPlan?.id || null,
+        upgrade: true,
+      },
     });
 
     return NextResponse.json({ success: true, subscription });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Erro ao alterar plano:", error);
-    return NextResponse.json({ error: "Erro ao processar assinatura" }, { status: 500 });
+    return NextResponse.json({ error: "Erro ao processar upgrade" }, { status: 500 });
   }
 }
