@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentAuthContext } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { ensureDatabaseSchema } from "@/lib/db-migrate";
 import { sendEmail, SmtpConfig } from "@/lib/email";
 import { AuditService } from "@/server/services/audit.service";
 
 export async function GET() {
   try {
+    await ensureDatabaseSchema();
     const auth = await getCurrentAuthContext();
     if (!auth || !auth.organization) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
@@ -69,6 +71,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    await ensureDatabaseSchema();
     const auth = await getCurrentAuthContext();
     if (!auth || !auth.organization) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });

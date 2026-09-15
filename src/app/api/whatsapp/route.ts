@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentAuthContext } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { ensureDatabaseSchema } from "@/lib/db-migrate";
 import { PlanLimitService } from "@/server/services/plan-limit.service";
 import { EvolutionService } from "@/server/services/evolution.service";
 import QRCode from "qrcode";
@@ -15,6 +16,7 @@ const createInstanceSchema = z.object({
 
 export async function GET() {
   try {
+    await ensureDatabaseSchema();
     const auth = await getCurrentAuthContext();
     if (!auth || !auth.organization) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });

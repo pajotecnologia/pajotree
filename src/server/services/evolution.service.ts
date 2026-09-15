@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
+import { ensureDatabaseSchema } from "@/lib/db-migrate";
 
 export class EvolutionService {
   private static defaultApiUrl = process.env.DEFAULT_EVOLUTION_API_URL || process.env.EVOLUTION_API_URL || "http://localhost:8080";
@@ -22,7 +23,10 @@ export class EvolutionService {
           };
         }
       } catch (err) {
-        console.warn("Erro ao carregar OrganizationEvolutionConfig:", err);
+        console.warn("Erro ao carregar OrganizationEvolutionConfig, executando ensureDatabaseSchema:", err);
+        try {
+          await ensureDatabaseSchema();
+        } catch {}
       }
     }
 

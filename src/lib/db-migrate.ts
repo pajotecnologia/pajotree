@@ -67,13 +67,22 @@ const migrationStatements = [
   `CREATE TABLE IF NOT EXISTS "OrganizationEvolutionConfig" (
     "id" TEXT PRIMARY KEY,
     "organizationId" TEXT NOT NULL UNIQUE,
-    "serverUrl" TEXT NOT NULL,
+    "apiUrl" TEXT NOT NULL,
     "apiKey" TEXT NOT NULL,
     "instanceName" TEXT,
     "ativo" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
+  `ALTER TABLE "OrganizationEvolutionConfig" ADD COLUMN IF NOT EXISTS "apiUrl" TEXT`,
+  `ALTER TABLE "OrganizationEvolutionConfig" ADD COLUMN IF NOT EXISTS "apiKey" TEXT`,
+  `ALTER TABLE "OrganizationEvolutionConfig" ADD COLUMN IF NOT EXISTS "instanceName" TEXT`,
+  `ALTER TABLE "OrganizationEvolutionConfig" ADD COLUMN IF NOT EXISTS "ativo" BOOLEAN DEFAULT true`,
+  `DO $$ BEGIN
+     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='OrganizationEvolutionConfig' AND column_name='serverUrl') THEN
+       UPDATE "OrganizationEvolutionConfig" SET "apiUrl" = "serverUrl" WHERE "apiUrl" IS NULL;
+     END IF;
+   END $$;`,
 
   // 8. AuditLog Table
   `CREATE TABLE IF NOT EXISTS "AuditLog" (
