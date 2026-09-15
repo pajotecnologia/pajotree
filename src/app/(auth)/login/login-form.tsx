@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Zap, Loader2, AlertCircle, ArrowRight, Lock, Mail, Eye, EyeOff } from "lucide-react";
@@ -22,6 +22,18 @@ export function LoginForm({ initialBranding }: { initialBranding?: BrandingInfo 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (!params.get("ref") && !branding.isWhiteLabel) {
+        try {
+          localStorage.removeItem("pajotree_wl_ref");
+          document.cookie = "pajotree_wl_ref=; path=/; max-age=0; SameSite=Lax";
+        } catch {}
+      }
+    }
+  }, [branding.isWhiteLabel]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

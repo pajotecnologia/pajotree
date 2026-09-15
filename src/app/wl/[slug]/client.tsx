@@ -105,12 +105,6 @@ export default function WhiteLabelLandingClient({ org, plans, config }: LandingP
         "vercel.app",
       ].some((dh) => host === dh || host.endsWith(`.${dh}`));
       setIsCustomDomain(!isDefault);
-
-      try {
-        const refToSave = org.whiteLabelDomain || org.id;
-        localStorage.setItem("pajotree_wl_ref", refToSave);
-        document.cookie = `pajotree_wl_ref=${encodeURIComponent(refToSave)}; path=/; max-age=604800; SameSite=Lax`;
-      } catch {}
     }
   }, [org.id, org.whiteLabelDomain]);
 

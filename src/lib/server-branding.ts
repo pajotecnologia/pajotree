@@ -16,10 +16,7 @@ export interface ServerBranding {
 }
 
 export async function getServerBranding(refParam?: string): Promise<ServerBranding> {
-  const cookieStore = await cookies();
   const headerStore = await headers();
-  const cookieRef = cookieStore.get("pajotree_wl_ref")?.value;
-  const effectiveRef = refParam || cookieRef;
   const host = headerStore.get("x-custom-host") || headerStore.get("host") || "";
   const cleanHost = host.split(":")[0].toLowerCase().trim();
   const withoutWww = cleanHost.replace(/^www\./, "");
@@ -28,15 +25,15 @@ export async function getServerBranding(refParam?: string): Promise<ServerBrandi
     await ensureDatabaseSchema();
     let organization: any = null;
 
-    // 1. Busca por parâmetro de indicação / referência direta ou cookie de sessão WL
-    if (effectiveRef) {
+    // 1. Busca por parâmetro de indicação / referência direta explícita
+    if (refParam) {
       organization = await db.organization.findFirst({
         where: {
           OR: [
-            { id: effectiveRef },
-            { name: { equals: effectiveRef, mode: "insensitive" } },
-            { tradeName: { equals: effectiveRef, mode: "insensitive" } },
-            { whiteLabelDomain: { equals: effectiveRef, mode: "insensitive" } },
+            { id: refParam },
+            { name: { equals: refParam, mode: "insensitive" } },
+            { tradeName: { equals: refParam, mode: "insensitive" } },
+            { whiteLabelDomain: { equals: refParam, mode: "insensitive" } },
           ],
         },
         include: {

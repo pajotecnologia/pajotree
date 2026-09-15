@@ -30,9 +30,16 @@ export function RegisterForm({ initialBranding, planId }: { initialBranding?: Br
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      setRefParam(params.get("ref") || "");
+      const ref = params.get("ref") || "";
+      setRefParam(ref);
+      if (!ref && !branding.isWhiteLabel) {
+        try {
+          localStorage.removeItem("pajotree_wl_ref");
+          document.cookie = "pajotree_wl_ref=; path=/; max-age=0; SameSite=Lax";
+        } catch {}
+      }
     }
-  }, []);
+  }, [branding.isWhiteLabel]);
 
   function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];

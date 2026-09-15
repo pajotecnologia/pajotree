@@ -6,22 +6,20 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const ref = searchParams.get("ref");
-    const cookieRef = req.cookies.get("pajotree_wl_ref")?.value;
-    const effectiveRef = ref || cookieRef;
     const host = req.headers.get("host") || "";
     const cleanHost = host.split(":")[0].toLowerCase();
 
     let organization: any = null;
 
-    // 1. Busca por parâmetro de indicação / referência direta ou cookie de sessão WL
-    if (effectiveRef) {
+    // 1. Busca por parâmetro de indicação / referência direta explícita
+    if (ref) {
       organization = await db.organization.findFirst({
         where: {
           OR: [
-            { id: effectiveRef },
-            { name: { equals: effectiveRef, mode: "insensitive" } },
-            { tradeName: { equals: effectiveRef, mode: "insensitive" } },
-            { whiteLabelDomain: { equals: effectiveRef, mode: "insensitive" } },
+            { id: ref },
+            { name: { equals: ref, mode: "insensitive" } },
+            { tradeName: { equals: ref, mode: "insensitive" } },
+            { whiteLabelDomain: { equals: ref, mode: "insensitive" } },
           ],
         },
         include: {
