@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { APP_VENDOR } from "@/lib/app-meta";
 
 export interface BrandingInfo {
@@ -28,14 +27,18 @@ const DEFAULT_BRANDING: BrandingInfo = {
 };
 
 export function useBranding(): BrandingInfo {
-  const searchParams = useSearchParams();
-  const ref = searchParams?.get("ref") || "";
   const [branding, setBranding] = useState<BrandingInfo>(DEFAULT_BRANDING);
 
   useEffect(() => {
     let isMounted = true;
     async function loadBranding() {
       try {
+        let ref = "";
+        if (typeof window !== "undefined") {
+          const params = new URLSearchParams(window.location.search);
+          ref = params.get("ref") || "";
+        }
+
         const query = ref ? `?ref=${encodeURIComponent(ref)}` : "";
         const res = await fetch(`/api/white-label/branding${query}`);
         if (res.ok && isMounted) {
@@ -65,7 +68,7 @@ export function useBranding(): BrandingInfo {
     return () => {
       isMounted = false;
     };
-  }, [ref]);
+  }, []);
 
   return branding;
 }
