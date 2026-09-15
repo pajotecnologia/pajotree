@@ -286,6 +286,7 @@ export default function VisualEditorPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: pageData.id,
+          name: title || pageData.name,
           title,
           description,
           slug,

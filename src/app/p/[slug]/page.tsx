@@ -152,18 +152,29 @@ export default async function PublicPage({ params, searchParams }: Props) {
   // Apenas remove a marca se o plano permitir E o usuário tiver ativado explicitamente a opção
   const shouldRemoveBranding = canRemoveBranding && Boolean(userCustomConfig.removeBranding);
 
-  const isWhiteLabel = Boolean(page.organization.isWhiteLabel || page.organization.whiteLabelParentId);
-  const brandName = page.organization.whiteLabelParent?.tradeName || page.organization.whiteLabelParent?.name || (isWhiteLabel ? (page.organization.tradeName || page.organization.name) : "Pajotree");
-  const brandLogoUrl = page.organization.whiteLabelParent?.logoUrl || (isWhiteLabel ? page.organization.logoUrl : null);
+  const displayName = page.title || page.name || page.organization.tradeName || page.organization.name;
+  const isWhiteLabel = Boolean(
+    page.organization.isWhiteLabel ||
+    page.organization.whiteLabelParentId ||
+    page.organization.whiteLabelDomain ||
+    page.organization.logoUrl
+  );
+  const brandName = page.organization.whiteLabelParent?.tradeName ||
+    page.organization.whiteLabelParent?.name ||
+    (isWhiteLabel ? (page.organization.tradeName || page.organization.name) : "Pajotree");
+  const brandLogoUrl = page.organization.whiteLabelParent?.logoUrl ||
+    (isWhiteLabel ? page.organization.logoUrl : null);
   const brandUrl = page.organization.whiteLabelParent
-    ? `/wl/${page.organization.whiteLabelParent.id}`
-    : (page.organization.isWhiteLabel ? `/wl/${page.organization.id}` : "/");
+    ? `/wl/${page.organization.whiteLabelParent.whiteLabelDomain || page.organization.whiteLabelParent.id}`
+    : (page.organization.isWhiteLabel ? `/wl/${page.organization.whiteLabelDomain || page.organization.id}` : "/");
 
   const publicPage = {
     ...page,
+    name: displayName,
+    title: page.title || page.name,
     organization: {
       ...page.organization,
-      name: page.organization.tradeName || page.organization.name,
+      name: displayName,
       removeBranding: shouldRemoveBranding,
       brandName,
       brandLogoUrl,

@@ -140,10 +140,17 @@ export async function PUT(request: NextRequest) {
       });
     }
 
+    if (title || name) {
+      await db.organization.update({
+        where: { id: auth.organization.id },
+        data: { tradeName: title || name },
+      });
+    }
+
     const updatedPage = await db.page.update({
       where: { id: existingPage.id },
       data: {
-        name: name !== undefined ? name : existingPage.name,
+        name: name !== undefined ? name : (title || existingPage.name),
         slug: slug !== undefined ? slug : existingPage.slug,
         title: title !== undefined ? title : existingPage.title,
         description: description !== undefined ? description : existingPage.description,

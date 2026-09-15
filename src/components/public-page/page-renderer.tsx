@@ -108,9 +108,9 @@ export function PublicPageRenderer({ page }: PageProps) {
     }
   };
 
-  const displayName = page?.name || page?.title || "Minha Empresa";
+  const displayName = page?.title || page?.name || page?.organization?.name || "Minha Empresa";
   const initialLetter = displayName ? displayName.charAt(0).toUpperCase() : "P";
-  const logoUrl = page?.organization?.logoUrl;
+  const logoUrl = page?.organization?.logoUrl || (page as any)?.logoUrl;
   const brandName = page?.organization?.brandName || "Pajotree";
   const brandLogo = page?.organization?.brandLogoUrl || null;
   const brandHref = page?.organization?.brandUrl || "/";
