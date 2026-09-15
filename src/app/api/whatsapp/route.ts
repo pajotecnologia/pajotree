@@ -97,6 +97,16 @@ export async function POST(request: NextRequest) {
       }
 
       const effectiveConfig = await EvolutionService.getEffectiveEvolutionConfig(orgId);
+      if (!effectiveConfig.isConfigured || !effectiveConfig.apiUrl) {
+        return NextResponse.json(
+          {
+            error:
+              "Evolution API não configurada. Acesse o menu Configurações > Evolution API para salvar a URL e Chave do seu servidor Evolution antes de conectar o WhatsApp.",
+          },
+          { status: 400 }
+        );
+      }
+
       const rawInstanceName = parsed.data.instanceName?.trim() || effectiveConfig.instanceName?.trim() || "";
       const instanceName = rawInstanceName
         ? rawInstanceName.replace(/[^a-zA-Z0-9_-]/g, "_")
@@ -106,8 +116,8 @@ export async function POST(request: NextRequest) {
         organizationId: orgId,
         name: parsed.data.name,
         instanceName,
-        apiUrl: parsed.data.apiUrl,
-        apiKey: parsed.data.apiKey,
+        apiUrl: effectiveConfig.apiUrl,
+        apiKey: effectiveConfig.apiKey,
       });
 
       // Gerar QR Code de pareamento

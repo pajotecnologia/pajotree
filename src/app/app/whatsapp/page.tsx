@@ -313,9 +313,9 @@ export default function WhatsAppPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-0.5">
             <p className="text-xs text-slate-500">
-              Conexão com WhatsApp Web / Baileys via microserviço Evolution API para chat em tempo real.
+              Conexão com WhatsApp Web / Baileys via servidor Evolution API para chat em tempo real.
             </p>
-            {evolutionConfig?.apiUrl && (
+            {evolutionConfig?.apiUrl ? (
               <a
                 href="/app/settings"
                 title="Configurar servidor Evolution API em Configurações"
@@ -323,6 +323,15 @@ export default function WhatsAppPage() {
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span>Servidor: <strong className="font-mono text-[10px]">{evolutionConfig.apiUrl}</strong></span>
+              </a>
+            ) : (
+              <a
+                href="/app/settings"
+                title="Clique para configurar o servidor Evolution API"
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-semibold hover:bg-amber-100 transition"
+              >
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                <span>Evolution API: <strong>Não configurada</strong></span>
               </a>
             )}
           </div>
@@ -343,6 +352,25 @@ export default function WhatsAppPage() {
           <span>Nova Conexão WhatsApp</span>
         </button>
       </div>
+
+      {/* Banner se Evolution API não estiver configurada */}
+      {!evolutionConfig?.apiUrl && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shrink-0">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+            <div>
+              <strong className="block font-bold">Servidor Evolution API não configurado</strong>
+              <span className="text-amber-800">Para conectar seu WhatsApp e enviar mensagens, informe a URL e a Chave da sua Evolution API em <b>Configurações &gt; Evolution API</b>.</span>
+            </div>
+          </div>
+          <a
+            href="/app/settings"
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold transition shrink-0 inline-flex items-center gap-1.5 self-start sm:self-auto"
+          >
+            <span>Configurar Evolution API</span>
+          </a>
+        </div>
+      )}
 
       {/* Main Inbox Layout (2 columns) */}
       <div className="flex-1 bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs flex flex-col md:flex-row min-h-0">
@@ -539,7 +567,7 @@ export default function WhatsAppPage() {
           <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 shadow-xl text-center max-h-[90vh] overflow-y-auto">
             <h3 className="font-bold text-base text-slate-900 mb-1">Conectar Aparelho WhatsApp</h3>
             <p className="text-xs text-slate-500 mb-5">
-              Conexão via WhatsApp Web / Baileys usando o microserviço <b>Evolution API</b>.
+              Conexão WhatsApp Web utilizando a <b>Evolution API</b> cadastrada em Configurações.
             </p>
 
             {modalError && (

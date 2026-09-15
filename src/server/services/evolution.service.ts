@@ -3,23 +3,26 @@ import { encryptSecret, decryptSecret } from "@/lib/crypto";
 import { ensureDatabaseSchema } from "@/lib/db-migrate";
 
 export class EvolutionService {
-  private static defaultApiUrl = process.env.DEFAULT_EVOLUTION_API_URL || process.env.EVOLUTION_API_URL || "http://localhost:8080";
-  private static defaultApiKey = process.env.DEFAULT_EVOLUTION_API_KEY || process.env.EVOLUTION_API_KEY || "";
-
   /**
-   * Resolves the effective Evolution API configuration for an organization (from Settings or Environment variables).
+   * Resolves the Evolution API configuration strictly from tenant Settings (OrganizationEvolutionConfig).
    */
-  static async getEffectiveEvolutionConfig(organizationId?: string): Promise<{ apiUrl: string; apiKey: string; instanceName?: string | null }> {
+  static async getEffectiveEvolutionConfig(organizationId?: string): Promise<{
+    isConfigured: boolean;
+    apiUrl: string;
+    apiKey: string;
+    instanceName?: string | null;
+  }> {
     if (organizationId) {
       try {
         const config = await db.organizationEvolutionConfig.findUnique({
           where: { organizationId },
         });
-        if (config && config.ativo && config.apiUrl) {
+        if (config && config.ativo && config.apiUrl?.trim()) {
           return {
-            apiUrl: config.apiUrl.replace(/\/+$/, ""),
-            apiKey: config.apiKey || this.defaultApiKey,
-            instanceName: config.instanceName || null,
+            isConfigured: true,
+            apiUrl: config.apiUrl.trim().replace(/\/+$/, ""),
+            apiKey: config.apiKey?.trim() || "",
+            instanceName: config.instanceName?.trim() || null,
           };
         }
       } catch (err) {
@@ -30,15 +33,29 @@ export class EvolutionService {
       }
     }
 
+    // Fallback para variáveis de ambiente apenas se existirem explicitamente no servidor
+    const envUrl = process.env.DEFAULT_EVOLUTION_API_URL || process.env.EVOLUTION_API_URL;
+    const envKey = process.env.DEFAULT_EVOLUTION_API_KEY || process.env.EVOLUTION_API_KEY;
+
+    if (envUrl) {
+      return {
+        isConfigured: true,
+        apiUrl: envUrl.trim().replace(/\/+$/, ""),
+        apiKey: envKey?.trim() || "",
+        instanceName: null,
+      };
+    }
+
     return {
-      apiUrl: this.defaultApiUrl.replace(/\/+$/, ""),
-      apiKey: this.defaultApiKey,
+      isConfigured: false,
+      apiUrl: "",
+      apiKey: "",
       instanceName: null,
     };
   }
 
   /**
-   * Creates a new instance in the Evolution API.
+   * Creates a new instance in the Evolution API configured in Settings.
    */
   static async createInstance(params: {
     organizationId: string;
@@ -51,30 +68,43 @@ export class EvolutionService {
     const apiUrl = (params.apiUrl || effectiveConfig.apiUrl).replace(/\/+$/, "");
     const apiKey = params.apiKey || effectiveConfig.apiKey;
 
-    // Se configurada a API do Evolution, tenta criar a instância remotamente
-    if (apiUrl && apiKey) {
-      try {
-        const createRes = await fetch(`${apiUrl}/instance/create`, {
-          method: "POST",
-          headers: {
-            apikey: apiKey,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            instanceName: params.instanceName,
-            token: apiKey,
-            qrcode: true,
-            integration: "WHATSAPP-BAILEYS",
-          }),
-        });
+    if (!apiUrl || !apiKey) {
+      throw new Error(
+        "Evolution API não está configurada. Por favor, acesse Configurações > Evolution API e cadastre a URL e a Chave Global da sua Evolution API antes de criar conexões."
+      );
+    }
 
-        if (!createRes.ok) {
-          const errText = await createRes.text();
-          console.warn(`Evolution API /instance/create retornou ${createRes.status}:`, errText);
+    // Cria a instância remotamente no servidor Evolution API configurado
+    try {
+      const createRes = await fetch(`${apiUrl}/instance/create`, {
+        method: "POST",
+        headers: {
+          apikey: apiKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          instanceName: params.instanceName,
+          token: apiKey,
+          qrcode: true,
+          integration: "WHATSAPP-BAILEYS",
+        }),
+      });
+
+      if (!createRes.ok) {
+        const errJson = await createRes.json().catch(() => null);
+        const errText = errJson?.response?.message?.[0] || errJson?.message || errJson?.error || `Status HTTP ${createRes.status}`;
+        console.warn(`Evolution API /instance/create retornou erro (${createRes.status}):`, errText);
+        // Se a instância já existe no Evolution API (403 ou similar), permitimos continuar
+        if (createRes.status !== 403 && !String(errText).toLowerCase().includes("already in use") && !String(errText).toLowerCase().includes("já existe")) {
+          throw new Error(`Falha no servidor Evolution API (${createRes.status}): ${errText}`);
         }
-      } catch (e) {
-        console.warn("Evolution API create instance fetch error:", e);
       }
+    } catch (e: any) {
+      if (e.message?.startsWith("Falha no servidor Evolution API")) {
+        throw e;
+      }
+      console.warn("Evolution API create instance fetch error:", e);
+      throw new Error(`Não foi possível conectar ao servidor Evolution API em "${apiUrl}". Verifique se a URL e a Chave estão corretas em Configurações.`);
     }
 
     // Encrypt apiKey before saving
@@ -173,67 +203,64 @@ export class EvolutionService {
   }
 
   /**
-   * Generates a pairing QR Code string for an instance from Evolution API.
+   * Generates a pairing QR Code string for an instance from the Evolution API configured in Settings.
    */
   static async getQrCode(instanceName: string, organizationId?: string) {
-    try {
-      let instance = null;
-      if (organizationId) {
-        instance = await db.whatsappInstance.findFirst({
-          where: { instanceName, organizationId },
-        });
-      } else {
-        instance = await db.whatsappInstance.findUnique({
-          where: { instanceName },
-        });
-      }
-
-      const effectiveConfig = await this.getEffectiveEvolutionConfig(instance?.organizationId || organizationId);
-      const apiUrl = (instance?.apiUrl || effectiveConfig.apiUrl).replace(/\/+$/, "");
-      const apiKey = instance?.credentialsEncrypted
-        ? decryptSecret(instance.credentialsEncrypted)
-        : effectiveConfig.apiKey;
-
-      if (apiUrl && apiKey) {
-        const res = await fetch(`${apiUrl}/instance/connect/${instanceName}`, {
-          method: "GET",
-          headers: {
-            apikey: apiKey,
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (res.ok) {
-          const json = await res.json();
-          const qrBase64 = json.base64 || json.qrcode?.base64 || json.code;
-          const pairingCode = json.pairingCode || json.code || "PJTR-CONNECT";
-
-          if (qrBase64) {
-            return {
-              isRealEvolution: true,
-              pairingCode,
-              qrCodeData: qrBase64,
-            };
-          }
-        } else {
-          console.warn(`Evolution API /instance/connect retornou status ${res.status}`);
-        }
-      }
-    } catch (err) {
-      console.warn("Evolution API connect request fallback:", err);
+    let instance = null;
+    if (organizationId) {
+      instance = await db.whatsappInstance.findFirst({
+        where: { instanceName, organizationId },
+      });
+    } else {
+      instance = await db.whatsappInstance.findUnique({
+        where: { instanceName },
+      });
     }
 
-    // Fallback explicativo quando a Evolution API não estiver conectada
-    return {
-      isRealEvolution: false,
-      pairingCode: "DEMO-MODE",
-      qrCodeData: `https://wa.me/pajotree_connect_${instanceName}`,
-      message: "Servidor Evolution API não configurado ou inacessível no momento.",
-    };
+    const effectiveConfig = await this.getEffectiveEvolutionConfig(instance?.organizationId || organizationId);
+    const apiUrl = (instance?.apiUrl || effectiveConfig.apiUrl).replace(/\/+$/, "");
+    const apiKey = instance?.credentialsEncrypted
+      ? decryptSecret(instance.credentialsEncrypted)
+      : effectiveConfig.apiKey;
+
+    if (!apiUrl || !apiKey) {
+      throw new Error("Evolution API não está configurada. Acesse Configurações > Evolution API para configurar seu servidor.");
+    }
+
+    try {
+      const res = await fetch(`${apiUrl}/instance/connect/${instanceName}`, {
+        method: "GET",
+        headers: {
+          apikey: apiKey,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        const qrBase64 = json.base64 || json.qrcode?.base64 || json.code;
+        const pairingCode = json.pairingCode || json.code || "CONECTADO";
+
+        if (qrBase64) {
+          return {
+            isRealEvolution: true,
+            pairingCode,
+            qrCodeData: qrBase64,
+          };
+        }
+      }
+
+      const errText = await res.text().catch(() => "");
+      console.warn(`Evolution API /instance/connect retornou status ${res.status}:`, errText);
+      throw new Error(`Servidor Evolution API (${res.status}): Não foi possível obter o QR Code da instância "${instanceName}". Verifique se o servidor está ativo.`);
+    } catch (err: any) {
+      console.warn("Evolution API connect request error:", err);
+      throw new Error(err.message || `Erro ao conectar com o servidor Evolution API em "${apiUrl}".`);
+    }
   }
 
   /**
-   * Sends a WhatsApp text message via Evolution API.
+   * Sends a WhatsApp text message via the Evolution API configured in Settings.
    */
   static async sendMessage(params: {
     instanceId: string;
@@ -254,24 +281,31 @@ export class EvolutionService {
       ? decryptSecret(instance.credentialsEncrypted)
       : effectiveConfig.apiKey;
 
-    // Se houver conexão real com Evolution, envia mensagem HTTP
-    if (apiUrl && apiKey) {
-      try {
-        const formattedNumber = params.remoteJid.replace(/\D/g, "");
-        await fetch(`${apiUrl}/message/sendText/${instance.instanceName}`, {
-          method: "POST",
-          headers: {
-            apikey: apiKey,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            number: formattedNumber,
-            text: params.text,
-          }),
-        });
-      } catch (err) {
-        console.warn("Evolution API sendText fetch warning:", err);
+    if (!apiUrl || !apiKey) {
+      throw new Error("Evolution API não configurada em Configurações. Configure seu servidor antes de enviar mensagens.");
+    }
+
+    // Envia mensagem HTTP diretamente pelo servidor Evolution API configurado
+    try {
+      const formattedNumber = params.remoteJid.replace(/\D/g, "");
+      const res = await fetch(`${apiUrl}/message/sendText/${instance.instanceName}`, {
+        method: "POST",
+        headers: {
+          apikey: apiKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          number: formattedNumber,
+          text: params.text,
+        }),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "");
+        console.warn(`Evolution API sendText retornou status ${res.status}:`, errText);
       }
+    } catch (err) {
+      console.warn("Evolution API sendText fetch warning:", err);
     }
 
     // Save message locally in conversation
