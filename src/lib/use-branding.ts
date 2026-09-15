@@ -26,8 +26,12 @@ const DEFAULT_BRANDING: BrandingInfo = {
   loading: true,
 };
 
-export function useBranding(): BrandingInfo {
-  const [branding, setBranding] = useState<BrandingInfo>(DEFAULT_BRANDING);
+export function useBranding(initialBranding?: Partial<BrandingInfo>): BrandingInfo {
+  const [branding, setBranding] = useState<BrandingInfo>(() => ({
+    ...DEFAULT_BRANDING,
+    ...initialBranding,
+    loading: initialBranding ? Boolean(initialBranding.loading ?? false) : true,
+  }));
 
   useEffect(() => {
     let isMounted = true;
