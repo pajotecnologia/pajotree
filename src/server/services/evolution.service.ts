@@ -6,6 +6,32 @@ export class EvolutionService {
   private static defaultApiKey = process.env.DEFAULT_EVOLUTION_API_KEY || process.env.EVOLUTION_API_KEY || "";
 
   /**
+   * Resolves the effective Evolution API configuration for an organization (from Settings or Environment variables).
+   */
+  static async getEffectiveEvolutionConfig(organizationId?: string): Promise<{ apiUrl: string; apiKey: string }> {
+    if (organizationId) {
+      try {
+        const config = await db.organizationEvolutionConfig.findUnique({
+          where: { organizationId },
+        });
+        if (config && config.ativo && config.apiUrl) {
+          return {
+            apiUrl: config.apiUrl.replace(/\/+$/, ""),
+            apiKey: config.apiKey || this.defaultApiKey,
+          };
+        }
+      } catch (err) {
+        console.warn("Erro ao carregar OrganizationEvolutionConfig:", err);
+      }
+    }
+
+    return {
+      apiUrl: this.defaultApiUrl.replace(/\/+$/, ""),
+      apiKey: this.defaultApiKey,
+    };
+  }
+
+  /**
    * Creates a new instance in the Evolution API.
    */
   static async createInstance(params: {
@@ -15,8 +41,9 @@ export class EvolutionService {
     apiUrl?: string;
     apiKey?: string;
   }) {
-    const apiUrl = (params.apiUrl || this.defaultApiUrl).replace(/\/+$/, "");
-    const apiKey = params.apiKey || this.defaultApiKey;
+    const effectiveConfig = await this.getEffectiveEvolutionConfig(params.organizationId);
+    const apiUrl = (params.apiUrl || effectiveConfig.apiUrl).replace(/\/+$/, "");
+    const apiKey = params.apiKey || effectiveConfig.apiKey;
 
     // Se configurada a API do Evolution, tenta criar a instância remotamente
     if (apiUrl && apiKey) {
@@ -74,10 +101,11 @@ export class EvolutionService {
       throw new Error("Instância WhatsApp não encontrada.");
     }
 
-    const apiUrl = (instance.apiUrl || this.defaultApiUrl).replace(/\/+$/, "");
+    const effectiveConfig = await this.getEffectiveEvolutionConfig(organizationId);
+    const apiUrl = (instance.apiUrl || effectiveConfig.apiUrl).replace(/\/+$/, "");
     const apiKey = instance.credentialsEncrypted
       ? decryptSecret(instance.credentialsEncrypted)
-      : this.defaultApiKey;
+      : effectiveConfig.apiKey;
 
     if (apiUrl && apiKey) {
       try {
@@ -149,10 +177,11 @@ export class EvolutionService {
         });
       }
 
-      const apiUrl = (instance?.apiUrl || this.defaultApiUrl).replace(/\/+$/, "");
+      const effectiveConfig = await this.getEffectiveEvolutionConfig(instance?.organizationId || organizationId);
+      const apiUrl = (instance?.apiUrl || effectiveConfig.apiUrl).replace(/\/+$/, "");
       const apiKey = instance?.credentialsEncrypted
         ? decryptSecret(instance.credentialsEncrypted)
-        : this.defaultApiKey;
+        : effectiveConfig.apiKey;
 
       if (apiUrl && apiKey) {
         const res = await fetch(`${apiUrl}/instance/connect/${instanceName}`, {
@@ -208,10 +237,11 @@ export class EvolutionService {
       throw new Error("Instância WhatsApp não encontrada.");
     }
 
-    const apiUrl = (instance.apiUrl || this.defaultApiUrl).replace(/\/+$/, "");
+    const effectiveConfig = await this.getEffectiveEvolutionConfig(instance.organizationId);
+    const apiUrl = (instance.apiUrl || effectiveConfig.apiUrl).replace(/\/+$/, "");
     const apiKey = instance.credentialsEncrypted
       ? decryptSecret(instance.credentialsEncrypted)
-      : this.defaultApiKey;
+      : effectiveConfig.apiKey;
 
     // Se houver conexão real com Evolution, envia mensagem HTTP
     if (apiUrl && apiKey) {

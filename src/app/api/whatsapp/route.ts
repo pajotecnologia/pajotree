@@ -29,23 +29,38 @@ export async function GET() {
       whatsappLocked = true;
     }
 
-    const instances = await db.whatsappInstance.findMany({
-      where: { organizationId: orgId },
-      include: {
-        conversations: {
-          include: {
-            contact: true,
-            messages: {
-              orderBy: { createdAt: "desc" },
-              take: 20,
+    const [instances, orgEvolutionConfig] = await Promise.all([
+      db.whatsappInstance.findMany({
+        where: { organizationId: orgId },
+        include: {
+          conversations: {
+            include: {
+              contact: true,
+              messages: {
+                orderBy: { createdAt: "desc" },
+                take: 20,
+              },
             },
           },
         },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+        orderBy: { createdAt: "desc" },
+      }),
+      db.organizationEvolutionConfig.findUnique({
+        where: { organizationId: orgId },
+        select: { apiUrl: true, ativo: true },
+      }),
+    ]);
 
-    return NextResponse.json({ instances, whatsappLocked });
+    const effectiveConfig = await EvolutionService.getEffectiveEvolutionConfig(orgId);
+
+    return NextResponse.json({
+      instances,
+      whatsappLocked,
+      evolutionConfig: {
+        apiUrl: effectiveConfig.apiUrl,
+        isCustom: Boolean(orgEvolutionConfig?.apiUrl && orgEvolutionConfig?.ativo),
+      },
+    });
   } catch (error: any) {
     console.error("Erro ao carregar instâncias WhatsApp:", error);
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 });

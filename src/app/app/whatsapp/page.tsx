@@ -34,8 +34,9 @@ export default function WhatsAppPage() {
   const [activeConversation, setActiveConversation] = useState<any>(null);
   const [chatInput, setChatInput] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [evolutionConfig, setEvolutionConfig] = useState<{ apiUrl: string; isCustom: boolean } | null>(null);
 
-  // New Connection Modal
+  // New Connection Modal State
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [connectionName, setConnectionName] = useState("");
   const [customApiUrl, setCustomApiUrl] = useState("");
@@ -45,7 +46,7 @@ export default function WhatsAppPage() {
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [modalError, setModalError] = useState<string | null>(null);
 
-  // Edit Connection State
+  // Edit Connection Modal State
   const [editingInstance, setEditingInstance] = useState<any | null>(null);
   const [editName, setEditName] = useState("");
   const [editApiUrl, setEditApiUrl] = useState("");
@@ -69,6 +70,9 @@ export default function WhatsAppPage() {
         setWhatsappLocked(true);
       } else if (res.ok) {
         setInstances(json.instances || []);
+        if (json.evolutionConfig) {
+          setEvolutionConfig(json.evolutionConfig);
+        }
         if (json.instances?.length > 0 && !activeInstance) {
           setActiveInstance(json.instances[0]);
           if (json.instances[0].conversations?.length > 0) {
@@ -302,14 +306,27 @@ export default function WhatsAppPage() {
               WhatsApp & Central de Mensagens
             </h1>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Conexão com WhatsApp Web / Baileys via microserviço Evolution API para chat em tempo real.
-          </p>
+          <div className="flex flex-wrap items-center gap-2 mt-0.5">
+            <p className="text-xs text-slate-500">
+              Conexão com WhatsApp Web / Baileys via microserviço Evolution API para chat em tempo real.
+            </p>
+            {evolutionConfig?.apiUrl && (
+              <a
+                href="/app/settings"
+                title="Configurar servidor Evolution API em Configurações"
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold hover:bg-emerald-100 transition"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Servidor: <strong className="font-mono text-[10px]">{evolutionConfig.apiUrl}</strong></span>
+              </a>
+            )}
+          </div>
         </div>
 
         <button
           onClick={() => {
             setShowConnectModal(true);
+            setCustomApiUrl(evolutionConfig?.apiUrl || "");
             setQrCodeUrl(null);
             setModalError(null);
           }}
@@ -557,11 +574,16 @@ export default function WhatsAppPage() {
                         <label className="block font-semibold text-slate-700 mb-1">URL do Servidor Evolution API</label>
                         <input
                           type="url"
-                          placeholder="http://localhost:8080 ou https://evolution.seuservidor.com"
+                          placeholder={evolutionConfig?.apiUrl || "http://localhost:8080"}
                           value={customApiUrl}
                           onChange={(e) => setCustomApiUrl(e.target.value)}
                           className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs"
                         />
+                        {evolutionConfig?.apiUrl && (
+                          <span className="text-[10px] text-slate-400 mt-1 block">
+                            Padrão atual: <code className="font-mono text-indigo-600">{evolutionConfig.apiUrl}</code> (configurado em Configurações)
+                          </span>
+                        )}
                       </div>
                       <div>
                         <label className="block font-semibold text-slate-700 mb-1">Global API Key do Evolution</label>
