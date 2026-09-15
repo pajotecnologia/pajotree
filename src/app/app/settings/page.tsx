@@ -119,6 +119,7 @@ export default function SettingsPage() {
   const [evolutionForm, setEvolutionForm] = useState({
     apiUrl: "http://localhost:8080",
     apiKey: "",
+    instanceName: "",
     ativo: true,
   });
   const [testingEvolution, setTestingEvolution] = useState(false);
@@ -169,6 +170,7 @@ export default function SettingsPage() {
             setEvolutionForm({
               apiUrl: intData.evolution.apiUrl || "http://localhost:8080",
               apiKey: "",
+              instanceName: intData.evolution.instanceName || "",
               ativo: intData.evolution.ativo ?? true,
             });
           }
@@ -751,7 +753,7 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  URL da Evolution API
+                  URL da Evolution API *
                 </label>
                 <input
                   type="text"
@@ -774,6 +776,22 @@ export default function SettingsPage() {
                   placeholder="••••••••••••••••"
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-emerald-500 focus:bg-white"
                 />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Nome da Instância Padrão (Instance Name)
+                </label>
+                <input
+                  type="text"
+                  value={evolutionForm.instanceName}
+                  onChange={(e) => setEvolutionForm({ ...evolutionForm, instanceName: e.target.value })}
+                  placeholder="Ex: minha_empresa_wpp ou comercial"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-emerald-500 focus:bg-white"
+                />
+                <span className="text-[11px] text-slate-400 mt-1 block">
+                  Identificador padrão da instância no servidor Evolution API. Se preenchido, será sugerido automaticamente ao conectar novos canais de WhatsApp.
+                </span>
               </div>
             </div>
 

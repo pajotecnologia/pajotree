@@ -34,11 +34,12 @@ export default function WhatsAppPage() {
   const [activeConversation, setActiveConversation] = useState<any>(null);
   const [chatInput, setChatInput] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
-  const [evolutionConfig, setEvolutionConfig] = useState<{ apiUrl: string; isCustom: boolean } | null>(null);
+  const [evolutionConfig, setEvolutionConfig] = useState<{ apiUrl: string; instanceName?: string | null; isCustom: boolean } | null>(null);
 
   // New Connection Modal State
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [connectionName, setConnectionName] = useState("");
+  const [instanceNameInput, setInstanceNameInput] = useState("");
   const [customApiUrl, setCustomApiUrl] = useState("");
   const [customApiKey, setCustomApiKey] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -49,6 +50,7 @@ export default function WhatsAppPage() {
   // Edit Connection Modal State
   const [editingInstance, setEditingInstance] = useState<any | null>(null);
   const [editName, setEditName] = useState("");
+  const [editInstanceName, setEditInstanceName] = useState("");
   const [editApiUrl, setEditApiUrl] = useState("");
   const [editApiKey, setEditApiKey] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
@@ -104,6 +106,7 @@ export default function WhatsAppPage() {
         body: JSON.stringify({
           action: "create_instance",
           name: connectionName || "Atendimento Principal",
+          instanceName: instanceNameInput.trim() || undefined,
           apiUrl: customApiUrl.trim() || undefined,
           apiKey: customApiKey.trim() || undefined,
         }),
@@ -160,6 +163,7 @@ export default function WhatsAppPage() {
     e.stopPropagation();
     setEditingInstance(inst);
     setEditName(inst.name || "");
+    setEditInstanceName(inst.instanceName || "");
     setEditApiUrl(inst.apiUrl || "");
     setEditApiKey("");
     setEditError(null);
@@ -179,6 +183,7 @@ export default function WhatsAppPage() {
         body: JSON.stringify({
           instanceId: editingInstance.id,
           name: editName.trim() || undefined,
+          instanceName: editInstanceName.trim() || undefined,
           apiUrl: editApiUrl.trim() || undefined,
           apiKey: editApiKey.trim() || undefined,
         }),
@@ -326,6 +331,8 @@ export default function WhatsAppPage() {
         <button
           onClick={() => {
             setShowConnectModal(true);
+            setConnectionName("");
+            setInstanceNameInput(evolutionConfig?.instanceName || "");
             setCustomApiUrl(evolutionConfig?.apiUrl || "");
             setQrCodeUrl(null);
             setModalError(null);
@@ -558,6 +565,22 @@ export default function WhatsAppPage() {
                   />
                 </div>
 
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Nome da Instância (Evolution API)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={evolutionConfig?.instanceName || "Ex: comercial_01 (Opcional - deixe vazio para gerar automático)"}
+                    value={instanceNameInput}
+                    onChange={(e) => setInstanceNameInput(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-emerald-500 shadow-2xs"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    Identificador da instância no seu servidor Evolution API.
+                  </span>
+                </div>
+
                 {/* Opções Avançadas de Servidor Evolution API */}
                 <div className="pt-1">
                   <button
@@ -706,6 +729,22 @@ export default function WhatsAppPage() {
                   placeholder="Ex: WhatsApp Comercial"
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-500"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Nome da Instância (Evolution API)
+                </label>
+                <input
+                  type="text"
+                  value={editInstanceName}
+                  onChange={(e) => setEditInstanceName(e.target.value)}
+                  placeholder="Nome da instância no servidor Evolution"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-indigo-500"
+                />
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  Identificador exato no Evolution API.
+                </span>
               </div>
 
               <div>

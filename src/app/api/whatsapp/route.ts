@@ -8,6 +8,7 @@ import { z } from "zod";
 
 const createInstanceSchema = z.object({
   name: z.string().min(2, "Nome da conexão é obrigatório"),
+  instanceName: z.string().optional(),
   apiUrl: z.string().optional(),
   apiKey: z.string().optional(),
 });
@@ -47,7 +48,7 @@ export async function GET() {
       }),
       db.organizationEvolutionConfig.findUnique({
         where: { organizationId: orgId },
-        select: { apiUrl: true, ativo: true },
+        select: { apiUrl: true, instanceName: true, ativo: true },
       }),
     ]);
 
@@ -58,6 +59,7 @@ export async function GET() {
       whatsappLocked,
       evolutionConfig: {
         apiUrl: effectiveConfig.apiUrl,
+        instanceName: effectiveConfig.instanceName || orgEvolutionConfig?.instanceName || null,
         isCustom: Boolean(orgEvolutionConfig?.apiUrl && orgEvolutionConfig?.ativo),
       },
     });
@@ -92,7 +94,12 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const instanceName = `pajo_${orgId.slice(-6)}_${Date.now().toString(36)}`;
+      const effectiveConfig = await EvolutionService.getEffectiveEvolutionConfig(orgId);
+      const rawInstanceName = parsed.data.instanceName?.trim() || effectiveConfig.instanceName?.trim() || "";
+      const instanceName = rawInstanceName
+        ? rawInstanceName.replace(/[^a-zA-Z0-9_-]/g, "_")
+        : `pajo_${orgId.slice(-6)}_${Date.now().toString(36)}`;
+
       const instance = await EvolutionService.createInstance({
         organizationId: orgId,
         name: parsed.data.name,
@@ -125,7 +132,7 @@ export async function POST(request: NextRequest) {
 
     // Ação: Atualizar Conexão
     if (action === "update_instance") {
-      const { instanceId, name, apiUrl, apiKey } = body;
+      const { instanceId, name, instanceName, apiUrl, apiKey } = body;
       if (!instanceId) {
         return NextResponse.json({ error: "ID da conexão obrigatório" }, { status: 400 });
       }
@@ -134,6 +141,7 @@ export async function POST(request: NextRequest) {
         instanceId,
         organizationId: orgId,
         name,
+        instanceName,
         apiUrl,
         apiKey,
       });
@@ -220,7 +228,7 @@ export async function PUT(request: NextRequest) {
 
     const orgId = auth.organization.id;
     const body = await request.json();
-    const { instanceId, name, apiUrl, apiKey } = body;
+    const { instanceId, name, instanceName, apiUrl, apiKey } = body;
 
     if (!instanceId) {
       return NextResponse.json({ error: "ID da conexão obrigatório" }, { status: 400 });
@@ -230,6 +238,7 @@ export async function PUT(request: NextRequest) {
       instanceId,
       organizationId: orgId,
       name,
+      instanceName,
       apiUrl,
       apiKey,
     });

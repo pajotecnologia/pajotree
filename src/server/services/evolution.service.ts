@@ -8,7 +8,7 @@ export class EvolutionService {
   /**
    * Resolves the effective Evolution API configuration for an organization (from Settings or Environment variables).
    */
-  static async getEffectiveEvolutionConfig(organizationId?: string): Promise<{ apiUrl: string; apiKey: string }> {
+  static async getEffectiveEvolutionConfig(organizationId?: string): Promise<{ apiUrl: string; apiKey: string; instanceName?: string | null }> {
     if (organizationId) {
       try {
         const config = await db.organizationEvolutionConfig.findUnique({
@@ -18,6 +18,7 @@ export class EvolutionService {
           return {
             apiUrl: config.apiUrl.replace(/\/+$/, ""),
             apiKey: config.apiKey || this.defaultApiKey,
+            instanceName: config.instanceName || null,
           };
         }
       } catch (err) {
@@ -28,6 +29,7 @@ export class EvolutionService {
     return {
       apiUrl: this.defaultApiUrl.replace(/\/+$/, ""),
       apiKey: this.defaultApiKey,
+      instanceName: null,
     };
   }
 
@@ -130,12 +132,13 @@ export class EvolutionService {
   }
 
   /**
-   * Updates an instance's name or custom server settings.
+   * Updates an instance's name, instanceName, or custom server settings.
    */
   static async updateInstance(params: {
     instanceId: string;
     organizationId: string;
     name?: string;
+    instanceName?: string;
     apiUrl?: string;
     apiKey?: string;
   }) {
@@ -148,11 +151,15 @@ export class EvolutionService {
     }
 
     const encryptedKey = params.apiKey ? encryptSecret(params.apiKey) : undefined;
+    const cleanInstanceName = params.instanceName?.trim()
+      ? params.instanceName.trim().replace(/[^a-zA-Z0-9_-]/g, "_")
+      : undefined;
 
     const updated = await db.whatsappInstance.update({
       where: { id: params.instanceId },
       data: {
         ...(params.name ? { name: params.name } : {}),
+        ...(cleanInstanceName ? { instanceName: cleanInstanceName } : {}),
         ...(params.apiUrl ? { apiUrl: params.apiUrl.replace(/\/+$/, "") } : {}),
         ...(encryptedKey !== undefined ? { credentialsEncrypted: encryptedKey } : {}),
       },

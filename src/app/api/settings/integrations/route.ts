@@ -49,12 +49,14 @@ export async function GET() {
         ? {
             apiUrl: evolution.apiUrl,
             apiKeyMasked: evolution.apiKey ? `${evolution.apiKey.substring(0, 4)}...${evolution.apiKey.slice(-4)}` : "",
+            instanceName: evolution.instanceName || "",
             ativo: evolution.ativo,
             isCustom: true,
           }
         : {
             apiUrl: process.env.DEFAULT_EVOLUTION_API_URL || process.env.EVOLUTION_API_URL || "http://localhost:8080",
             apiKeyMasked: (process.env.DEFAULT_EVOLUTION_API_KEY || process.env.EVOLUTION_API_KEY) ? "••••••••••••" : "",
+            instanceName: "",
             ativo: globalEvolutionConfigured,
             isCustom: false,
           },
@@ -223,8 +225,11 @@ export async function POST(request: NextRequest) {
 
     // 4. Salvar Evolution API
     if (type === "evolution") {
-      const { apiUrl, apiKey, ativo } = body;
+      const { apiUrl, apiKey, instanceName, ativo } = body;
       const cleanUrl = (apiUrl || "http://localhost:8080").replace(/\/+$/, "");
+      const cleanInstanceName = instanceName?.trim()
+        ? instanceName.trim().replace(/[^a-zA-Z0-9_-]/g, "_")
+        : null;
 
       const updated = await db.organizationEvolutionConfig.upsert({
         where: { organizationId: orgId },
@@ -232,11 +237,13 @@ export async function POST(request: NextRequest) {
           organizationId: orgId,
           apiUrl: cleanUrl,
           apiKey: apiKey || "",
+          instanceName: cleanInstanceName,
           ativo: ativo ?? true,
         },
         update: {
           apiUrl: cleanUrl,
           ...(apiKey ? { apiKey } : {}),
+          instanceName: cleanInstanceName,
           ativo: ativo ?? true,
         },
       });
@@ -247,7 +254,7 @@ export async function POST(request: NextRequest) {
         action: "UPDATE_EVOLUTION_CONFIG",
         entity: "OrganizationEvolutionConfig",
         entityId: updated.id,
-        metadata: { apiUrl: cleanUrl },
+        metadata: { apiUrl: cleanUrl, instanceName: cleanInstanceName },
       });
 
       return NextResponse.json({
