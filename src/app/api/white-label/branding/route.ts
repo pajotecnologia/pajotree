@@ -32,26 +32,55 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // 2. Busca por domínio personalizado (Host header)
-    if (!organization && cleanHost && !cleanHost.includes("localhost") && !cleanHost.includes("pajotree") && !cleanHost.includes("127.0.0.1")) {
-      const domainRecord = await db.domain.findFirst({
-        where: { domain: cleanHost },
+    // 2. Busca por domínio personalizado (Host header ou x-custom-host)
+    const customHost = req.headers.get("x-custom-host") || cleanHost;
+    const withoutWww = customHost.replace(/^www\./, "");
+
+    if (!organization && customHost && !customHost.includes("localhost") && !customHost.includes("pajotree") && !customHost.includes("127.0.0.1") && !customHost.includes("vercel.app")) {
+      // 2.1 Verifica se o domínio está cadastrado diretamente no campo whiteLabelDomain da Organização
+      organization = await db.organization.findFirst({
+        where: {
+          OR: [
+            { whiteLabelDomain: customHost },
+            { whiteLabelDomain: withoutWww },
+          ],
+        },
         include: {
-          organization: {
-            include: {
-              whiteLabelParent: true,
-              pages: {
-                where: { status: "PUBLISHED" },
-                take: 1,
-                include: { settings: true },
-              },
-            },
+          whiteLabelParent: true,
+          pages: {
+            where: { status: "PUBLISHED" },
+            take: 1,
+            include: { settings: true },
           },
         },
       });
 
-      if (domainRecord?.organization) {
-        organization = domainRecord.organization;
+      // 2.2 Se não encontrado, verifica na tabela de Domínios (Domain)
+      if (!organization) {
+        const domainRecord = await db.domain.findFirst({
+          where: {
+            OR: [
+              { domain: customHost },
+              { domain: withoutWww },
+            ],
+          },
+          include: {
+            organization: {
+              include: {
+                whiteLabelParent: true,
+                pages: {
+                  where: { status: "PUBLISHED" },
+                  take: 1,
+                  include: { settings: true },
+                },
+              },
+            },
+          },
+        });
+
+        if (domainRecord?.organization) {
+          organization = domainRecord.organization;
+        }
       }
     }
 

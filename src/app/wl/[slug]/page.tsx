@@ -31,17 +31,40 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
+  const cleanSlug = decodeURIComponent(slug).toLowerCase().trim();
+  const withoutWww = cleanSlug.replace(/^www\./, "");
+
   try {
     await ensureDatabaseSchema();
-    const org = await db.organization.findFirst({
+    let org = await db.organization.findFirst({
       where: {
         OR: [
-          { whiteLabelDomain: slug },
-          { id: slug },
+          { whiteLabelDomain: cleanSlug },
+          { whiteLabelDomain: withoutWww },
+          { id: cleanSlug },
         ],
       },
       select: { name: true, tradeName: true, logoUrl: true, faviconUrl: true },
     });
+
+    if (!org) {
+      const domainRec = await db.domain.findFirst({
+        where: {
+          OR: [
+            { domain: cleanSlug },
+            { domain: withoutWww },
+          ],
+        },
+        include: {
+          organization: {
+            select: { name: true, tradeName: true, logoUrl: true, faviconUrl: true },
+          },
+        },
+      });
+      if (domainRec?.organization) {
+        org = domainRec.organization;
+      }
+    }
 
     const brandName = org?.tradeName || org?.name || "Plataforma Digital";
     return {
@@ -56,6 +79,8 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function WhiteLabelPublicLandingPage({ params }: PageProps) {
   const { slug } = await params;
+  const cleanSlug = decodeURIComponent(slug).toLowerCase().trim();
+  const withoutWww = cleanSlug.replace(/^www\./, "");
 
   try {
     await ensureDatabaseSchema();
@@ -63,12 +88,13 @@ export default async function WhiteLabelPublicLandingPage({ params }: PageProps)
     // Non-blocking
   }
 
-  // Busca a organização White Label por slug/domínio ou ID
-  const org = await db.organization.findFirst({
+  // Busca a organização White Label por slug/domínio, ID ou tabela Domain
+  let org = await db.organization.findFirst({
     where: {
       OR: [
-        { whiteLabelDomain: slug },
-        { id: slug },
+        { whiteLabelDomain: cleanSlug },
+        { whiteLabelDomain: withoutWww },
+        { id: cleanSlug },
       ],
     },
     include: {
@@ -78,6 +104,31 @@ export default async function WhiteLabelPublicLandingPage({ params }: PageProps)
       },
     },
   });
+
+  if (!org) {
+    const domainRec = await db.domain.findFirst({
+      where: {
+        OR: [
+          { domain: cleanSlug },
+          { domain: withoutWww },
+        ],
+      },
+      include: {
+        organization: {
+          include: {
+            customPlans: {
+              include: { features: true },
+              orderBy: { priceMonthly: "asc" },
+            },
+          },
+        },
+      },
+    });
+
+    if (domainRec?.organization) {
+      org = domainRec.organization;
+    }
+  }
 
   if (!org) {
     notFound();

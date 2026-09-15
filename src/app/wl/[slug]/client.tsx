@@ -84,9 +84,21 @@ interface LandingProps {
 export default function WhiteLabelLandingClient({ org, plans, config }: LandingProps) {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [isCustomDomain, setIsCustomDomain] = useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const host = window.location.host.split(":")[0].toLowerCase();
+      const isDefault = ["localhost", "127.0.0.1", "pajotree.com", "www.pajotree.com", "pajotree.com.br", "www.pajotree.com.br", "vercel.app"].some(
+        (dh) => host === dh || host.endsWith(`.${dh}`)
+      );
+      setIsCustomDomain(!isDefault);
+    }
+  }, []);
 
   const brandName = org.tradeName || org.name || "Nossa Empresa";
-  const registerUrl = `/register?ref=${org.id}`;
+  const registerUrl = isCustomDomain ? "/register" : `/register?ref=${org.id}`;
+  const logoHref = isCustomDomain ? "/" : `/wl/${org.whiteLabelDomain || org.id}`;
 
   const formatMoney = (val: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -136,7 +148,7 @@ export default function WhiteLabelLandingClient({ org, plans, config }: LandingP
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b border-slate-800/80 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <Link href={`/wl/${org.whiteLabelDomain || org.id}`} className="flex items-center gap-3 group">
+            <Link href={logoHref} className="flex items-center gap-3 group">
               {org.logoUrl ? (
                 <div className="relative h-10 w-auto max-w-[180px] flex items-center">
                   <img

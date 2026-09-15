@@ -76,6 +76,7 @@ export async function POST(req: Request) {
           OR: [
             { id: whiteLabelRef },
             { name: { equals: whiteLabelRef, mode: "insensitive" } },
+            { whiteLabelDomain: { equals: whiteLabelRef, mode: "insensitive" } },
           ],
         },
         include: {
@@ -90,6 +91,61 @@ export async function POST(req: Request) {
         parentOrgId = parentOrg.id;
         if (parentOrg.customPlans.length > 0) {
           defaultPlan = parentOrg.customPlans[0];
+        }
+      }
+    }
+
+    // Se não veio por whiteLabelRef explícito, verifica o Host do domínio personalizado
+    if (!parentOrgId) {
+      const host = req.headers.get("x-custom-host") || req.headers.get("host") || "";
+      const cleanHost = host.split(":")[0].toLowerCase().trim();
+      const withoutWww = cleanHost.replace(/^www\./, "");
+
+      if (cleanHost && !cleanHost.includes("localhost") && !cleanHost.includes("pajotree") && !cleanHost.includes("127.0.0.1") && !cleanHost.includes("vercel.app")) {
+        let parentOrg = await db.organization.findFirst({
+          where: {
+            OR: [
+              { whiteLabelDomain: cleanHost },
+              { whiteLabelDomain: withoutWww },
+            ],
+          },
+          include: {
+            customPlans: {
+              where: { status: "ACTIVE" },
+              orderBy: { priceMonthly: "asc" },
+            },
+          },
+        });
+
+        if (!parentOrg) {
+          const domainRec = await db.domain.findFirst({
+            where: {
+              OR: [
+                { domain: cleanHost },
+                { domain: withoutWww },
+              ],
+            },
+            include: {
+              organization: {
+                include: {
+                  customPlans: {
+                    where: { status: "ACTIVE" },
+                    orderBy: { priceMonthly: "asc" },
+                  },
+                },
+              },
+            },
+          });
+          if (domainRec?.organization) {
+            parentOrg = domainRec.organization;
+          }
+        }
+
+        if (parentOrg) {
+          parentOrgId = parentOrg.id;
+          if (parentOrg.customPlans.length > 0) {
+            defaultPlan = parentOrg.customPlans[0];
+          }
         }
       }
     }
