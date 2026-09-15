@@ -6,19 +6,22 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const ref = searchParams.get("ref");
+    const cookieRef = req.cookies.get("pajotree_wl_ref")?.value;
+    const effectiveRef = ref || cookieRef;
     const host = req.headers.get("host") || "";
     const cleanHost = host.split(":")[0].toLowerCase();
 
     let organization: any = null;
 
-    // 1. Busca por parâmetro de indicação / referência direta
-    if (ref) {
+    // 1. Busca por parâmetro de indicação / referência direta ou cookie de sessão WL
+    if (effectiveRef) {
       organization = await db.organization.findFirst({
         where: {
           OR: [
-            { id: ref },
-            { name: { equals: ref, mode: "insensitive" } },
-            { tradeName: { equals: ref, mode: "insensitive" } },
+            { id: effectiveRef },
+            { name: { equals: effectiveRef, mode: "insensitive" } },
+            { tradeName: { equals: effectiveRef, mode: "insensitive" } },
+            { whiteLabelDomain: { equals: effectiveRef, mode: "insensitive" } },
           ],
         },
         include: {
@@ -36,7 +39,7 @@ export async function GET(req: NextRequest) {
     const customHost = req.headers.get("x-custom-host") || cleanHost;
     const withoutWww = customHost.replace(/^www\./, "");
 
-    if (!organization && customHost && !customHost.includes("localhost") && !customHost.includes("pajotree") && !customHost.includes("127.0.0.1") && !customHost.includes("vercel.app")) {
+    if (!organization && customHost && !customHost.includes("localhost") && !customHost.includes("pajotree") && !customHost.includes("pajotech") && !customHost.includes("127.0.0.1") && !customHost.includes("vercel.app")) {
       // 2.1 Verifica se o domínio está cadastrado diretamente no campo whiteLabelDomain da Organização
       organization = await db.organization.findFirst({
         where: {

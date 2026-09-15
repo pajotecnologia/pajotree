@@ -86,19 +86,38 @@ export default function WhiteLabelLandingClient({ org, plans, config }: LandingP
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [isCustomDomain, setIsCustomDomain] = useState(false);
 
+  const partnerRef = org.whiteLabelDomain || org.id;
+
   React.useEffect(() => {
     if (typeof window !== "undefined") {
       const host = window.location.host.split(":")[0].toLowerCase();
-      const isDefault = ["localhost", "127.0.0.1", "pajotree.com", "www.pajotree.com", "pajotree.com.br", "www.pajotree.com.br", "vercel.app"].some(
-        (dh) => host === dh || host.endsWith(`.${dh}`)
-      );
+      const isDefault = [
+        "localhost",
+        "127.0.0.1",
+        "pajotree.com",
+        "www.pajotree.com",
+        "pajotree.com.br",
+        "www.pajotree.com.br",
+        "pajotech.com.br",
+        "www.pajotech.com.br",
+        "tree.pajotech.com.br",
+        "pajotech.com",
+        "vercel.app",
+      ].some((dh) => host === dh || host.endsWith(`.${dh}`));
       setIsCustomDomain(!isDefault);
+
+      try {
+        const refToSave = org.whiteLabelDomain || org.id;
+        localStorage.setItem("pajotree_wl_ref", refToSave);
+        document.cookie = `pajotree_wl_ref=${encodeURIComponent(refToSave)}; path=/; max-age=604800; SameSite=Lax`;
+      } catch {}
     }
-  }, []);
+  }, [org.id, org.whiteLabelDomain]);
 
   const brandName = org.tradeName || org.name || "Nossa Empresa";
-  const registerUrl = isCustomDomain ? "/register" : `/register?ref=${org.id}`;
-  const logoHref = isCustomDomain ? "/" : `/wl/${org.whiteLabelDomain || org.id}`;
+  const registerUrl = isCustomDomain ? "/register" : `/register?ref=${encodeURIComponent(partnerRef)}`;
+  const loginUrl = isCustomDomain ? "/login" : `/login?ref=${encodeURIComponent(partnerRef)}`;
+  const logoHref = isCustomDomain ? "/" : `/wl/${partnerRef}`;
 
   const formatMoney = (val: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -177,7 +196,7 @@ export default function WhiteLabelLandingClient({ org, plans, config }: LandingP
 
           <div className="flex items-center gap-3">
             <Link
-              href="/login"
+              href={loginUrl}
               className="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-300 hover:text-white transition"
             >
               Fazer Login
@@ -525,7 +544,7 @@ export default function WhiteLabelLandingClient({ org, plans, config }: LandingP
 
                     <div className="pt-8">
                       <Link
-                        href={`/register?ref=${org.id}&planId=${plan.id}`}
+                        href={isCustomDomain ? `/register?planId=${plan.id}` : `/register?ref=${encodeURIComponent(partnerRef)}&planId=${plan.id}`}
                         className={`w-full py-3.5 rounded-xl font-extrabold text-xs transition flex items-center justify-center gap-2 cursor-pointer ${
                           isPopular
                             ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30"
@@ -662,7 +681,7 @@ export default function WhiteLabelLandingClient({ org, plans, config }: LandingP
           </div>
 
           <div className="flex items-center gap-6">
-            <Link href="/login" className="hover:text-white transition">Fazer Login</Link>
+            <Link href={loginUrl} className="hover:text-white transition">Fazer Login</Link>
             <Link href={registerUrl} className="hover:text-white transition">Criar Conta</Link>
             {whatsappLink && (
               <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition">

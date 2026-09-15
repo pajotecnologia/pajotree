@@ -37,6 +37,17 @@ export function useBranding(): BrandingInfo {
         if (typeof window !== "undefined") {
           const params = new URLSearchParams(window.location.search);
           ref = params.get("ref") || "";
+
+          if (ref) {
+            try {
+              localStorage.setItem("pajotree_wl_ref", ref);
+              document.cookie = `pajotree_wl_ref=${encodeURIComponent(ref)}; path=/; max-age=604800; SameSite=Lax`;
+            } catch {}
+          } else {
+            try {
+              ref = localStorage.getItem("pajotree_wl_ref") || "";
+            } catch {}
+          }
         }
 
         const query = ref ? `?ref=${encodeURIComponent(ref)}` : "";

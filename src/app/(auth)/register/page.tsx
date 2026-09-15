@@ -102,10 +102,14 @@ function RegisterForm() {
     }
   }
 
+  const effectiveRef = refParam || branding.orgId || "";
+  const loginUrl = effectiveRef ? `/login?ref=${encodeURIComponent(effectiveRef)}` : "/login";
+  const homeUrl = effectiveRef ? `/wl/${encodeURIComponent(effectiveRef)}` : "/";
+
   return (
     <div className="w-full max-w-lg bg-white border border-slate-200 rounded-3xl p-8 sm:p-10 shadow-xl relative z-10">
       <div className="text-center mb-8">
-        <Link href="/" className="inline-flex items-center gap-2.5 mb-3 group">
+        <Link href={homeUrl} className="inline-flex items-center gap-2.5 mb-3 group">
           {branding.logoUrl ? (
             <img
               src={branding.logoUrl}
@@ -267,7 +271,7 @@ function RegisterForm() {
 
       <div className="mt-6 pt-5 border-t border-slate-100 text-center text-xs text-slate-500">
         <span>Já possui uma conta? </span>
-        <Link href={refParam ? `/login?ref=${refParam}` : "/login"} className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">Fazer login</Link>
+        <Link href={loginUrl} className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">Fazer login</Link>
         <div className="mt-3 text-[10px] text-slate-400 leading-relaxed">
           <span>Versão {APP_VERSION}</span>
           <span className="mx-1.5">•</span>

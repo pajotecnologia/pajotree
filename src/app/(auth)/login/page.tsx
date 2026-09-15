@@ -61,10 +61,17 @@ function LoginForm() {
     }
   }
 
+  const registerUrl = branding.isWhiteLabel && branding.orgId
+    ? `/register?ref=${encodeURIComponent(branding.orgId)}`
+    : "/register";
+  const homeUrl = branding.isWhiteLabel && branding.orgId
+    ? `/wl/${encodeURIComponent(branding.orgId)}`
+    : "/";
+
   return (
     <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-8 shadow-xl relative z-10">
       <div className="text-center mb-8">
-        <Link href="/" className="inline-flex items-center gap-2.5 mb-4 group">
+        <Link href={homeUrl} className="inline-flex items-center gap-2.5 mb-4 group">
           {branding.logoUrl ? (
             <img
               src={branding.logoUrl}
@@ -96,7 +103,9 @@ function LoginForm() {
         </Link>
         <h2 className="text-xl font-bold text-slate-900">Acesse sua conta</h2>
         <p className="text-xs text-slate-500 mt-1">
-          Gerencie sua página, leads, WhatsApp e CRM
+          {branding.isWhiteLabel
+            ? `Painel de gerenciamento de ${branding.brandName}`
+            : "Gerencie sua página, leads, WhatsApp e CRM"}
         </p>
       </div>
 
@@ -158,7 +167,7 @@ function LoginForm() {
 
       <div className="mt-8 pt-6 border-t border-slate-100 text-center text-xs text-slate-500">
         <span>Ainda não possui uma conta? </span>
-        <Link href="/register" className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">Cadastre sua empresa</Link>
+        <Link href={registerUrl} className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">Cadastre sua empresa</Link>
         <div className="mt-3 text-[10px] text-slate-400 leading-relaxed">
           <span>Versão {APP_VERSION}</span>
           <span className="mx-1.5">•</span>

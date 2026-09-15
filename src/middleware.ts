@@ -8,6 +8,10 @@ const DEFAULT_HOSTS = [
   "www.pajotree.com",
   "pajotree.com.br",
   "www.pajotree.com.br",
+  "pajotech.com.br",
+  "www.pajotech.com.br",
+  "tree.pajotech.com.br",
+  "pajotech.com",
   "vercel.app",
 ];
 
