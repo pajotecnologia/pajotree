@@ -34,18 +34,26 @@ const migrationStatements = [
     "provider" TEXT NOT NULL DEFAULT 'BANCO_INTER',
     "clientId" TEXT,
     "clientSecret" TEXT,
+    "certCrt" TEXT,
+    "certKey" TEXT,
     "chavePix" TEXT,
     "contaCorrente" TEXT,
-    "certificadoCrt" TEXT,
-    "chavePrivadaKey" TEXT,
-    "webhookSecret" TEXT,
     "ambiente" TEXT NOT NULL DEFAULT 'PRODUCAO',
     "ativo" BOOLEAN NOT NULL DEFAULT false,
-    "webhookAtivo" BOOLEAN NOT NULL DEFAULT false,
     "webhookUrl" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
+  `ALTER TABLE "OrganizationPaymentGateway" ADD COLUMN IF NOT EXISTS "certCrt" TEXT`,
+  `ALTER TABLE "OrganizationPaymentGateway" ADD COLUMN IF NOT EXISTS "certKey" TEXT`,
+  `ALTER TABLE "OrganizationPaymentGateway" ADD COLUMN IF NOT EXISTS "webhookUrl" TEXT`,
+  `ALTER TABLE "OrganizationPaymentGateway" ADD COLUMN IF NOT EXISTS "provider" TEXT DEFAULT 'BANCO_INTER'`,
+  `ALTER TABLE "OrganizationPaymentGateway" ADD COLUMN IF NOT EXISTS "ambiente" TEXT DEFAULT 'PRODUCAO'`,
+  `ALTER TABLE "OrganizationPaymentGateway" ADD COLUMN IF NOT EXISTS "ativo" BOOLEAN DEFAULT false`,
+  `ALTER TABLE "OrganizationPaymentGateway" DROP COLUMN IF EXISTS "certificadoCrt"`,
+  `ALTER TABLE "OrganizationPaymentGateway" DROP COLUMN IF EXISTS "chavePrivadaKey"`,
+  `ALTER TABLE "OrganizationPaymentGateway" DROP COLUMN IF EXISTS "webhookSecret"`,
+  `ALTER TABLE "OrganizationPaymentGateway" DROP COLUMN IF EXISTS "webhookAtivo"`,
 
   // 6. OrganizationSmtpConfig Table
   `CREATE TABLE IF NOT EXISTS "OrganizationSmtpConfig" (
@@ -56,12 +64,16 @@ const migrationStatements = [
     "user" TEXT NOT NULL,
     "pass" TEXT NOT NULL,
     "fromEmail" TEXT,
-    "fromName" TEXT,
+    "fromName" TEXT DEFAULT 'Pajotree',
     "secure" BOOLEAN NOT NULL DEFAULT false,
     "ativo" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
+  `ALTER TABLE "OrganizationSmtpConfig" ADD COLUMN IF NOT EXISTS "fromName" TEXT DEFAULT 'Pajotree'`,
+  `ALTER TABLE "OrganizationSmtpConfig" ADD COLUMN IF NOT EXISTS "fromEmail" TEXT`,
+  `ALTER TABLE "OrganizationSmtpConfig" ADD COLUMN IF NOT EXISTS "secure" BOOLEAN DEFAULT false`,
+  `ALTER TABLE "OrganizationSmtpConfig" ADD COLUMN IF NOT EXISTS "ativo" BOOLEAN DEFAULT true`,
 
   // 7. OrganizationEvolutionConfig Table
   `CREATE TABLE IF NOT EXISTS "OrganizationEvolutionConfig" (
@@ -78,13 +90,21 @@ const migrationStatements = [
   `ALTER TABLE "OrganizationEvolutionConfig" ADD COLUMN IF NOT EXISTS "apiKey" TEXT`,
   `ALTER TABLE "OrganizationEvolutionConfig" ADD COLUMN IF NOT EXISTS "instanceName" TEXT`,
   `ALTER TABLE "OrganizationEvolutionConfig" ADD COLUMN IF NOT EXISTS "ativo" BOOLEAN DEFAULT true`,
+  // If serverUrl column existed, migrate data to apiUrl first
   `DO $$ BEGIN
      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='OrganizationEvolutionConfig' AND column_name='serverUrl') THEN
        UPDATE "OrganizationEvolutionConfig" SET "apiUrl" = "serverUrl" WHERE "apiUrl" IS NULL;
      END IF;
    END $$;`,
+  // Drop the serverUrl column so it will never cause NOT NULL constraint violations
+  `ALTER TABLE "OrganizationEvolutionConfig" DROP COLUMN IF EXISTS "serverUrl"`,
 
-  // 8. AuditLog Table
+  // 8. WhatsappInstance Extra Columns
+  `ALTER TABLE "WhatsappInstance" ADD COLUMN IF NOT EXISTS "apiUrl" TEXT`,
+  `ALTER TABLE "WhatsappInstance" ADD COLUMN IF NOT EXISTS "credentialsEncrypted" TEXT`,
+  `ALTER TABLE "WhatsappInstance" ADD COLUMN IF NOT EXISTS "webhookStatus" TEXT DEFAULT 'PENDING'`,
+
+  // 9. AuditLog Table
   `CREATE TABLE IF NOT EXISTS "AuditLog" (
     "id" TEXT PRIMARY KEY,
     "organizationId" TEXT,
@@ -99,6 +119,35 @@ const migrationStatements = [
   `CREATE INDEX IF NOT EXISTS "AuditLog_userId_idx" ON "AuditLog"("userId")`,
   `CREATE INDEX IF NOT EXISTS "AuditLog_action_idx" ON "AuditLog"("action")`,
   `CREATE INDEX IF NOT EXISTS "AuditLog_createdAt_idx" ON "AuditLog"("createdAt")`,
+
+  // 10. Notification Table
+  `CREATE TABLE IF NOT EXISTS "Notification" (
+    "id" TEXT PRIMARY KEY,
+    "organizationId" TEXT,
+    "userId" TEXT,
+    "type" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "message" TEXT NOT NULL,
+    "read" BOOLEAN NOT NULL DEFAULT false,
+    "link" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE INDEX IF NOT EXISTS "Notification_organizationId_idx" ON "Notification"("organizationId")`,
+  `CREATE INDEX IF NOT EXISTS "Notification_userId_idx" ON "Notification"("userId")`,
+
+  // 11. TrackingConsent Table
+  `CREATE TABLE IF NOT EXISTS "TrackingConsent" (
+    "id" TEXT PRIMARY KEY,
+    "organizationId" TEXT NOT NULL,
+    "visitorId" TEXT NOT NULL,
+    "consentGiven" BOOLEAN NOT NULL DEFAULT true,
+    "policyVersion" TEXT NOT NULL DEFAULT '1.0',
+    "preferencesJson" TEXT,
+    "ipHash" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE INDEX IF NOT EXISTS "TrackingConsent_organizationId_idx" ON "TrackingConsent"("organizationId")`,
+  `CREATE INDEX IF NOT EXISTS "TrackingConsent_visitorId_idx" ON "TrackingConsent"("visitorId")`,
 ];
 
 /**
@@ -110,7 +159,7 @@ export async function ensureDatabaseSchema(): Promise<void> {
     try {
       await db.$executeRawUnsafe(sql);
     } catch (error: any) {
-      // Ignored if column/index/table already exists
+      // Ignored if column/index/table already exists or minor notice
       console.warn(`[Auto-Migrate] SQL notice: ${sql.slice(0, 45)}...`, error?.message);
     }
   }
