@@ -75,34 +75,6 @@ const migrationStatements = [
   `ALTER TABLE "OrganizationSmtpConfig" ADD COLUMN IF NOT EXISTS "secure" BOOLEAN DEFAULT false`,
   `ALTER TABLE "OrganizationSmtpConfig" ADD COLUMN IF NOT EXISTS "ativo" BOOLEAN DEFAULT true`,
 
-  // 7. OrganizationEvolutionConfig Table
-  `CREATE TABLE IF NOT EXISTS "OrganizationEvolutionConfig" (
-    "id" TEXT PRIMARY KEY,
-    "organizationId" TEXT NOT NULL UNIQUE,
-    "apiUrl" TEXT NOT NULL,
-    "apiKey" TEXT NOT NULL,
-    "instanceName" TEXT,
-    "ativo" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
-  )`,
-  `ALTER TABLE "OrganizationEvolutionConfig" ADD COLUMN IF NOT EXISTS "apiUrl" TEXT`,
-  `ALTER TABLE "OrganizationEvolutionConfig" ADD COLUMN IF NOT EXISTS "apiKey" TEXT`,
-  `ALTER TABLE "OrganizationEvolutionConfig" ADD COLUMN IF NOT EXISTS "instanceName" TEXT`,
-  `ALTER TABLE "OrganizationEvolutionConfig" ADD COLUMN IF NOT EXISTS "ativo" BOOLEAN DEFAULT true`,
-  // If serverUrl column existed, migrate data to apiUrl first
-  `DO $$ BEGIN
-     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='OrganizationEvolutionConfig' AND column_name='serverUrl') THEN
-       UPDATE "OrganizationEvolutionConfig" SET "apiUrl" = "serverUrl" WHERE "apiUrl" IS NULL;
-     END IF;
-   END $$;`,
-  // Drop the serverUrl column so it will never cause NOT NULL constraint violations
-  `ALTER TABLE "OrganizationEvolutionConfig" DROP COLUMN IF EXISTS "serverUrl"`,
-
-  // 8. WhatsappInstance Extra Columns
-  `ALTER TABLE "WhatsappInstance" ADD COLUMN IF NOT EXISTS "apiUrl" TEXT`,
-  `ALTER TABLE "WhatsappInstance" ADD COLUMN IF NOT EXISTS "credentialsEncrypted" TEXT`,
-  `ALTER TABLE "WhatsappInstance" ADD COLUMN IF NOT EXISTS "webhookStatus" TEXT DEFAULT 'PENDING'`,
 
   // 9. AuditLog Table
   `CREATE TABLE IF NOT EXISTS "AuditLog" (

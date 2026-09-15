@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentAuthContext } from "@/lib/auth";
 import { PlanLimitService } from "@/server/services/plan-limit.service";
+import { db } from "@/lib/db";
 
 export async function GET() {
   try {
@@ -11,11 +12,21 @@ export async function GET() {
     }
 
     let planAndUsage = null;
+    let pageSlug = null;
+
     if (authContext.organization?.id) {
       try {
-        planAndUsage = await PlanLimitService.getPlanAndUsage(authContext.organization.id);
+        const [planUsage, primaryPage] = await Promise.all([
+          PlanLimitService.getPlanAndUsage(authContext.organization.id),
+          db.page.findFirst({
+            where: { organizationId: authContext.organization.id },
+            select: { slug: true },
+          }),
+        ]);
+        planAndUsage = planUsage;
+        pageSlug = primaryPage?.slug || null;
       } catch (e) {
-        console.error("Erro ao carregar uso do plano:", e);
+        console.error("Erro ao carregar dados complementares do auth/me:", e);
       }
     }
 
@@ -35,6 +46,7 @@ export async function GET() {
       isWhiteLabelClient,
       whiteLabelParent: org?.whiteLabelParent || null,
       planDetails: planAndUsage,
+      pageSlug,
     });
   } catch (error: any) {
     console.error("Erro ao obter contexto de autenticação:", error);

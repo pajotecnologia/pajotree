@@ -435,17 +435,15 @@ export default function WhiteLabelPage() {
           maxUsers: 2,
           maxLeads: 500,
           maxForms: 3,
-          maxWhatsappInstances: 1,
           customDomainAllowed: true,
           crmAllowed: true,
-          whatsappInboxAllowed: true,
           removeBranding: true,
         },
       });
     } else {
       setEditingPlan({
         name: "Plano Pro",
-        description: "Acesso completo aos recursos com WhatsApp e CRM",
+        description: "Acesso completo aos recursos com CRM e Tracking",
         priceMonthly: 49.90,
         priceYearly: 479.00,
         trialDays: 7,
@@ -456,13 +454,11 @@ export default function WhiteLabelPage() {
           maxUsers: 3,
           maxLeads: 1000,
           maxForms: 5,
-          maxWhatsappInstances: 1,
           maxMetaPixels: 2,
           maxAutomations: 5,
           maxStorageMb: 200,
           customDomainAllowed: true,
           crmAllowed: true,
-          whatsappInboxAllowed: true,
           advancedAnalytics: true,
           removeBranding: true,
         },
@@ -1294,12 +1290,6 @@ export default function WhiteLabelPage() {
                         <Check className="w-4 h-4 text-emerald-500 shrink-0" />
                         <span>Até <strong>{plan.features?.[0]?.maxLeads || 100}</strong> leads</span>
                       </li>
-                      {plan.features?.[0]?.whatsappInboxAllowed && (
-                        <li className="flex items-center gap-2 text-emerald-700 font-semibold">
-                          <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                          <span>WhatsApp & Inbox Liberados</span>
-                        </li>
-                      )}
                       {plan.features?.[0]?.crmAllowed && (
                         <li className="flex items-center gap-2 text-indigo-700 font-semibold">
                           <Check className="w-4 h-4 text-indigo-500 shrink-0" />
@@ -1442,15 +1432,7 @@ export default function WhiteLabelPage() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
-                      <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={editingPlan.features.whatsappInboxAllowed}
-                          onChange={(e) => setEditingPlan({ ...editingPlan, features: { ...editingPlan.features, whatsappInboxAllowed: e.target.checked } })}
-                          className="rounded text-purple-600"
-                        />
-                        <span>WhatsApp & Inbox Liberados</span>
-                      </label>
+
                       <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
                         <input
                           type="checkbox"

@@ -10,12 +10,85 @@ interface Props {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
+async function findPageBySlug(slug: string) {
+  let page = await db.page.findUnique({
+    where: { slug },
+    include: {
+      organization: {
+        include: {
+          plan: { include: { features: true } },
+          metaPixels: { where: { status: "ACTIVE" } },
+          googleIntegrations: { where: { status: "ACTIVE" } },
+          whiteLabelParent: true,
+        },
+      },
+      settings: true,
+      links: { where: { status: "ACTIVE" }, orderBy: { position: "asc" }, include: { shortLinks: true } },
+      blocks: { where: { status: "ACTIVE" }, orderBy: { position: "asc" } },
+    },
+  });
+
+  if (!page) {
+    // Fallback: busca por slug insensível a maiúsculas/minúsculas
+    page = await db.page.findFirst({
+      where: { slug: { equals: slug, mode: "insensitive" } },
+      include: {
+        organization: {
+          include: {
+            plan: { include: { features: true } },
+            metaPixels: { where: { status: "ACTIVE" } },
+            googleIntegrations: { where: { status: "ACTIVE" } },
+            whiteLabelParent: true,
+          },
+        },
+        settings: true,
+        links: { where: { status: "ACTIVE" }, orderBy: { position: "asc" }, include: { shortLinks: true } },
+        blocks: { where: { status: "ACTIVE" }, orderBy: { position: "asc" } },
+      },
+    });
+  }
+
+  if (!page) {
+    // Fallback 2: busca por nome ou tradeName da organização
+    const normalized = slug.toLowerCase().replace(/[^a-z0-9]/g, " ");
+    const org = await db.organization.findFirst({
+      where: {
+        OR: [
+          { name: { contains: normalized, mode: "insensitive" } },
+          { tradeName: { contains: normalized, mode: "insensitive" } },
+        ],
+      },
+      include: {
+        pages: {
+          take: 1,
+          include: {
+            organization: {
+              include: {
+                plan: { include: { features: true } },
+                metaPixels: { where: { status: "ACTIVE" } },
+                googleIntegrations: { where: { status: "ACTIVE" } },
+                whiteLabelParent: true,
+              },
+            },
+            settings: true,
+            links: { where: { status: "ACTIVE" }, orderBy: { position: "asc" }, include: { shortLinks: true } },
+            blocks: { where: { status: "ACTIVE" }, orderBy: { position: "asc" } },
+          },
+        },
+      },
+    });
+
+    if (org?.pages?.[0]) {
+      page = org.pages[0];
+    }
+  }
+
+  return page;
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const page = await db.page.findUnique({
-    where: { slug },
-    include: { organization: true, settings: true },
-  });
+  const page = await findPageBySlug(slug);
 
   if (!page || page.status !== "PUBLISHED") {
     return { title: "Página não encontrada | Pajotree" };
@@ -40,22 +113,7 @@ export default async function PublicPage({ params, searchParams }: Props) {
   const { slug } = await params;
   const sParams = await searchParams;
 
-  const page = await db.page.findUnique({
-    where: { slug },
-    include: {
-      organization: {
-        include: {
-          plan: { include: { features: true } },
-          metaPixels: { where: { status: "ACTIVE" } },
-          googleIntegrations: { where: { status: "ACTIVE" } },
-          whiteLabelParent: true,
-        },
-      },
-      settings: true,
-      links: { where: { status: "ACTIVE" }, orderBy: { position: "asc" }, include: { shortLinks: true } },
-      blocks: { where: { status: "ACTIVE" }, orderBy: { position: "asc" } },
-    },
-  });
+  const page = await findPageBySlug(slug);
 
   if (!page || page.status !== "PUBLISHED") notFound();
 
@@ -112,7 +170,6 @@ export default async function PublicPage({ params, searchParams }: Props) {
       brandUrl,
     },
   };
-
 
   return (
     <>

@@ -22,8 +22,8 @@ type Plan = {
   features?: Array<{
     maxLinks?: number;
     maxLeads?: number;
-    maxWhatsappInstances?: number;
     maxMetaPixels?: number;
+    maxAutomations?: number;
   }>;
 };
 
@@ -249,8 +249,8 @@ export default function BillingPage() {
           {[
             ["Links Criados", usage?.linksCount || 0, data?.isSuperAdmin ? "Ilimitado" : features?.maxLinks, "bg-indigo-600"],
             ["Leads Capturados", usage?.leadsCount || 0, data?.isSuperAdmin ? "Ilimitado" : features?.maxLeads, "bg-emerald-600"],
-            ["WhatsApp Conectado", usage?.whatsappInstancesCount || 0, data?.isSuperAdmin ? "Ilimitado" : features?.maxWhatsappInstances, "bg-blue-600"],
             ["Meta Pixels", usage?.metaPixelsCount || 0, data?.isSuperAdmin ? "Ilimitado" : features?.maxMetaPixels, "bg-pink-600"],
+            ["Automações", usage?.automationsCount || 0, data?.isSuperAdmin ? "Ilimitado" : features?.maxAutomations, "bg-blue-600"],
           ].map(([label, used, max, barClass]) => {
             const numericMax = Number(max) || 1;
             const percentage = data?.isSuperAdmin ? 100 : Math.min((Number(used) / numericMax) * 100, 100);
@@ -310,8 +310,8 @@ export default function BillingPage() {
                     <div className="space-y-2.5 mb-6 text-xs text-slate-700">
                       <div className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /><span>Até {pFeatures?.maxLinks} Links com Tracking</span></div>
                       <div className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /><span>{pFeatures?.maxLeads} Leads no CRM</span></div>
-                      <div className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /><span>{pFeatures?.maxWhatsappInstances} Conexões WhatsApp</span></div>
                       <div className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /><span>{pFeatures?.maxMetaPixels} Meta Pixels</span></div>
+                      <div className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /><span>Domínio Próprio & SSL</span></div>
                     </div>
                   </div>
 

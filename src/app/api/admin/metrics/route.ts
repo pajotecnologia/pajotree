@@ -24,7 +24,6 @@ export async function GET() {
       totalUsers,
       totalLeads,
       totalLinks,
-      totalWhatsapp,
       activeSubscriptions,
       recentAuditLogs,
     ] = await Promise.all([
@@ -35,7 +34,6 @@ export async function GET() {
       db.user.count(),
       db.lead.count(),
       db.link.count(),
-      db.whatsappInstance.count({ where: { status: "CONNECTED" } }),
       db.subscription.findMany({
         where: { status: "ACTIVE" },
         include: { plan: true },
@@ -65,7 +63,6 @@ export async function GET() {
         totalUsers,
         totalLeads,
         totalLinks,
-        totalWhatsapp,
         mrr: `R$ ${mrr.toFixed(2).replace(".", ",")}`,
         arr: `R$ ${arr.toFixed(2).replace(".", ",")}`,
       },

@@ -10,13 +10,11 @@ const planFeatureSchema = z.object({
   maxUsers: z.number().int().min(1).default(1),
   maxLeads: z.number().int().min(0).default(100),
   maxForms: z.number().int().min(0).default(1),
-  maxWhatsappInstances: z.number().int().min(0).default(0),
   maxMetaPixels: z.number().int().min(0).default(1),
   maxAutomations: z.number().int().min(0).default(0),
   maxStorageMb: z.number().int().min(10).default(50),
   customDomainAllowed: z.boolean().default(false),
   crmAllowed: z.boolean().default(false),
-  whatsappInboxAllowed: z.boolean().default(false),
   advancedAnalytics: z.boolean().default(false),
   removeBranding: z.boolean().default(false),
 });

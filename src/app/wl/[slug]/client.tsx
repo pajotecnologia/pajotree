@@ -35,11 +35,9 @@ interface PlanFeature {
   maxUsers?: number;
   maxLeads?: number;
   maxForms?: number;
-  maxWhatsappInstances?: number;
   maxMetaPixels?: number;
   customDomainAllowed?: boolean;
   crmAllowed?: boolean;
-  whatsappInboxAllowed?: boolean;
   advancedAnalytics?: boolean;
   removeBranding?: boolean;
 }
@@ -488,7 +486,7 @@ export default function WhiteLabelLandingClient({ org, plans, config }: LandingP
                         </li>
                         <li className="flex items-center gap-2.5 text-slate-300">
                           <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                          <span><b>{feats?.maxWhatsappInstances ?? 1}</b> {feats?.maxWhatsappInstances === 1 ? "Conexão WhatsApp Web" : "Conexões WhatsApp Web"}</span>
+                          <span><b>{feats?.maxMetaPixels ?? 1}</b> Meta Pixels & UTM Tracking</span>
                         </li>
                         <li className="flex items-center gap-2.5 text-slate-300">
                           <Check className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -496,7 +494,7 @@ export default function WhiteLabelLandingClient({ org, plans, config }: LandingP
                         </li>
                         <li className="flex items-center gap-2.5 text-slate-300">
                           <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                          <span>Central de Atendimento ao Vivo</span>
+                          <span>Formulários & Captura Inteligente</span>
                         </li>
                         {feats?.customDomainAllowed && (
                           <li className="flex items-center gap-2.5 text-indigo-300 font-semibold">

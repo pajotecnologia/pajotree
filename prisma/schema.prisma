@@ -45,7 +45,6 @@ model Organization {
   whiteLabelClients   Organization[]             @relation("WhiteLabelTenants")
   paymentGateway      OrganizationPaymentGateway?
   smtpConfig          OrganizationSmtpConfig?
-  evolutionConfig     OrganizationEvolutionConfig?
   customPlans         Plan[]                     @relation("OrganizationPlans")
 
   addresses          OrganizationAddress[]
@@ -67,8 +66,6 @@ model Organization {
   opportunities      Opportunity[]
   tasks              Task[]
   forms              Form[]
-  whatsappInstances  WhatsappInstance[]
-  whatsappContacts   WhatsappContact[]
   automations        Automation[]
   subscriptions      Subscription[]
   subscriptionUsages SubscriptionUsage[]
@@ -768,89 +765,7 @@ model FormSubmission {
   @@index([formId])
 }
 
-// ==========================================
-// 10. WHATSAPP & EVOLUTION API
-// ==========================================
 
-enum WhatsappStatus {
-  CONNECTING
-  CONNECTED
-  DISCONNECTED
-  ERROR
-}
-
-model WhatsappInstance {
-  id                   String         @id @default(cuid())
-  organizationId       String
-  organization         Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  name                 String
-  instanceName         String         @unique
-  phone                String?
-  status               WhatsappStatus @default(DISCONNECTED)
-  apiUrl               String?
-  credentialsEncrypted String?        @db.Text
-  webhookStatus        String?        @default("PENDING")
-
-  conversations WhatsappConversation[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([organizationId])
-  @@index([instanceName])
-}
-
-model WhatsappContact {
-  id             String                 @id @default(cuid())
-  organizationId String
-  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  remoteJid      String                 // e.g. 5511999999999@s.whatsapp.net
-  name           String?
-  profilePicUrl  String?
-  
-  conversations  WhatsappConversation[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([organizationId, remoteJid])
-  @@index([organizationId])
-}
-
-model WhatsappConversation {
-  id         String            @id @default(cuid())
-  instanceId String
-  instance   WhatsappInstance  @relation(fields: [instanceId], references: [id], onDelete: Cascade)
-  contactId  String
-  contact    WhatsappContact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  status     String            @default("OPEN") // OPEN, CLOSED, WAITING
-  unread     Int               @default(0)
-
-  messages WhatsappMessage[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([instanceId])
-  @@index([contactId])
-}
-
-model WhatsappMessage {
-  id             String               @id @default(cuid())
-  conversationId String
-  conversation   WhatsappConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  direction      String               // incoming, outgoing
-  messageType    String               // text, image, audio, video, document, sticker
-  content        String?              @db.Text
-  mediaUrl       String?
-  status         String               @default("SENT") // PENDING, SENT, DELIVERED, READ, ERROR
-  externalId     String?              @unique // For webhook idempotency
-
-  createdAt DateTime @default(now())
-
-  @@index([conversationId])
-  @@index([externalId])
-}
 
 // ==========================================
 // 11. AUTOMATIONS & QUEUES
@@ -961,13 +876,11 @@ model PlanFeature {
   maxUsers             Int     @default(1)
   maxLeads             Int     @default(100)
   maxForms             Int     @default(1)
-  maxWhatsappInstances Int     @default(0)
   maxMetaPixels        Int     @default(1)
   maxAutomations       Int     @default(0)
   maxStorageMb         Int     @default(50)
   customDomainAllowed  Boolean @default(false)
   crmAllowed           Boolean @default(false)
-  whatsappInboxAllowed Boolean @default(false)
   advancedAnalytics    Boolean @default(false)
   removeBranding       Boolean @default(false)
 
@@ -1107,20 +1020,7 @@ model OrganizationSmtpConfig {
   @@index([organizationId])
 }
 
-model OrganizationEvolutionConfig {
-  id             String       @id @default(cuid())
-  organizationId String       @unique
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  apiUrl         String
-  apiKey         String
-  instanceName   String?
-  ativo          Boolean      @default(true)
 
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  @@index([organizationId])
-}
 
 model PasswordResetToken {
   id        String   @id @default(cuid())

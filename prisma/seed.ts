@@ -38,23 +38,23 @@ async function main() {
       priceMonthly: 0,
       priceYearly: 0,
       trialDays: 0,
-      features: { maxPages: 1, maxLinks: 5, maxUsers: 1, maxLeads: 50, maxForms: 1, maxWhatsappInstances: 0, maxMetaPixels: 1, maxAutomations: 0, maxStorageMb: 20, customDomainAllowed: false, crmAllowed: false, whatsappInboxAllowed: false, advancedAnalytics: false, removeBranding: false },
+      features: { maxPages: 1, maxLinks: 5, maxUsers: 1, maxLeads: 50, maxForms: 1, maxMetaPixels: 1, maxAutomations: 0, maxStorageMb: 20, customDomainAllowed: false, crmAllowed: false, advancedAnalytics: false, removeBranding: false },
     },
     {
       name: "START",
-      description: "Ideal para autônomos e pequenos negócios que atendem no WhatsApp.",
+      description: "Ideal para autônomos e pequenos negócios que querem profissionalizar sua presença digital.",
       priceMonthly: 39.9,
       priceYearly: 399.0,
       trialDays: 14,
-      features: { maxPages: 3, maxLinks: 25, maxUsers: 3, maxLeads: 500, maxForms: 3, maxWhatsappInstances: 1, maxMetaPixels: 2, maxAutomations: 2, maxStorageMb: 200, customDomainAllowed: true, crmAllowed: true, whatsappInboxAllowed: true, advancedAnalytics: false, removeBranding: false },
+      features: { maxPages: 3, maxLinks: 25, maxUsers: 3, maxLeads: 500, maxForms: 3, maxMetaPixels: 2, maxAutomations: 2, maxStorageMb: 200, customDomainAllowed: true, crmAllowed: true, advancedAnalytics: false, removeBranding: false },
     },
     {
       name: "PRO",
-      description: "A máquina completa de conversão com WhatsApp, CRM e Analytics.",
+      description: "A máquina completa de conversão com CRM, Analytics e formulários de captura.",
       priceMonthly: 89.9,
       priceYearly: 898.8,
       trialDays: 14,
-      features: { maxPages: 10, maxLinks: 100, maxUsers: 10, maxLeads: 5000, maxForms: 10, maxWhatsappInstances: 3, maxMetaPixels: 10, maxAutomations: 10, maxStorageMb: 1024, customDomainAllowed: true, crmAllowed: true, whatsappInboxAllowed: true, advancedAnalytics: true, removeBranding: true },
+      features: { maxPages: 10, maxLinks: 100, maxUsers: 10, maxLeads: 5000, maxForms: 10, maxMetaPixels: 10, maxAutomations: 10, maxStorageMb: 1024, customDomainAllowed: true, crmAllowed: true, advancedAnalytics: true, removeBranding: true },
     },
     {
       name: "BUSINESS",
@@ -62,7 +62,7 @@ async function main() {
       priceMonthly: 199.9,
       priceYearly: 1998.0,
       trialDays: 14,
-      features: { maxPages: 50, maxLinks: 500, maxUsers: 50, maxLeads: 50000, maxForms: 50, maxWhatsappInstances: 10, maxMetaPixels: 50, maxAutomations: 50, maxStorageMb: 10240, customDomainAllowed: true, crmAllowed: true, whatsappInboxAllowed: true, advancedAnalytics: true, removeBranding: true },
+      features: { maxPages: 50, maxLinks: 500, maxUsers: 50, maxLeads: 50000, maxForms: 50, maxMetaPixels: 50, maxAutomations: 50, maxStorageMb: 10240, customDomainAllowed: true, crmAllowed: true, advancedAnalytics: true, removeBranding: true },
     },
     {
       name: "WHITE LABEL",
@@ -70,7 +70,7 @@ async function main() {
       priceMonthly: 399.9,
       priceYearly: 3999.0,
       trialDays: 14,
-      features: { maxPages: 100, maxLinks: 1000, maxUsers: 100, maxLeads: 100000, maxForms: 100, maxWhatsappInstances: 20, maxMetaPixels: 100, maxAutomations: 100, maxStorageMb: 51200, customDomainAllowed: true, crmAllowed: true, whatsappInboxAllowed: true, advancedAnalytics: true, removeBranding: true },
+      features: { maxPages: 100, maxLinks: 1000, maxUsers: 100, maxLeads: 100000, maxForms: 100, maxMetaPixels: 100, maxAutomations: 100, maxStorageMb: 51200, customDomainAllowed: true, crmAllowed: true, advancedAnalytics: true, removeBranding: true },
     },
     {
       name: "MASTER",
@@ -78,7 +78,7 @@ async function main() {
       priceMonthly: 0,
       priceYearly: 0,
       trialDays: 0,
-      features: { maxPages: 999999, maxLinks: 999999, maxUsers: 999999, maxLeads: 999999, maxForms: 999999, maxWhatsappInstances: 999999, maxMetaPixels: 999999, maxAutomations: 999999, maxStorageMb: 999999, customDomainAllowed: true, crmAllowed: true, whatsappInboxAllowed: true, advancedAnalytics: true, removeBranding: true },
+      features: { maxPages: 999999, maxLinks: 999999, maxUsers: 999999, maxLeads: 999999, maxForms: 999999, maxMetaPixels: 999999, maxAutomations: 999999, maxStorageMb: 999999, customDomainAllowed: true, crmAllowed: true, advancedAnalytics: true, removeBranding: true },
     },
   ];
 

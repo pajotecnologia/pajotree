@@ -39,7 +39,7 @@ type Organization = {
   planId?: string | null;
   plan?: Plan | null;
   addresses?: Address[];
-  _count?: { links?: number; leads?: number; whatsappInstances?: number };
+  _count?: { links?: number; leads?: number; users?: number };
 };
 
 type FormState = {
@@ -296,7 +296,7 @@ export default function AdminOrganizationsPage() {
                       <option value="">Sem plano</option>{plans.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                   </td>
-                  <td data-label="Consumo" className="p-4 text-slate-600 text-[11px]">{org._count?.links || 0} links &bull; {org._count?.leads || 0} leads &bull; {org._count?.whatsappInstances || 0} WA</td>
+                  <td data-label="Consumo" className="p-4 text-slate-600 text-[11px]">{org._count?.links || 0} links &bull; {org._count?.leads || 0} leads &bull; {org._count?.users || 1} usuários</td>
                   <td data-label="Status" className="p-4"><span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold border ${org.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : org.status === "TRIAL" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-rose-50 text-rose-700 border-rose-200"}`}>{org.status}</span></td>
                   <td data-label="Ações" className="p-4 pr-6 text-right">
                     <div className="flex items-center justify-start sm:justify-end gap-2">

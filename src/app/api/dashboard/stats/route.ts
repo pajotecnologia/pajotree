@@ -64,7 +64,7 @@ export async function GET() {
         take: 5,
       }),
       db.page.findFirst({
-        where: { organizationId: orgId, status: "PUBLISHED" },
+        where: { organizationId: orgId },
       }),
     ]);
 

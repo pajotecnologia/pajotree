@@ -41,13 +41,13 @@ export default function LandingPage() {
     },
     {
       name: "START",
-      description: "Ideal para autônomos e pequenos negócios que atendem no WhatsApp.",
+      description: "Ideal para autônomos e pequenos negócios que querem profissionalizar sua presença digital.",
       price: billingCycle === "monthly" ? "R$ 39,90" : "R$ 33,25",
       period: billingCycle === "monthly" ? "/mês" : "/mês (anual)",
       features: [
         "3 Páginas Personalizadas",
         "Até 25 Links com Tracking",
-        "1 Conexão WhatsApp (Evolution API)",
+        "Botões Diretos para WhatsApp",
         "CRM Básico de Oportunidades",
         "Captura de até 500 Leads",
         "Domínio Próprio Personalizado",
@@ -59,14 +59,12 @@ export default function LandingPage() {
     },
     {
       name: "PRO",
-      description: "A máquina completa de conversão com WhatsApp, CRM e Analytics.",
+      description: "A máquina completa de conversão com CRM, Analytics e formulários de captura.",
       price: billingCycle === "monthly" ? "R$ 89,90" : "R$ 74,90",
       period: billingCycle === "monthly" ? "/mês" : "/mês (anual)",
       features: [
         "10 Páginas Personalizadas",
         "Até 100 Links com Tracking",
-        "3 Conexões WhatsApp Simultâneas",
-        "Central de Atendimento Multiatendente",
         "CRM Kanban Completo & Automações",
         "Captura de até 5.000 Leads",
         "Meta Pixel Dedicado por Link",
@@ -84,7 +82,6 @@ export default function LandingPage() {
       period: billingCycle === "monthly" ? "/mês" : "/mês (anual)",
       features: [
         "50 Páginas e 500 Links",
-        "10 Conexões WhatsApp",
         "Até 50 Usuários na Equipe",
         "Leads Ilimitados",
         "Meta Conversions API (CAPI)",
@@ -105,7 +102,6 @@ export default function LandingPage() {
         "Até 1.000 Links com Tracking",
         "Até 100 Usuários na Equipe",
         "Até 100.000 Leads",
-        "20 Conexões WhatsApp",
         "Domínio Próprio Personalizado",
         "CRM, Automações e Analytics Avançado",
         "50 GB de Armazenamento",
@@ -120,11 +116,11 @@ export default function LandingPage() {
   const faqs = [
     {
       q: "O Pajotree é apenas mais um criador de links na bio?",
-      a: "Não. O Pajotree é uma plataforma completa de vendas. Além da página de links ultra-rápida, você tem CRM integrado, conexão direta com WhatsApp (Evolution API), rastreamento avançado com Meta Pixel por link e captura automática de leads.",
+      a: "Não. O Pajotree é uma plataforma completa de vendas. Além da página de links ultra-rápida, você tem CRM integrado, rastreamento avançado com Meta Pixel por link, links diretos para WhatsApp e captura automática de leads.",
     },
     {
-      q: "Como funciona a conexão com o WhatsApp?",
-      a: "Você conecta seu número de WhatsApp escaneando o QR Code da Evolution API direto no painel. Mensagens, novos leads e contatos caem automaticamente na sua Central de Atendimento e no seu funil de CRM.",
+      q: "Como funcionam os links diretos para o WhatsApp?",
+      a: "Você pode adicionar botões de contato direto para o WhatsApp com mensagens personalizadas. Cada clique é rastreado automaticamente no painel de Analytics e no CRM de leads.",
     },
     {
       q: "Posso usar meu próprio domínio?",
@@ -180,7 +176,7 @@ export default function LandingPage() {
           </div>
           <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-xs font-semibold text-slate-500">
             <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600" />Sem cartão de crédito inicial</div>
-            <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600" />Conexão WhatsApp Evolution API</div>
+            <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600" />Links Diretos para WhatsApp & CRM</div>
             <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600" />Multi-Pixel & Tracking Server-side</div>
           </div>
         </div>
@@ -189,11 +185,11 @@ export default function LandingPage() {
       <section className="relative z-10 py-20 bg-white border-y border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="p-8 rounded-3xl bg-rose-50/60 border border-rose-200"><div className="inline-flex px-3 py-1 rounded-lg bg-rose-100 text-rose-800 text-xs font-bold uppercase mb-4">O Modo Antigo</div><h3 className="text-2xl font-bold text-slate-900 mb-4">Links comuns desperdiçam oportunidades de venda</h3><ul className="space-y-3.5 text-slate-600 text-sm"><li>✕ Links espalhados e sem rastreamento de origem.</li><li>✕ Visitantes entram no WhatsApp sem organização no CRM.</li><li>✕ Falta de pixel dedicado e perda de eventos de conversão.</li></ul></div>
-          <div className="p-8 rounded-3xl bg-indigo-50/60 border border-indigo-200 shadow-sm"><div className="inline-flex px-3 py-1 rounded-lg bg-indigo-100 text-indigo-800 text-xs font-bold uppercase mb-4">A Solução Pajotree</div><h3 className="text-2xl font-bold text-slate-900 mb-4">Um ecossistema inteligente de aquisição, atendimento e conversão</h3><ul className="space-y-3.5 text-slate-700 text-sm"><li>✓ <strong>Tracking Automático:</strong> captura de UTMs e eventos.</li><li>✓ <strong>Funil CRM Integrado:</strong> leads e oportunidades organizados no Kanban.</li><li>✓ <strong>WhatsApp Centralizado:</strong> atendimento com histórico e múltiplos atendentes.</li></ul></div>
+          <div className="p-8 rounded-3xl bg-indigo-50/60 border border-indigo-200 shadow-sm"><div className="inline-flex px-3 py-1 rounded-lg bg-indigo-100 text-indigo-800 text-xs font-bold uppercase mb-4">A Solução Pajotree</div><h3 className="text-2xl font-bold text-slate-900 mb-4">Um ecossistema inteligente de aquisição, atendimento e conversão</h3><ul className="space-y-3.5 text-slate-700 text-sm"><li>✓ <strong>Tracking Automático:</strong> captura de UTMs e eventos.</li><li>✓ <strong>Funil CRM Integrado:</strong> leads e oportunidades organizados no Kanban.</li><li>✓ <strong>Links Inteligentes:</strong> redirecionamento direto com parâmetros e pixels.</li></ul></div>
         </div>
       </section>
 
-      <section id="recursos" className="relative z-10 py-24"><div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div className="text-center max-w-3xl mx-auto mb-16"><h2 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">Recursos de Alta Performance</h2><p className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">Tudo o que sua empresa precisa para escalar conversões</p></div><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"><Feature icon={<Smartphone />} title="Editor Visual & Live Preview" text="Personalize cores, temas, fontes e blocos com preview em tempo real." /><Feature icon={<MessageSquare />} title="Conexão WhatsApp" text="Pareamento via QR Code, webhook e central de atendimento." /><Feature icon={<Users />} title="CRM Kanban de Vendas" text="Acompanhe leads desde o primeiro contato até o fechamento." /><Feature icon={<MousePointerClick />} title="Meta Pixel por Link" text="Configure pixels e eventos específicos para cada botão." /><Feature icon={<BarChart3 />} title="Analytics em Tempo Real" text="Métricas de visitantes, cliques, conversões e UTMs." /><Feature icon={<Globe />} title="Domínio Próprio & SSL" text="Conecte o domínio da sua marca com HTTPS." /></div></div></section>
+      <section id="recursos" className="relative z-10 py-24"><div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div className="text-center max-w-3xl mx-auto mb-16"><h2 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">Recursos de Alta Performance</h2><p className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">Tudo o que sua empresa precisa para escalar conversões</p></div><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"><Feature icon={<Smartphone />} title="Editor Visual & Live Preview" text="Personalize cores, temas, fontes e blocos com preview em tempo real." /><Feature icon={<MessageSquare />} title="Links para WhatsApp" text="Botões direcionados com mensagens personalizadas e rastreamento." /><Feature icon={<Users />} title="CRM Kanban de Vendas" text="Acompanhe leads desde o primeiro contato até o fechamento." /><Feature icon={<MousePointerClick />} title="Meta Pixel por Link" text="Configure pixels e eventos específicos para cada botão." /><Feature icon={<BarChart3 />} title="Analytics em Tempo Real" text="Métricas de visitantes, cliques, conversões e UTMs." /><Feature icon={<Globe />} title="Domínio Próprio & SSL" text="Conecte o domínio da sua marca com HTTPS." /></div></div></section>
 
       <section id="whatsapp-crm" className="relative z-10 py-24 bg-slate-900 text-white"><div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-12 items-center"><div><div className="inline-flex px-3 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 text-xs font-bold uppercase mb-5">WhatsApp + CRM</div><h2 className="text-4xl md:text-5xl font-black tracking-tight">Seu atendimento conectado ao seu processo de vendas.</h2><p className="mt-6 text-slate-300 text-lg leading-relaxed">Receba leads, converse com clientes e acompanhe cada oportunidade sem sair da plataforma.</p></div><div className="grid sm:grid-cols-2 gap-4"><FeatureDark title="Inbox" text="Atendimento centralizado." /><FeatureDark title="Kanban" text="Pipeline visual de vendas." /><FeatureDark title="Conversão" text="Acompanhe resultados." /><FeatureDark title="Controle" text="Gestão por equipes." /></div></div></section>
 

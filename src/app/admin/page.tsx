@@ -52,7 +52,6 @@ export default function SuperAdminDashboard() {
     totalUsers: 0,
     totalLeads: 0,
     totalLinks: 0,
-    totalWhatsapp: 0,
     mrr: "R$ 0,00",
     arr: "R$ 0,00",
   };
@@ -62,7 +61,7 @@ export default function SuperAdminDashboard() {
     { title: "ARR (Projeção Anual)", value: metrics.arr, icon: TrendingUp, color: "text-indigo-600", bg: "bg-indigo-50 text-indigo-600" },
     { title: "Total de Empresas", value: metrics.totalOrgs, icon: Building2, color: "text-amber-600", bg: "bg-amber-50 text-amber-600" },
     { title: "Empresas em Trial", value: metrics.trialOrgs, icon: Users, color: "text-cyan-600", bg: "bg-cyan-50 text-cyan-600" },
-    { title: "WhatsApps Conectados", value: metrics.totalWhatsapp, icon: MessageSquare, color: "text-emerald-600", bg: "bg-emerald-50 text-emerald-600" },
+    { title: "Total de Links Criados", value: metrics.totalLinks, icon: Link2, color: "text-indigo-600", bg: "bg-indigo-50 text-indigo-600" },
     { title: "Total de Leads no SaaS", value: metrics.totalLeads, icon: Users, color: "text-purple-600", bg: "bg-purple-50 text-purple-600" },
   ];
 

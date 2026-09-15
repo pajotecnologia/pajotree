@@ -74,7 +74,6 @@ export async function GET() {
               users: true,
               leads: true,
               links: true,
-              whatsappInstances: true,
               whiteLabelClients: true,
             },
           },

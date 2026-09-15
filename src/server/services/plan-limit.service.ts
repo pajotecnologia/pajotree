@@ -36,7 +36,6 @@ export class PlanLimitService {
       usersCount,
       leadsCount,
       formsCount,
-      whatsappInstancesCount,
       metaPixelsCount,
       automationsCount,
     ] = await Promise.all([
@@ -45,7 +44,6 @@ export class PlanLimitService {
       db.organizationUser.count({ where: { organizationId, status: "ACTIVE" } }),
       db.lead.count({ where: { organizationId } }),
       db.form.count({ where: { organizationId } }),
-      db.whatsappInstance.count({ where: { organizationId } }),
       db.metaPixel.count({ where: { organizationId } }),
       db.automation.count({ where: { organizationId } }),
     ]);
@@ -60,13 +58,11 @@ export class PlanLimitService {
           maxUsers: 99999,
           maxLeads: 999999,
           maxForms: 99999,
-          maxWhatsappInstances: 999,
           maxMetaPixels: 999,
           maxAutomations: 999,
           maxStorageMb: 99999,
           customDomainAllowed: true,
           crmAllowed: true,
-          whatsappInboxAllowed: true,
           advancedAnalytics: true,
           removeBranding: true,
         },
@@ -76,7 +72,6 @@ export class PlanLimitService {
           usersCount,
           leadsCount,
           formsCount,
-          whatsappInstancesCount,
           metaPixelsCount,
           automationsCount,
         },
@@ -91,13 +86,11 @@ export class PlanLimitService {
         maxUsers: 1,
         maxLeads: 50,
         maxForms: 1,
-        maxWhatsappInstances: 0,
         maxMetaPixels: 1,
         maxAutomations: 0,
         maxStorageMb: 20,
         customDomainAllowed: false,
         crmAllowed: false,
-        whatsappInboxAllowed: false,
         advancedAnalytics: false,
         removeBranding: false,
       },
@@ -107,7 +100,6 @@ export class PlanLimitService {
         usersCount,
         leadsCount,
         formsCount,
-        whatsappInstancesCount,
         metaPixelsCount,
         automationsCount,
       },
@@ -125,7 +117,6 @@ export class PlanLimitService {
       | "user"
       | "lead"
       | "form"
-      | "whatsapp_instance"
       | "meta_pixel"
       | "automation"
   ) {
@@ -167,13 +158,6 @@ export class PlanLimitService {
           );
         }
         break;
-      case "whatsapp_instance":
-        if (usage.whatsappInstancesCount >= features.maxWhatsappInstances) {
-          throw new Error(
-            `Limite atingido: Seu plano permite ${features.maxWhatsappInstances} conexão(ões) do WhatsApp. Faça upgrade para desbloquear.`
-          );
-        }
-        break;
       case "meta_pixel":
         if (usage.metaPixelsCount >= features.maxMetaPixels) {
           throw new Error(
@@ -192,19 +176,16 @@ export class PlanLimitService {
   }
 
   /**
-   * Asserts whether a feature is unlocked (e.g. CRM, WhatsApp Inbox, Custom Domain).
+   * Asserts whether a feature is unlocked (e.g. CRM, Custom Domain).
    */
   static async assertFeatureEnabled(
     organizationId: string,
-    feature: "crm" | "whatsapp_inbox" | "custom_domain" | "advanced_analytics"
+    feature: "crm" | "custom_domain" | "advanced_analytics"
   ) {
     const { features } = await this.getPlanAndUsage(organizationId);
 
     if (feature === "crm" && !features.crmAllowed) {
       throw new Error("O recurso de CRM Kanban não está habilitado no seu plano atual. Faça upgrade para o plano START ou superior.");
-    }
-    if (feature === "whatsapp_inbox" && !features.whatsappInboxAllowed) {
-      throw new Error("A Central de Atendimento WhatsApp não está habilitada no seu plano atual. Faça upgrade para o plano START ou superior.");
     }
     if (feature === "custom_domain" && !features.customDomainAllowed) {
       throw new Error("Domínio personalizado não disponível no seu plano. Faça upgrade para o plano START ou superior.");

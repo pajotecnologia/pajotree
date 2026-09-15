@@ -10,13 +10,11 @@ const featureSchema = z.object({
   maxUsers: z.number().int().min(0),
   maxLeads: z.number().int().min(0),
   maxForms: z.number().int().min(0),
-  maxWhatsappInstances: z.number().int().min(0),
   maxMetaPixels: z.number().int().min(0),
   maxAutomations: z.number().int().min(0),
   maxStorageMb: z.number().int().min(0),
   customDomainAllowed: z.boolean(),
   crmAllowed: z.boolean(),
-  whatsappInboxAllowed: z.boolean(),
   advancedAnalytics: z.boolean(),
   removeBranding: z.boolean(),
 });

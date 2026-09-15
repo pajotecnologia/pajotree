@@ -9,13 +9,11 @@ type Features = {
   maxUsers: number;
   maxLeads: number;
   maxForms: number;
-  maxWhatsappInstances: number;
   maxMetaPixels: number;
   maxAutomations: number;
   maxStorageMb: number;
   customDomainAllowed: boolean;
   crmAllowed: boolean;
-  whatsappInboxAllowed: boolean;
   advancedAnalytics: boolean;
   removeBranding: boolean;
 };
@@ -37,13 +35,11 @@ const defaultFeatures: Features = {
   maxUsers: 1,
   maxLeads: 50,
   maxForms: 1,
-  maxWhatsappInstances: 0,
   maxMetaPixels: 1,
   maxAutomations: 0,
   maxStorageMb: 20,
   customDomainAllowed: false,
   crmAllowed: false,
-  whatsappInboxAllowed: false,
   advancedAnalytics: false,
   removeBranding: false,
 };
@@ -54,7 +50,6 @@ const featureLabels: Array<[keyof Features, string]> = [
   ["maxUsers", "Usuários"],
   ["maxLeads", "Leads"],
   ["maxForms", "Formulários"],
-  ["maxWhatsappInstances", "WhatsApp"],
   ["maxMetaPixels", "Meta Pixels"],
   ["maxAutomations", "Automações"],
   ["maxStorageMb", "Armazenamento (MB)"],
@@ -63,7 +58,6 @@ const featureLabels: Array<[keyof Features, string]> = [
 const booleanFeatures: Array<[keyof Features, string]> = [
   ["customDomainAllowed", "Domínio personalizado"],
   ["crmAllowed", "CRM"],
-  ["whatsappInboxAllowed", "Inbox WhatsApp"],
   ["advancedAnalytics", "Analytics avançado"],
   ["removeBranding", "Remover marca PAJOTREE"],
 ];
