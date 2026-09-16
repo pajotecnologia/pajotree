@@ -157,11 +157,7 @@ export async function PUT(request: NextRequest) {
       });
 
       try {
-        await db.$executeRawUnsafe(
-          `UPDATE "PageSettings" SET "showContactForm" = $1 WHERE "pageId" = $2`,
-          showContactFormVal,
-          existingPage.id
-        );
+        await db.$executeRaw`UPDATE "PageSettings" SET "showContactForm" = ${showContactFormVal} WHERE "pageId" = ${existingPage.id}`;
       } catch {
         // Ignored if column not yet added
       }
@@ -171,7 +167,7 @@ export async function PUT(request: NextRequest) {
       await db.organization.update({
         where: { id: auth.organization.id },
         data: { tradeName: title || name },
-      });
+      }).catch(() => {});
     }
 
     const updatedPage = await db.page.update({
@@ -190,13 +186,14 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    await AuditService.log({
+    // Log de auditoria não-bloqueante
+    AuditService.log({
       organizationId: auth.organization.id,
       userId: auth.user.id,
       action: "UPDATE_PAGE",
       entity: "Page",
       entityId: existingPage.id,
-    });
+    }).catch(() => {});
 
     return NextResponse.json({ success: true, page: updatedPage });
   } catch (error: any) {

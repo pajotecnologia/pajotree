@@ -159,14 +159,19 @@ export default async function PublicPage({ params, searchParams }: Props) {
     page.organization.whiteLabelDomain ||
     page.organization.logoUrl
   );
-  const brandName = page.organization.whiteLabelParent?.tradeName ||
+  const brandName =
+    page.organization.whiteLabelParent?.tradeName ||
     page.organization.whiteLabelParent?.name ||
-    (isWhiteLabel ? (page.organization.tradeName || page.organization.name) : "Pajotree");
-  const brandLogoUrl = page.organization.whiteLabelParent?.logoUrl ||
-    (isWhiteLabel ? page.organization.logoUrl : null);
+    page.organization.tradeName ||
+    page.organization.name ||
+    "Plataforma Digital";
+  const brandLogoUrl =
+    page.organization.whiteLabelParent?.logoUrl ||
+    page.organization.logoUrl ||
+    null;
   const brandUrl = page.organization.whiteLabelParent
     ? `/wl/${page.organization.whiteLabelParent.whiteLabelDomain || page.organization.whiteLabelParent.id}`
-    : (page.organization.isWhiteLabel ? `/wl/${page.organization.whiteLabelDomain || page.organization.id}` : "/");
+    : (page.organization.whiteLabelDomain ? `/wl/${page.organization.whiteLabelDomain}` : "/");
 
   const isContactFormActive = Boolean(
     (page.settings as any)?.showContactForm ?? userCustomConfig.showContactForm
