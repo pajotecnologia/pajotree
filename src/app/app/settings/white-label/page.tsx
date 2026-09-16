@@ -841,12 +841,12 @@ export default function WhiteLabelPage() {
                       <tbody className="divide-y divide-slate-200/60 font-mono">
                         <tr>
                           <td className="py-2 font-bold text-indigo-600">CNAME</td>
-                          <td className="py-2">app (ou @)</td>
-                          <td className="py-2">cname.pajotree.com.br</td>
+                          <td className="py-2">bio (ou app / @)</td>
+                          <td className="py-2">tree.pajotech.com.br</td>
                           <td className="py-2 text-right">
                             <button
                               type="button"
-                              onClick={() => handleCopy("cname.pajotree.com.br", "cname")}
+                              onClick={() => handleCopy("tree.pajotech.com.br", "cname")}
                               className="text-slate-500 hover:text-indigo-600"
                               title="Copiar"
                             >
@@ -857,6 +857,9 @@ export default function WhiteLabelPage() {
                       </tbody>
                     </table>
                   </div>
+                  <p className="text-[11px] text-slate-500 font-sans">
+                    💡 <strong>Cloudflare:</strong> Ao criar o CNAME, você pode deixar o status como <em>DNS Only (Nuvem Cinza)</em> ou <em>Proxied (Nuvem Laranja)</em> com SSL em modo Full/Strict.
+                  </p>
                 </div>
               </div>
             </div>

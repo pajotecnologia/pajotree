@@ -11,6 +11,9 @@ const migrationStatements = [
   `ALTER TABLE "Plan" ADD COLUMN IF NOT EXISTS "organizationId" TEXT`,
   `ALTER TABLE "Plan" ADD COLUMN IF NOT EXISTS "status" TEXT DEFAULT 'ACTIVE'`,
 
+  // 2.1 PageSettings Columns
+  `ALTER TABLE "PageSettings" ADD COLUMN IF NOT EXISTS "showContactForm" BOOLEAN DEFAULT false`,
+
   // 3. Lead Columns
   `ALTER TABLE "Lead" ADD COLUMN IF NOT EXISTS "visualizado" BOOLEAN DEFAULT false`,
   `ALTER TABLE "Lead" ADD COLUMN IF NOT EXISTS "dataVisualizacao" TIMESTAMP(3)`,
@@ -122,17 +125,29 @@ const migrationStatements = [
   `CREATE INDEX IF NOT EXISTS "TrackingConsent_visitorId_idx" ON "TrackingConsent"("visitorId")`,
 ];
 
+let migrationPromise: Promise<void> | null = null;
+
 /**
  * Ensures all new columns and tables exist in PostgreSQL database.
- * Executes each statement individually to guarantee success in all drivers.
+ * Executes once per server process and caches the result to avoid connection pool exhaustion.
  */
 export async function ensureDatabaseSchema(): Promise<void> {
-  for (const sql of migrationStatements) {
-    try {
-      await db.$executeRawUnsafe(sql);
-    } catch (error: any) {
-      // Ignored if column/index/table already exists or minor notice
-      console.warn(`[Auto-Migrate] SQL notice: ${sql.slice(0, 45)}...`, error?.message);
-    }
+  if (migrationPromise) {
+    return migrationPromise;
   }
+
+  migrationPromise = (async () => {
+    for (const sql of migrationStatements) {
+      try {
+        await db.$executeRawUnsafe(sql);
+      } catch (error: any) {
+        // Ignored if column/index/table already exists or minor notice
+      }
+    }
+  })().catch((err) => {
+    migrationPromise = null;
+    throw err;
+  });
+
+  return migrationPromise;
 }

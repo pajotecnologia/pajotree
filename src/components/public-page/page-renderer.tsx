@@ -38,6 +38,7 @@ interface PageProps {
       buttonStyle: string;
       fontFamily: string;
       layout: string;
+      showContactForm?: boolean;
     } | null;
     links: Array<{
       id: string;
@@ -328,7 +329,8 @@ export function PublicPageRenderer({ page }: PageProps) {
           </div>
         )}
 
-        {!page.blocks?.some((b) => b.type === "FORM") && (
+        {/* Renderiza formulário apenas se ativado nas configurações e não houver bloco FORM explícito */}
+        {Boolean((settings as any)?.showContactForm) && !page.blocks?.some((b) => b.type === "FORM") && (
           <div className="w-full">
             <PublicContactForm pageSlug={page.slug} buttonColor={settings.primaryColor} textColor="#ffffff" />
           </div>

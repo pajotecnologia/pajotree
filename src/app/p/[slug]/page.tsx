@@ -168,10 +168,20 @@ export default async function PublicPage({ params, searchParams }: Props) {
     ? `/wl/${page.organization.whiteLabelParent.whiteLabelDomain || page.organization.whiteLabelParent.id}`
     : (page.organization.isWhiteLabel ? `/wl/${page.organization.whiteLabelDomain || page.organization.id}` : "/");
 
+  const isContactFormActive = Boolean(
+    (page.settings as any)?.showContactForm ?? userCustomConfig.showContactForm
+  );
+
   const publicPage = {
     ...page,
     name: displayName,
     title: page.title || page.name,
+    settings: page.settings
+      ? {
+          ...page.settings,
+          showContactForm: isContactFormActive,
+        }
+      : null,
     organization: {
       ...page.organization,
       name: displayName,

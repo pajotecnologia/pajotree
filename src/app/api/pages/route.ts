@@ -112,6 +112,21 @@ export async function PUT(request: NextRequest) {
     }
 
     if (settings) {
+      let existingCustomConfig: any = {};
+      try {
+        existingCustomConfig = JSON.parse(existingPage.settings?.customCss || "{}");
+      } catch {}
+
+      const showContactFormVal =
+        settings.showContactForm !== undefined
+          ? Boolean(settings.showContactForm)
+          : Boolean(existingCustomConfig.showContactForm ?? (existingPage.settings as any)?.showContactForm ?? false);
+
+      const mergedCustomCss = JSON.stringify({
+        ...existingCustomConfig,
+        showContactForm: showContactFormVal,
+      });
+
       await db.pageSettings.upsert({
         where: { pageId: existingPage.id },
         create: {
@@ -125,6 +140,7 @@ export async function PUT(request: NextRequest) {
           buttonStyle: settings.buttonStyle || "rounded-xl",
           fontFamily: settings.fontFamily || "Inter",
           layout: settings.layout || "classic",
+          customCss: mergedCustomCss,
         },
         update: {
           themeId: settings.themeId !== undefined ? settings.themeId : undefined,
@@ -136,8 +152,19 @@ export async function PUT(request: NextRequest) {
           buttonStyle: settings.buttonStyle !== undefined ? settings.buttonStyle : undefined,
           fontFamily: settings.fontFamily !== undefined ? settings.fontFamily : undefined,
           layout: settings.layout !== undefined ? settings.layout : undefined,
+          customCss: mergedCustomCss,
         },
       });
+
+      try {
+        await db.$executeRawUnsafe(
+          `UPDATE "PageSettings" SET "showContactForm" = $1 WHERE "pageId" = $2`,
+          showContactFormVal,
+          existingPage.id
+        );
+      } catch {
+        // Ignored if column not yet added
+      }
     }
 
     if (title || name) {

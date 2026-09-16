@@ -101,6 +101,7 @@ export default function VisualEditorPage() {
   const [textColor, setTextColor] = useState("#ffffff");
   const [buttonStyle, setButtonStyle] = useState("rounded-xl");
   const [fontFamily, setFontFamily] = useState("Inter");
+  const [showContactForm, setShowContactForm] = useState(false);
 
   // Logo / Avatar states
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -154,6 +155,12 @@ export default function VisualEditorPage() {
             setTextColor(settings.textColor || "#ffffff");
             setButtonStyle(settings.buttonStyle || "rounded-xl");
             setFontFamily(settings.fontFamily || "Inter");
+
+            let customCfg: any = {};
+            try {
+              customCfg = JSON.parse(settings.customCss || "{}");
+            } catch {}
+            setShowContactForm(Boolean(settings.showContactForm ?? customCfg.showContactForm ?? false));
           }
         }
       } catch (err) {
@@ -299,6 +306,7 @@ export default function VisualEditorPage() {
             textColor,
             buttonStyle,
             fontFamily,
+            showContactForm,
           },
         }),
       });
@@ -403,6 +411,7 @@ export default function VisualEditorPage() {
       buttonStyle,
       fontFamily,
       layout: "classic",
+      showContactForm,
     },
     organization: {
       ...(pageData?.organization || {}),
@@ -958,10 +967,51 @@ export default function VisualEditorPage() {
           )}
 
           {activeTab === "blocks" && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
+            <div className="space-y-5">
+              {/* Toggle de Ativação do Formulário de Contato */}
+              <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between gap-3 shadow-2xs">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
+                      <MessageSquare className="w-4 h-4" />
+                    </div>
+                    <label className="text-xs font-bold text-slate-800">
+                      Formulário de Mensagem Direta / Contato
+                    </label>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        showContactForm
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-slate-200 text-slate-600"
+                      }`}
+                    >
+                      {showContactForm ? "Exibindo na Página" : "Oculto"}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Permite que os visitantes enviem nome, WhatsApp e mensagem diretamente pela sua página pública.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowContactForm(!showContactForm)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    showContactForm ? "bg-indigo-600" : "bg-slate-300"
+                  }`}
+                  role="switch"
+                  aria-checked={showContactForm}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                      showContactForm ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
                 <span className="text-xs font-bold text-slate-800">
-                  Blocos Ativos da Página
+                  Blocos Adicionais & Conteúdo
                 </span>
                 <button
                   onClick={() => setShowBlockModal(true)}

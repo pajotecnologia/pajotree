@@ -263,23 +263,44 @@ export async function POST(request: NextRequest) {
 
     try {
       const dns = await import("node:dns/promises");
+      const ACCEPTED_TARGETS = [
+        "pajotree",
+        "pajotech",
+        "tree.pajotech.com.br",
+        "cname.pajotree.com.br",
+        "cname",
+      ];
+
       // Tenta resolver CNAME
       try {
         const cnames = await dns.resolveCname(cleanDomain);
-        if (cnames.some((c) => c.toLowerCase().includes("pajotree") || c.toLowerCase().includes("cname"))) {
+        if (
+          cnames.some((c) =>
+            ACCEPTED_TARGETS.some((target) => c.toLowerCase().includes(target.toLowerCase()))
+          )
+        ) {
           verified = true;
-          dnsDetails = `CNAME encontrado: ${cnames.join(", ")}`;
+          dnsDetails = `CNAME verificado com sucesso: ${cnames.join(", ")}`;
         } else {
-          dnsDetails = `CNAME aponta para ${cnames.join(", ")} (esperado: cname.pajotree.com.br)`;
+          // Se o CNAME aponta para outro lugar, ainda tentamos verificar se resolve para IP
+          const addresses = await dns.resolve4(cleanDomain).catch(() => []);
+          if (addresses.length > 0) {
+            verified = true;
+            dnsDetails = `CNAME encontrado: ${cnames.join(", ")} (IP: ${addresses.join(", ")})`;
+          } else {
+            dnsDetails = `CNAME aponta para ${cnames.join(", ")} (esperado: tree.pajotech.com.br ou cname.pajotree.com.br)`;
+          }
         }
       } catch (cnameErr: any) {
-        // Se falhar CNAME, tenta resolver A
+        // Se não tiver registro CNAME direto (ex: Cloudflare Proxy ativo ou registro tipo A na raiz @)
         try {
           const addresses = await dns.resolve4(cleanDomain);
           if (addresses.length > 0) {
-            // Se resolver IP, consideramos conectado
+            // Se resolver IP ativo (Cloudflare Anycast ou servidor direto), consideramos conectado
             verified = true;
-            dnsDetails = `Registro A encontrado: ${addresses.join(", ")}`;
+            dnsDetails = `Apontamento verificado (IP / Cloudflare Proxy: ${addresses.join(", ")})`;
+          } else {
+            dnsDetails = `Aguardando propagação DNS para ${cleanDomain}...`;
           }
         } catch (aErr: any) {
           dnsDetails = `Aguardando propagação DNS para ${cleanDomain}...`;
