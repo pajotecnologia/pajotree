@@ -283,7 +283,7 @@ export default function WhiteLabelLandingClient({ org, plans, config }: LandingP
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold">
-                        ● WhatsApp Conectado
+                        ● Links WhatsApp Ativos
                       </span>
                     </div>
                   </div>
@@ -301,11 +301,11 @@ export default function WhiteLabelLandingClient({ org, plans, config }: LandingP
 
                     <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
                       <div className="flex items-center justify-between text-slate-400 text-xs">
-                        <span>Atendimentos WhatsApp</span>
+                        <span>Conversões WhatsApp</span>
                         <MessageSquare className="w-4 h-4 text-emerald-400" />
                       </div>
                       <p className="text-2xl font-black text-white">654</p>
-                      <span className="text-[10px] text-emerald-400 font-bold">Tempo médio: 1.2 min</span>
+                      <span className="text-[10px] text-emerald-400 font-bold">+34.2% em cliques diretos</span>
                     </div>
 
                     <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
@@ -355,9 +355,9 @@ export default function WhiteLabelLandingClient({ org, plans, config }: LandingP
                 <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition">
                   <MessageSquare className="w-6 h-6" />
                 </div>
-                <h3 className="text-lg font-bold text-white">Central de Atendimento WhatsApp</h3>
+                <h3 className="text-lg font-bold text-white">Links Diretos para WhatsApp</h3>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Conecte seu WhatsApp via QR Code e atenda todos os seus clientes em tempo real direto da central integrada.
+                  Adicione botões com mensagens personalizadas que abrem o WhatsApp instantaneamente e registram o lead no seu funil de vendas.
                 </p>
               </div>
 

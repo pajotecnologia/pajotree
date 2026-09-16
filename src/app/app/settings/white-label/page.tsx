@@ -1851,7 +1851,7 @@ export default function WhiteLabelPage() {
                     {landingConfig.headline || `A Plataforma Completa de Vendas para ${form.brandName}`}
                   </h5>
                   <p className="text-[11px] text-slate-500 leading-relaxed">
-                    {landingConfig.subtitle || "Páginas com alta conversão, atendimento centralizado e CRM sob medida."}
+                    {landingConfig.subtitle || "Páginas com alta conversão, links diretos para WhatsApp e CRM sob medida."}
                   </p>
                   <div className="pt-2 flex items-center gap-2">
                     <span className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-[10px] font-bold">

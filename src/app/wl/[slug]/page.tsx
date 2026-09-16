@@ -69,7 +69,7 @@ export async function generateMetadata({ params }: PageProps) {
     const brandName = org?.tradeName || org?.name || "Plataforma Digital";
     return {
       title: `${brandName} - A Plataforma Completa de Páginas, WhatsApp e CRM`,
-      description: `Crie páginas de alta conversão, gerencie atendimentos no WhatsApp Web e controle seus leads no CRM com ${brandName}.`,
+      description: `Crie páginas de alta conversão, direcione leads para o WhatsApp e gerencie oportunidades no CRM com ${brandName}.`,
       icons: org?.faviconUrl ? [{ rel: "icon", url: org.faviconUrl }] : undefined,
     };
   } catch {
@@ -125,7 +125,7 @@ export default async function WhiteLabelPublicLandingPage({ params }: PageProps)
       },
     });
 
-    if (domainRec?.organization) {
+  if (domainRec?.organization) {
       org = domainRec.organization;
     }
   }
@@ -180,7 +180,7 @@ export default async function WhiteLabelPublicLandingPage({ params }: PageProps)
       }))}
       config={{
         headline: landingConfig.headline || `A Plataforma Tudo-em-Um de Páginas, WhatsApp e CRM para ${brandName}`,
-        subtitle: landingConfig.subtitle || "Transforme cliques em vendas reais com páginas modernas, central de atendimento WhatsApp Web, pipeline CRM e métricas avançadas.",
+        subtitle: landingConfig.subtitle || "Transforme cliques em vendas reais com páginas modernas, links diretos para WhatsApp, pipeline CRM e métricas avançadas.",
         badgeText: landingConfig.badgeText || "🚀 Revolucione o Atendimento e Vendas do seu Negócio",
         ctaText: landingConfig.ctaText || "Criar Minha Conta Grátis",
         ctaSecondaryText: landingConfig.ctaSecondaryText || "Falar com Especialista",
