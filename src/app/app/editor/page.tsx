@@ -206,8 +206,8 @@ export default function VisualEditorPage() {
       setLogoError("Formato não suportado. Use PNG, JPG, WebP ou GIF.");
       return;
     }
-    if (file.size > 3 * 1024 * 1024) {
-      setLogoError("A imagem deve ter no máximo 3 MB.");
+    if (file.size > 5 * 1024 * 1024) {
+      setLogoError("A imagem deve ter no máximo 5 MB.");
       return;
     }
 
@@ -240,8 +240,8 @@ export default function VisualEditorPage() {
       setImageError("Formato não suportado. Por favor, envie uma imagem PNG, JPG, WebP ou GIF.");
       return;
     }
-    if (file.size > 3 * 1024 * 1024) {
-      setImageError("A imagem deve ter no máximo 3 MB.");
+    if (file.size > 5 * 1024 * 1024) {
+      setImageError("A imagem deve ter no máximo 5 MB.");
       return;
     }
 
@@ -822,7 +822,7 @@ export default function VisualEditorPage() {
                           {uploadingImage ? "Carregando imagem..." : "Clique para enviar imagem de fundo"}
                         </p>
                         <p className="text-[11px] text-slate-500 mt-0.5">
-                          PNG, JPG, WebP ou GIF · até 3 MB
+                          PNG, JPG, WebP ou GIF · até 5 MB
                         </p>
                       </div>
                     )}
