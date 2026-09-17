@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: PageProps) {
           { id: cleanSlug },
         ],
       },
-      select: { name: true, tradeName: true, logoUrl: true, faviconUrl: true },
+      select: { name: true, tradeName: true, logoUrl: true, faviconUrl: true, whiteLabelLandingJson: true },
     });
 
     if (!org) {
@@ -57,7 +57,7 @@ export async function generateMetadata({ params }: PageProps) {
         },
         include: {
           organization: {
-            select: { name: true, tradeName: true, logoUrl: true, faviconUrl: true },
+            select: { name: true, tradeName: true, logoUrl: true, faviconUrl: true, whiteLabelLandingJson: true },
           },
         },
       });
@@ -66,14 +66,35 @@ export async function generateMetadata({ params }: PageProps) {
       }
     }
 
-    const brandName = org?.tradeName || org?.name || "Plataforma Digital";
+    let landingConfig: any = {};
+    if (org?.whiteLabelLandingJson) {
+      try {
+        landingConfig = JSON.parse(org.whiteLabelLandingJson);
+      } catch {}
+    }
+
+    const brandName = org?.tradeName || org?.name || "Links Oficiais & Soluções";
+    const pageTitle = landingConfig.headline
+      ? `${brandName} - ${landingConfig.headline}`
+      : `${brandName} - Links Oficiais, Atendimento & CRM`;
+    const pageDesc =
+      landingConfig.subtitle ||
+      `Crie páginas de alta conversão, direcione leads para o WhatsApp e gerencie oportunidades no CRM com ${brandName}.`;
+
+    const iconUrl = org?.faviconUrl || org?.logoUrl || undefined;
+
     return {
-      title: `${brandName} - A Plataforma Completa de Páginas, WhatsApp e CRM`,
-      description: `Crie páginas de alta conversão, direcione leads para o WhatsApp e gerencie oportunidades no CRM com ${brandName}.`,
-      icons: org?.faviconUrl ? [{ rel: "icon", url: org.faviconUrl }] : undefined,
+      title: pageTitle,
+      description: pageDesc,
+      openGraph: {
+        title: pageTitle,
+        description: pageDesc,
+        images: org?.logoUrl ? [{ url: org.logoUrl }] : undefined,
+      },
+      icons: iconUrl ? [{ rel: "icon", url: iconUrl }] : undefined,
     };
   } catch {
-    return { title: "Plataforma Digital" };
+    return { title: "Links Oficiais & Atendimento" };
   }
 }
 

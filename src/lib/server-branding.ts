@@ -109,7 +109,7 @@ export async function getServerBranding(refParam?: string): Promise<ServerBrandi
         isWhiteLabel: true,
         brandName,
         logoUrl: effectiveOrg.logoUrl || null,
-        faviconUrl: pageSettings?.faviconUrl || effectiveOrg.faviconUrl || "/favicon.ico",
+        faviconUrl: pageSettings?.faviconUrl || effectiveOrg.faviconUrl || effectiveOrg.logoUrl || "/favicon.ico",
         primaryColor: pageSettings?.primaryColor || "#6366f1",
         secondaryColor: pageSettings?.secondaryColor || "#ec4899",
         vendorName: brandName,

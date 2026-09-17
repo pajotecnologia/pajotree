@@ -79,11 +79,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const page = await findPageBySlug(slug);
 
   if (!page || page.status !== "PUBLISHED") {
-    return { title: "Página não encontrada | Pajotree" };
+    return { title: "Página não encontrada" };
   }
 
-  const title = page.settings?.seoTitle || page.title || `${page.name} | Link Oficial`;
-  const description = page.settings?.seoDescription || page.description || `Acesse os links oficiais e canais de contato de ${page.name}.`;
+  const brandName =
+    page.organization?.whiteLabelParent?.tradeName ||
+    page.organization?.whiteLabelParent?.name ||
+    (page.organization?.isWhiteLabel ? (page.organization?.tradeName || page.organization?.name) : null);
+
+  const title =
+    page.settings?.seoTitle ||
+    page.title ||
+    (brandName ? `${page.name} | ${brandName}` : `${page.name} | Links Oficiais`);
+
+  const description =
+    page.settings?.seoDescription ||
+    page.description ||
+    `Acesse os links oficiais e canais de contato de ${page.name}.`;
+
+  const iconUrl = page.settings?.faviconUrl || page.organization.faviconUrl || page.organization.logoUrl || "/favicon.ico";
 
   return {
     title,
@@ -93,7 +107,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       images: page.settings?.ogImageUrl ? [{ url: page.settings.ogImageUrl }] : undefined,
     },
-    icons: { icon: page.settings?.faviconUrl || page.organization.faviconUrl || "/favicon.ico" },
+    icons: { icon: iconUrl },
   };
 }
 

@@ -14,8 +14,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pajotree",
-  description: "Sua presença digital em um só lugar.",
+  title: {
+    template: "%s",
+    default: "Bio Links, WhatsApp & CRM",
+  },
+  description: "Sua presença digital, canais de atendimento e gestão de leads em um só lugar.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
