@@ -38,7 +38,7 @@ export default function QrCodePage() {
     if (data?.qrDataUrl) {
       const a = document.createElement("a");
       a.href = data.qrDataUrl;
-      a.download = `qrcode-${data.pageSlug || "pajotree"}.png`;
+      a.download = `qrcode-${data.pageSlug || "bio"}.png`;
       a.click();
     }
   };
@@ -80,8 +80,8 @@ export default function QrCodePage() {
               </div>
             )}
           </div>
-          <span className="text-xs text-slate-500 font-mono block">
-            Escaneie para acessar /p/{data?.pageSlug}
+          <span className="text-xs text-slate-500 font-mono block truncate max-w-[280px]">
+            {data?.targetUrl ? data.targetUrl.replace(/^https?:\/\//, "") : `/p/${data?.pageSlug}`}
           </span>
         </div>
 

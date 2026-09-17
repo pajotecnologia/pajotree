@@ -34,6 +34,7 @@ export async function GET() {
     const isWlPlan = planAndUsage?.plan?.name?.toUpperCase().includes("WHITE") || Boolean(planAndUsage?.features?.removeBranding && planAndUsage?.features?.customDomainAllowed);
     const isWhiteLabelPartner = Boolean(org?.isWhiteLabel || isWlPlan || authContext.isSuperAdmin);
     const isWhiteLabelClient = Boolean(org?.whiteLabelParentId);
+    const customDomain = org?.whiteLabelDomain || org?.whiteLabelParent?.whiteLabelDomain || null;
 
     return NextResponse.json({
       authenticated: true,
@@ -45,6 +46,7 @@ export async function GET() {
       isWhiteLabelPartner,
       isWhiteLabelClient,
       whiteLabelParent: org?.whiteLabelParent || null,
+      customDomain,
       planDetails: planAndUsage,
       pageSlug,
     });

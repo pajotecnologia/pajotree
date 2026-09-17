@@ -215,15 +215,25 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
               </Link>
             )}
             {authData?.isSuperAdmin && <Link href="/admin" className="min-h-11 px-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold hover:bg-amber-100 transition flex items-center gap-1.5 whitespace-nowrap"><ShieldAlert className="w-3.5 h-3.5 text-amber-600" /><span className="hidden xs:inline">Painel Mestre</span><span className="sm:hidden">Mestre</span></Link>}
-            <Link
-              href={authData?.pageSlug ? `/p/${authData.pageSlug}` : `/p/${organization?.name?.toLowerCase().replace(/[^a-z0-9]/g, "-") || "minha-empresa"}`}
-              target="_blank"
-              className="min-h-11 px-3 sm:px-3.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap"
-            >
-              <span className="hidden sm:inline">Ver Minha Página</span>
-              <span className="sm:hidden">Minha Página</span>
-              <ExternalLink className="w-3.5 h-3.5 text-indigo-600" />
-            </Link>
+            {(() => {
+              const effectiveCustomDomain = authData?.customDomain || organization?.whiteLabelDomain || authData?.whiteLabelParent?.whiteLabelDomain;
+              const pageSlug = authData?.pageSlug || organization?.name?.toLowerCase().replace(/[^a-z0-9]/g, "-") || "minha-empresa";
+              const publicPageUrl = effectiveCustomDomain
+                ? `https://${effectiveCustomDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}/p/${pageSlug}`
+                : `/p/${pageSlug}`;
+
+              return (
+                <Link
+                  href={publicPageUrl}
+                  target="_blank"
+                  className="min-h-11 px-3 sm:px-3.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap"
+                >
+                  <span className="hidden sm:inline">Ver Minha Página</span>
+                  <span className="sm:hidden">Minha Página</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-indigo-600" />
+                </Link>
+              );
+            })()}
           </div>
 
         </header>

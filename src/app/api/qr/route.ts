@@ -10,7 +10,7 @@ function getPublicAppUrl(): string {
   return configuredUrl.replace(/\/+$/, "");
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const auth = await getCurrentAuthContext();
     if (!auth || !auth.organization) {
@@ -19,13 +19,29 @@ export async function GET() {
 
     const orgId = auth.organization.id;
 
-    const page = await db.page.findFirst({
-      where: { organizationId: orgId },
-    });
+    const [page, org] = await Promise.all([
+      db.page.findFirst({
+        where: { organizationId: orgId },
+      }),
+      db.organization.findUnique({
+        where: { id: orgId },
+        include: { whiteLabelParent: true },
+      }),
+    ]);
 
     const pageSlug = page?.slug || "minha-empresa";
-    const appUrl = getPublicAppUrl();
-    const targetUrl = `${appUrl}/p/${pageSlug}`;
+
+    // Resolve White Label Custom Domain
+    const customDomain = org?.whiteLabelDomain || org?.whiteLabelParent?.whiteLabelDomain;
+    let targetUrl: string;
+
+    if (customDomain) {
+      const cleanCustomDomain = customDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+      targetUrl = `https://${cleanCustomDomain}/p/${pageSlug}`;
+    } else {
+      const configuredUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/+$/, "");
+      targetUrl = `${configuredUrl}/p/${pageSlug}`;
+    }
 
     const qrDataUrl = await QRCode.toDataURL(targetUrl, {
       width: 400,
