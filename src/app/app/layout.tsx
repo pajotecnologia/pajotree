@@ -97,6 +97,39 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
   const subTitle = authData?.whiteLabelParent ? (organization?.name || "Minha Empresa") : (isWhiteLabel ? "Painel da Empresa" : (organization?.name || "Minha Empresa"));
   const vendorCredit = isWhiteLabel ? brandName : APP_VENDOR;
 
+  const pageTitleMap: Record<string, string> = {
+    "/app": "Painel de Gestão",
+    "/app/editor": "Editor Visual",
+    "/app/links": "Links & Tracking",
+    "/app/leads": "Leads & Contatos",
+    "/app/crm": "CRM Kanban",
+    "/app/forms": "Formulários",
+    "/app/analytics": "Analytics & Pixels",
+    "/app/qr-code": "QR Codes",
+    "/app/billing": "Assinatura & Planos",
+    "/app/settings/white-label": "Gerenciamento White Label",
+    "/app/settings": "Configurações da Empresa",
+  };
+
+  useEffect(() => {
+    if (brandName) {
+      const section = pageTitleMap[pathname] || "Painel";
+      document.title = `${brandName} - ${section}`;
+    }
+  }, [brandName, pathname]);
+
+  useEffect(() => {
+    if (displayLogo) {
+      let link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']");
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = "icon";
+        document.head.appendChild(link);
+      }
+      link.href = displayLogo;
+    }
+  }, [displayLogo]);
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex overflow-x-clip font-sans">
       {sidebarOpen && <div onClick={() => setSidebarOpen(false)} className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 lg:hidden" aria-hidden="true" />}
