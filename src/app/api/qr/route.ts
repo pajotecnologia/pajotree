@@ -3,13 +3,6 @@ import { getCurrentAuthContext } from "@/lib/auth";
 import { db } from "@/lib/db";
 import QRCode from "qrcode";
 
-function getPublicAppUrl(): string {
-  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
-  // Evita URLs inválidas como https://tree.pajotech.com.br//p/slug
-  return configuredUrl.replace(/\/+$/, "");
-}
-
 export async function GET(request: Request) {
   try {
     const auth = await getCurrentAuthContext();
@@ -19,7 +12,7 @@ export async function GET(request: Request) {
 
     const orgId = auth.organization.id;
 
-    const [page, org] = await Promise.all([
+    const [page, org, domain] = await Promise.all([
       db.page.findFirst({
         where: { organizationId: orgId },
       }),
@@ -27,12 +20,42 @@ export async function GET(request: Request) {
         where: { id: orgId },
         include: { whiteLabelParent: true },
       }),
+      db.domain.findFirst({
+        where: { organizationId: orgId },
+      }),
     ]);
 
     const pageSlug = page?.slug || "minha-empresa";
 
-    // Resolve White Label Custom Domain
-    const customDomain = org?.whiteLabelDomain || org?.whiteLabelParent?.whiteLabelDomain;
+    // Extrair host ativo da requisição / query params
+    const { searchParams } = new URL(request.url);
+    const queryHost = searchParams.get("host")?.replace(/^https?:\/\//, "").split(":")[0].toLowerCase().trim();
+
+    const reqHeaders = new Headers(request.headers);
+    const rawReqHost =
+      queryHost ||
+      reqHeaders.get("x-custom-host") ||
+      reqHeaders.get("x-forwarded-host") ||
+      reqHeaders.get("host") ||
+      "";
+    const cleanReqHost = rawReqHost.split(":")[0].toLowerCase().trim();
+
+    const isNonDefaultHost =
+      cleanReqHost &&
+      !["localhost", "127.0.0.1", "tree.pajotech.com.br", "pajotree.com", "pajotech.com.br", "pajotree.com.br"].includes(cleanReqHost);
+
+    // Prioridade de resolução de domínio:
+    // 1. Host ativo atual se for um domínio personalizado (ex: bio.agenciaignis.com.br)
+    // 2. whiteLabelDomain cadastrado na organização ou no parceiro White Label
+    // 3. Registro na tabela domain
+    // 4. NEXT_PUBLIC_APP_URL padrão
+    const customDomain =
+      (isNonDefaultHost ? cleanReqHost : null) ||
+      org?.whiteLabelDomain ||
+      org?.whiteLabelParent?.whiteLabelDomain ||
+      domain?.domain ||
+      (cleanReqHost && !cleanReqHost.includes("localhost") ? cleanReqHost : null);
+
     let targetUrl: string;
 
     if (customDomain) {
@@ -44,7 +67,7 @@ export async function GET(request: Request) {
     }
 
     const qrDataUrl = await QRCode.toDataURL(targetUrl, {
-      width: 400,
+      width: 500,
       margin: 2,
       color: {
         dark: "#0f172a",
@@ -56,6 +79,7 @@ export async function GET(request: Request) {
       targetUrl,
       qrDataUrl,
       pageSlug,
+      brandName: org?.tradeName || org?.name || "Minha Empresa",
     });
   } catch (error: any) {
     console.error("Erro ao gerar QR Code:", error);
