@@ -256,9 +256,10 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
             {authData?.isSuperAdmin && <Link href="/admin" className="min-h-10 px-3 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium hover:bg-slate-200 transition flex items-center gap-1.5 whitespace-nowrap"><ShieldAlert className="w-3.5 h-3.5 text-slate-600" /><span className="hidden xs:inline">Painel Mestre</span><span className="sm:hidden">Mestre</span></Link>}
             {(() => {
               const effectiveCustomDomain = authData?.customDomain || organization?.whiteLabelDomain || authData?.whiteLabelParent?.whiteLabelDomain;
-              const pageSlug = authData?.pageSlug || organization?.name?.toLowerCase().replace(/[^a-z0-9]/g, "-") || "minha-empresa";
+              const rawName = organization?.name || "minha-empresa";
+              const pageSlug = authData?.pageSlug || String(rawName).toLowerCase().replace(/[^a-z0-9]/g, "-");
               const publicPageUrl = effectiveCustomDomain
-                ? `https://${effectiveCustomDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}/p/${pageSlug}`
+                ? `https://${String(effectiveCustomDomain).replace(/^https?:\/\//, "").replace(/\/+$/, "")}/p/${pageSlug}`
                 : `/p/${pageSlug}`;
 
               return (

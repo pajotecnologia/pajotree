@@ -171,12 +171,14 @@ export default function DashboardPage() {
           {data?.recentLeads && data.recentLeads.length > 0 ? (
             <div className="divide-y divide-slate-100">
               {data.recentLeads.map((lead: any) => {
+                const leadName = lead.name || "Lead sem nome";
                 const isNew = lead.status === "NEW";
                 const isFromForm =
                   lead.source?.includes("form") ||
                   lead.source === "public_page_contact_block" ||
                   lead.message;
-                const phoneDigits = lead.whatsapp ? lead.whatsapp.replace(/\D/g, "") : "";
+                const rawPhone = lead.whatsapp || lead.phone || "";
+                const phoneDigits = String(rawPhone).replace(/\D/g, "");
                 const fullPhone = phoneDigits.startsWith("55") ? phoneDigits : `55${phoneDigits}`;
 
                 return (
@@ -192,12 +194,12 @@ export default function DashboardPage() {
                           ? "bg-emerald-500 text-white shadow-xs ring-2 ring-emerald-200"
                           : "bg-emerald-50 border border-emerald-100 text-emerald-700"
                       }`}>
-                        {lead.name.charAt(0).toUpperCase()}
+                        {leadName.charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-bold text-xs text-slate-900 block truncate">
-                            {lead.name}
+                            {leadName}
                           </span>
                           {isNew && (
                             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[9px] font-extrabold">
@@ -227,10 +229,10 @@ export default function DashboardPage() {
                       }`}>
                         {lead.status === "NEW" ? "Novo Lead" : lead.status}
                       </span>
-                      {lead.whatsapp && (
+                      {phoneDigits.length >= 8 && (
                         <a
                           href={`https://wa.me/${fullPhone}${
-                            lead.message ? `?text=${encodeURIComponent(`Olá ${lead.name}, recebemos sua mensagem através do nosso site!`)}` : ""
+                            lead.message ? `?text=${encodeURIComponent(`Olá ${leadName}, recebemos sua mensagem através do nosso site!`)}` : ""
                           }`}
                           target="_blank"
                           rel="noopener noreferrer"
