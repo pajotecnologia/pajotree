@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Palette, Link2, Users2, KanbanSquare, MessageSquare, FileText, BarChart3, QrCode, Settings, CreditCard, LogOut, ExternalLink, Zap, Menu, X, Sparkles, ChevronRight, ShieldAlert, Brush,
+  LayoutDashboard, Palette, Link2, Users2, KanbanSquare, MessageSquare, FileText, BarChart3, QrCode, Settings, CreditCard, LogOut, ExternalLink, Zap, Menu, X, Sparkles, ChevronRight, ShieldAlert, Brush, Loader2,
 } from "lucide-react";
 import { APP_VERSION, APP_VENDOR } from "@/lib/app-meta";
 
@@ -70,17 +70,6 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
     { label: "Configurações", href: "/app/settings", icon: Settings },
   ];
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 animate-pulse flex items-center justify-center shadow-md shadow-indigo-100"><Zap className="w-5 h-5 text-white" /></div>
-          <span className="text-xs text-slate-500 font-medium">Carregando painel...</span>
-        </div>
-      </div>
-    );
-  }
-
   const organization = authData?.organization;
   const plan = authData?.planDetails?.plan?.name || "START";
 
@@ -93,7 +82,7 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
   );
 
   const displayLogo = authData?.whiteLabelParent?.logoUrl || organization?.logoUrl || null;
-  const brandName = authData?.whiteLabelParent?.tradeName || authData?.whiteLabelParent?.name || (isWhiteLabel ? (organization?.tradeName || organization?.name) : "Pajotree");
+  const brandName = authData?.whiteLabelParent?.tradeName || authData?.whiteLabelParent?.name || (isWhiteLabel ? (organization?.tradeName || organization?.name) : "Pajotree") || "Pajotree";
   const subTitle = authData?.whiteLabelParent ? (organization?.name || "Minha Empresa") : (isWhiteLabel ? "Painel da Empresa" : (organization?.name || "Minha Empresa"));
   const vendorCredit = isWhiteLabel ? brandName : APP_VENDOR;
 
@@ -129,6 +118,19 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
       link.href = displayLogo;
     }
   }, [displayLogo]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white">
+            <Loader2 className="w-5 h-5 animate-spin" />
+          </div>
+          <span className="text-xs text-slate-500 font-medium">Carregando painel...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex overflow-x-clip font-sans">
