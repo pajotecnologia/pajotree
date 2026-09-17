@@ -767,57 +767,109 @@ export default function WhiteLabelPage() {
 
             {/* Domínio Próprio & DNS */}
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold shrink-0">
                     <Globe className="w-5 h-5" />
                   </div>
                   <div>
                     <h2 className="text-base font-extrabold text-slate-900">Domínio Próprio & DNS</h2>
-                    <p className="text-xs text-slate-500">Acesse o sistema diretamente no seu domínio (ex: app.seusite.com.br)</p>
+                    <p className="text-xs text-slate-500">Conecte seu domínio ou subdomínio exclusivo para a sua marca White Label</p>
                   </div>
                 </div>
 
-                {form.domainStatus === "VERIFIED" ? (
-                  <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Conectado</span>
-                  </span>
-                ) : (
-                  <span className="px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold flex items-center gap-1.5">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    <span>Pendente DNS</span>
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {form.customDomain && (
+                    <a
+                      href={`https://${form.customDomain.replace(/^https?:\/\//, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition flex items-center gap-1.5"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Abrir Página</span>
+                    </a>
+                  )}
+
+                  {form.domainStatus === "VERIFIED" || dnsResult?.verified ? (
+                    <span className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Conectado & Verificado</span>
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Pendente DNS</span>
+                    </span>
+                  )}
+                </div>
               </div>
+
+              {/* Card de Domínio Ativo com Acesso Rápido */}
+              {form.customDomain && (
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-950 text-white border border-indigo-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-indigo-200">Endereço Oficial da Sua Agência</span>
+                    </div>
+                    <div className="font-mono text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                      <span>https://{form.customDomain.replace(/^https?:\/\//, "")}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(`https://${form.customDomain.replace(/^https?:\/\//, "")}`, "custom-url")}
+                      className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition flex items-center gap-1.5 border border-white/10 flex-1 sm:flex-initial justify-center"
+                    >
+                      {copiedDns === "custom-url" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedDns === "custom-url" ? "Copiado!" : "Copiar Link"}</span>
+                    </button>
+                    <a
+                      href={`https://${form.customDomain.replace(/^https?:\/\//, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-600/30 flex-1 sm:flex-initial justify-center"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Testar no Navegador</span>
+                    </a>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                    Seu Domínio ou Subdomínio
+                    Domínio ou Subdomínio Personalizado
                   </label>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={form.customDomain}
                       onChange={(e) => setForm({ ...form, customDomain: e.target.value })}
-                      placeholder="app.minhaempresa.com.br"
+                      placeholder="Ex: bio.agenciaignis.com.br ou app.meudominio.com.br"
                       className="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
                     />
                     <button
                       type="button"
                       onClick={handleVerifyDns}
                       disabled={verifyingDns || !form.customDomain}
-                      className="px-4 py-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-bold transition flex items-center gap-2 shrink-0 disabled:opacity-50"
+                      className="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-2 shrink-0 disabled:opacity-50 shadow-sm"
                     >
                       {verifyingDns ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                      <span>Verificar DNS</span>
+                      <span>Verificar Apontamento</span>
                     </button>
                   </div>
+                  <span className="text-[11px] text-slate-500 mt-1 block">
+                    Digite o domínio que você deseja usar (ex: <code>bio.agenciaignis.com.br</code>) e clique em Salvar Alterações no final da página.
+                  </span>
                 </div>
 
                 {dnsResult && (
-                  <div className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                  <div className={`p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 ${
                     dnsResult.verified ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-amber-50 text-amber-800 border border-amber-200"
                   }`}>
                     {dnsResult.verified ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <Info className="w-4 h-4 text-amber-600 shrink-0" />}
@@ -826,40 +878,56 @@ export default function WhiteLabelPage() {
                 )}
 
                 {/* Tabela de Apontamentos DNS */}
-                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-xs space-y-3">
-                  <span className="font-bold text-slate-800 block">Como configurar no seu provedor de domínio (Registro.br, Cloudflare, GoDaddy):</span>
+                <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 text-xs space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-slate-800 block text-xs">
+                      Tabela de Apontamento DNS (Cloudflare, Registro.br, GoDaddy):
+                    </span>
+                    <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold">
+                      Tipo CNAME
+                    </span>
+                  </div>
+
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-slate-600">
                       <thead>
                         <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase">
-                          <th className="py-2">Tipo</th>
-                          <th className="py-2">Nome / Host</th>
-                          <th className="py-2">Destino / Valor</th>
-                          <th className="py-2 text-right">Ação</th>
+                          <th className="py-2.5 px-3">Tipo</th>
+                          <th className="py-2.5 px-3">Nome / Host</th>
+                          <th className="py-2.5 px-3">Destino / Valor</th>
+                          <th className="py-2.5 px-3 text-right">Ação</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200/60 font-mono">
-                        <tr>
-                          <td className="py-2 font-bold text-indigo-600">CNAME</td>
-                          <td className="py-2">bio (ou app / @)</td>
-                          <td className="py-2">tree.pajotech.com.br</td>
-                          <td className="py-2 text-right">
+                        <tr className="bg-white">
+                          <td className="py-3 px-3 font-bold text-indigo-600">CNAME</td>
+                          <td className="py-3 px-3">bio <span className="font-sans text-[11px] text-slate-400 font-normal">(ou app / @)</span></td>
+                          <td className="py-3 px-3 font-bold text-slate-800">tree.pajotech.com.br</td>
+                          <td className="py-3 px-3 text-right">
                             <button
                               type="button"
                               onClick={() => handleCopy("tree.pajotech.com.br", "cname")}
-                              className="text-slate-500 hover:text-indigo-600"
-                              title="Copiar"
+                              className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-sans text-xs font-semibold inline-flex items-center gap-1 transition"
+                              title="Copiar Destino"
                             >
                               {copiedDns === "cname" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                              <span>{copiedDns === "cname" ? "Copiado!" : "Copiar"}</span>
                             </button>
                           </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
-                  <p className="text-[11px] text-slate-500 font-sans">
-                    💡 <strong>Cloudflare:</strong> Ao criar o CNAME, você pode deixar o status como <em>DNS Only (Nuvem Cinza)</em> ou <em>Proxied (Nuvem Laranja)</em> com SSL em modo Full/Strict.
-                  </p>
+
+                  <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-100 text-blue-900 space-y-1.5 text-[11px]">
+                    <p className="font-bold flex items-center gap-1.5">
+                      <span>💡 Dicas Importantes de Configuração:</span>
+                    </p>
+                    <ul className="list-disc pl-4 space-y-1 text-blue-800/90 leading-relaxed">
+                      <li><strong>Cloudflare:</strong> Ao criar o CNAME, configure inicialmente como <em>DNS Only (Nuvem Cinza)</em> para que o servidor gere o certificado SSL Let's Encrypt automaticamente.</li>
+                      <li><strong>Coolify:</strong> No painel do Coolify, acesse sua aplicação e adicione o domínio <code>https://{form.customDomain || 'bio.agenciaignis.com.br'}</code> na lista de <em>Domains</em>.</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </div>
