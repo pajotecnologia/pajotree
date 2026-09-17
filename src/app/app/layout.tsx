@@ -174,17 +174,17 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
                   key={item.href}
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
-                  className={`min-h-11 flex items-center justify-between px-3 rounded-xl text-xs font-semibold transition ${
-                    active ? "bg-indigo-50 text-indigo-700" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  className={`min-h-10 flex items-center justify-between px-3 rounded-lg text-xs font-medium transition ${
+                    active ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                   }`}
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Icon className={`w-4 h-4 shrink-0 ${active ? "text-indigo-600" : "text-slate-400"}`} />
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Icon className={`w-4 h-4 shrink-0 ${active ? "text-white" : "text-slate-400"}`} />
                     <span className="truncate">{item.label}</span>
                   </div>
 
                   {item.badge && (
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold animate-pulse shadow-2xs">
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-semibold">
                       {item.badge}
                     </span>
                   )}
@@ -195,43 +195,49 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
         </div>
 
         <div className="p-3 border-t border-slate-100 space-y-2 bg-slate-50/50">
-          <Link href="/app/billing" className="min-h-11 flex items-center justify-between p-2.5 rounded-xl bg-indigo-50/80 border border-indigo-100/80 hover:bg-indigo-100/70 transition group">
-            <div className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-indigo-600 group-hover:rotate-12 transition" /><div><span className="text-[11px] font-bold text-indigo-900 block">Plano {plan}</span><span className="text-[9px] text-indigo-600">Ver limites & cotas</span></div></div>
-            <ChevronRight className="w-3.5 h-3.5 text-indigo-500 group-hover:translate-x-0.5 transition" />
+          <Link href="/app/billing" className="min-h-10 flex items-center justify-between p-2.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 transition group">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-3.5 h-3.5 text-slate-500" />
+              <div>
+                <span className="text-xs font-semibold text-slate-800 block">Plano {plan}</span>
+                <span className="text-[10px] text-slate-400">Ver cotas e limites</span>
+              </div>
+            </div>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 transition" />
           </Link>
-          <div className="flex items-center justify-between gap-2 p-1.5 text-xs">
+          <div className="flex items-center justify-between gap-2 p-1 text-xs">
             <div className="truncate max-w-[150px] min-w-0">
               <span className="text-slate-800 font-semibold block truncate text-xs">{authData?.user?.name}</span>
               <span className="text-slate-400 text-[10px] block truncate">{authData?.user?.email}</span>
               <span className="text-slate-400 text-[9px] block mt-0.5">v{APP_VERSION} • By {vendorCredit}</span>
             </div>
-            <button type="button" onClick={handleLogout} title="Sair da Conta" aria-label="Sair da Conta" className="min-h-11 min-w-11 p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition flex items-center justify-center"><LogOut className="w-4 h-4" /></button>
+            <button type="button" onClick={handleLogout} title="Sair da Conta" aria-label="Sair da Conta" className="min-h-10 min-w-10 p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition flex items-center justify-center cursor-pointer"><LogOut className="w-4 h-4" /></button>
           </div>
         </div>
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
-        <header className="min-h-16 px-3 sm:px-6 py-2 border-b border-slate-200 bg-white flex flex-wrap items-center justify-between gap-2 shrink-0 sticky top-0 z-30 shadow-2xs">
+        <header className="min-h-14 px-3 sm:px-6 py-2 border-b border-slate-200 bg-white flex flex-wrap items-center justify-between gap-2 shrink-0 sticky top-0 z-30">
           <div className="flex items-center gap-2 min-w-0">
-            <button type="button" aria-label="Abrir menu" onClick={() => setSidebarOpen(true)} className="lg:hidden min-h-11 min-w-11 p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 flex items-center justify-center"><Menu className="w-5 h-5" /></button>
-            <h1 className="text-sm font-bold text-slate-800 hidden sm:block truncate">{organization?.name || "Painel de Controle"}</h1>
+            <button type="button" aria-label="Abrir menu" onClick={() => setSidebarOpen(true)} className="lg:hidden min-h-10 min-w-10 p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 flex items-center justify-center"><Menu className="w-5 h-5" /></button>
+            <h1 className="text-xs font-bold text-slate-800 hidden sm:block truncate">{organization?.name || "Painel de Controle"}</h1>
             
             {/* White Label Partner Signal */}
             {authData?.isWhiteLabelPartner && (
               <Link
                 href="/app/settings/white-label"
-                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 text-purple-900 text-xs font-bold hover:shadow-xs transition"
+                className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium hover:bg-slate-200 transition"
                 title="Configurar Pagamentos, Planos e Marca White Label"
               >
-                <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse" />
-                <span>Modo White Label: <strong className="text-indigo-700">{organization?.tradeName || organization?.name}</strong></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-700" />
+                <span>Modo White Label: <strong className="text-slate-900">{organization?.tradeName || organization?.name}</strong></span>
               </Link>
             )}
 
             {/* White Label Client Signal */}
             {authData?.isWhiteLabelClient && (
-              <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium">
-                <span className="w-2 h-2 rounded-full bg-indigo-500" />
+              <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
                 <span>Ambiente: <strong className="text-slate-900">{authData?.whiteLabelParent?.tradeName || authData?.whiteLabelParent?.name}</strong></span>
               </span>
             )}
@@ -240,14 +246,14 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
             {newLeadsCount > 0 && (
               <Link
                 href="/app/leads"
-                className="min-h-11 px-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold hover:bg-emerald-100 transition flex items-center gap-1.5 whitespace-nowrap shadow-2xs"
+                className="min-h-10 px-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium hover:bg-emerald-100 transition flex items-center gap-1.5 whitespace-nowrap"
                 title={`${newLeadsCount} novos leads aguardando atendimento`}
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                 <span>{newLeadsCount} {newLeadsCount === 1 ? "Novo Lead" : "Novos Leads"}</span>
               </Link>
             )}
-            {authData?.isSuperAdmin && <Link href="/admin" className="min-h-11 px-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold hover:bg-amber-100 transition flex items-center gap-1.5 whitespace-nowrap"><ShieldAlert className="w-3.5 h-3.5 text-amber-600" /><span className="hidden xs:inline">Painel Mestre</span><span className="sm:hidden">Mestre</span></Link>}
+            {authData?.isSuperAdmin && <Link href="/admin" className="min-h-10 px-3 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium hover:bg-slate-200 transition flex items-center gap-1.5 whitespace-nowrap"><ShieldAlert className="w-3.5 h-3.5 text-slate-600" /><span className="hidden xs:inline">Painel Mestre</span><span className="sm:hidden">Mestre</span></Link>}
             {(() => {
               const effectiveCustomDomain = authData?.customDomain || organization?.whiteLabelDomain || authData?.whiteLabelParent?.whiteLabelDomain;
               const pageSlug = authData?.pageSlug || organization?.name?.toLowerCase().replace(/[^a-z0-9]/g, "-") || "minha-empresa";
@@ -259,11 +265,11 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
                 <Link
                   href={publicPageUrl}
                   target="_blank"
-                  className="min-h-11 px-3 sm:px-3.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap"
+                  className="min-h-10 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-medium transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
                 >
                   <span className="hidden sm:inline">Ver Minha Página</span>
                   <span className="sm:hidden">Minha Página</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-indigo-600" />
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
                 </Link>
               );
             })()}

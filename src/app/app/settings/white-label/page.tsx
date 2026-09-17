@@ -5,16 +5,13 @@ import {
   AlertCircle,
   Check,
   Globe,
-  Image as ImageIcon,
   Loader2,
   Palette,
-  RotateCcw,
   Save,
   Sparkles,
   Type,
   Upload,
   ExternalLink,
-  ShieldCheck,
   HelpCircle,
   Copy,
   CheckCircle2,
@@ -27,18 +24,11 @@ import {
   Package,
   Users,
   Key,
-  Lock,
   Plus,
   Trash2,
   Edit3,
-  TrendingUp,
-  Link as LinkIcon,
   MessageSquare,
-  FileCheck,
 } from "lucide-react";
-
-const MAX_IMAGE_SIZE = 2.5 * 1024 * 1024; // 2.5 MB
-const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 const FONTS = [
   { label: "Inter (Moderno & Neutro)", value: "Inter" },
@@ -53,42 +43,6 @@ const FONTS = [
 ] as const;
 
 type FontName = (typeof FONTS)[number]["value"];
-
-const GRADIENT_PRESETS = [
-  { name: "Galáxia Escura", value: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)" },
-  { name: "Obsidiana Minimal", value: "linear-gradient(135deg, #18181b 0%, #09090b 100%)" },
-  { name: "Sunset Violet", value: "linear-gradient(135deg, #312e81 0%, #4c1d95 50%, #831843 100%)" },
-  { name: "Emerald Forest", value: "linear-gradient(135deg, #064e3b 0%, #022c22 100%)" },
-  { name: "Ocean Deep", value: "linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)" },
-  { name: "Clean Pearl", value: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)" },
-];
-
-const HD_IMAGE_PRESETS = [
-  {
-    name: "Dark Mesh Gradient",
-    url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    name: "Cyber Neon City",
-    url: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    name: "Abstract Fluid Art",
-    url: "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    name: "Deep Space Aurora",
-    url: "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    name: "Minimalist Geometry",
-    url: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    name: "Nordic Sunset Mountains",
-    url: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
-  },
-];
 
 type WhiteLabelData = {
   brandName: string;
@@ -114,11 +68,11 @@ const DEFAULTS: WhiteLabelData = {
   whatsapp: "",
   logoUrl: null,
   faviconUrl: null,
-  primaryColor: "#6366f1",
-  secondaryColor: "#ec4899",
+  primaryColor: "#0f172a",
+  secondaryColor: "#334155",
   textColor: "#ffffff",
   backgroundType: "gradient",
-  backgroundValue: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)",
+  backgroundValue: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
   buttonStyle: "rounded-xl",
   fontFamily: "Inter",
   customDomain: "",
@@ -137,23 +91,20 @@ export default function WhiteLabelPage() {
 
   // Branding State
   const [form, setForm] = useState<WhiteLabelData>(DEFAULTS);
-  const [hasPlanAccess, setHasPlanAccess] = useState(false);
-  const [planName, setPlanName] = useState("START");
   const [copiedDns, setCopiedDns] = useState<string | null>(null);
   const [verifyingDns, setVerifyingDns] = useState(false);
   const [dnsResult, setDnsResult] = useState<{ verified: boolean; message: string } | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
-  const bgImageInputRef = useRef<HTMLInputElement>(null);
 
   // Landing Page State
   const [landingConfig, setLandingConfig] = useState({
     headline: "",
     subtitle: "",
-    badgeText: "🚀 O Sistema Completo de Conversão",
+    badgeText: "A Plataforma de Gestão e Bio Links",
     ctaText: "Começar Gratuitamente",
     ctaSecondaryText: "Falar com Especialista",
     whatsappContact: "",
-    themeColor: "#4f46e5",
+    themeColor: "#0f172a",
     showHero: true,
     showFeatures: true,
     showPricing: true,
@@ -183,7 +134,6 @@ export default function WhiteLabelPage() {
 
   // Plans Management State
   const [customPlans, setCustomPlans] = useState<any[]>([]);
-  const [loadingPlans, setLoadingPlans] = useState(false);
   const [editingPlan, setEditingPlan] = useState<any | null>(null);
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [savingPlan, setSavingPlan] = useState(false);
@@ -193,7 +143,6 @@ export default function WhiteLabelPage() {
     summary: { totalClients: 0, activeClients: 0, trialClients: 0, monthlyRevenue: 0 },
     clients: [],
   });
-  const [loadingClients, setLoadingClients] = useState(false);
   const [orgId, setOrgId] = useState<string>("");
 
   useEffect(() => {
@@ -224,8 +173,6 @@ export default function WhiteLabelPage() {
           ...data.whiteLabel,
           removeBrandingActive: Boolean(data.whiteLabel?.removeBrandingActive),
         });
-        setHasPlanAccess(Boolean(data.plan?.removeBranding || data.isSuperAdmin));
-        setPlanName(data.plan?.name || "START");
       }
 
       if (landRes.ok) {
@@ -279,7 +226,7 @@ export default function WhiteLabelPage() {
       link.rel = "stylesheet";
       document.head.appendChild(link);
     }
-    const fontQuery = FONTS.map((f) => f.value.replace(/ /g, "+") + ":wght@400;600;700;800").join("&family=");
+    const fontQuery = FONTS.map((f) => f.value.replace(/ /g, "+") + ":wght@400;600;700").join("&family=");
     link.href = `https://fonts.googleapis.com/css2?family=${fontQuery}&display=swap`;
   }, []);
 
@@ -296,10 +243,10 @@ export default function WhiteLabelPage() {
   const buttonClass = useMemo(() => {
     switch (form.buttonStyle) {
       case "square": return "rounded-none";
-      case "rounded": return "rounded-lg";
+      case "rounded": return "rounded-md";
       case "pill": return "rounded-full";
-      case "glass": return "rounded-xl backdrop-blur-md bg-white/20 border border-white/30 text-white shadow-lg";
-      default: return "rounded-xl";
+      case "glass": return "rounded-lg backdrop-blur-md bg-white/20 border border-white/30 text-white";
+      default: return "rounded-lg";
     }
   }, [form.buttonStyle]);
 
@@ -319,7 +266,7 @@ export default function WhiteLabelPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Falha ao salvar");
 
-      setSuccess("Identidade visual e domínio salvos com sucesso!");
+      setSuccess("Identidade visual e domínio salvos com sucesso.");
       setTimeout(() => setSuccess(null), 4000);
     } catch (err: any) {
       setError(err.message || "Erro ao salvar.");
@@ -345,7 +292,7 @@ export default function WhiteLabelPage() {
       const data = await res.json();
       setDnsResult({
         verified: Boolean(data.verified),
-        message: data.message || (data.verified ? "Domínio verificado com sucesso!" : "Apontamento DNS ainda não propagado."),
+        message: data.message || (data.verified ? "Domínio verificado com sucesso." : "Apontamento DNS ainda não propagado."),
       });
       if (data.verified) {
         setForm((prev) => ({ ...prev, domainStatus: "VERIFIED" }));
@@ -373,7 +320,7 @@ export default function WhiteLabelPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Falha ao salvar credenciais do Banco Inter.");
 
-      setSuccess("Credenciais do Banco Inter salvas com sucesso!");
+      setSuccess("Credenciais do Banco Inter salvas com sucesso.");
       setGatewayConfigured(true);
       setTimeout(() => setSuccess(null), 4000);
     } catch (err: any) {
@@ -419,7 +366,7 @@ export default function WhiteLabelPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Falha no registro do webhook.");
-      setSuccess("Webhook registrado com sucesso no Banco Inter!");
+      setSuccess("Webhook registrado com sucesso no Banco Inter.");
     } catch (err: any) {
       setError(err.message || "Erro ao registrar webhook.");
     } finally {
@@ -487,7 +434,7 @@ export default function WhiteLabelPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erro ao salvar plano.");
 
-      setSuccess(isEdit ? "Plano atualizado com sucesso!" : "Novo plano criado com sucesso!");
+      setSuccess(isEdit ? "Plano atualizado com sucesso." : "Novo plano criado com sucesso.");
       setIsPlanModalOpen(false);
       const plansRes = await fetch("/api/white-label/plans");
       if (plansRes.ok) {
@@ -509,7 +456,7 @@ export default function WhiteLabelPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erro ao excluir plano.");
 
-      setSuccess("Plano excluído com sucesso!");
+      setSuccess("Plano excluído com sucesso.");
       setCustomPlans((prev) => prev.filter((p) => p.id !== id));
       setTimeout(() => setSuccess(null), 4000);
     } catch (err: any) {
@@ -530,7 +477,7 @@ export default function WhiteLabelPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erro ao salvar página.");
-      setSuccess("Landing Page de vendas atualizada com sucesso!");
+      setSuccess("Landing Page salva com sucesso.");
       setTimeout(() => setSuccess(null), 4000);
     } catch (err: any) {
       setError(err.message || "Erro ao salvar landing page.");
@@ -551,7 +498,7 @@ export default function WhiteLabelPage() {
     ? `https://${cleanCustomDomain}/register?ref=${orgId}`
     : (typeof window !== "undefined"
       ? `${window.location.origin}/register?ref=${orgId}`
-      : `https://pajotree.com/register?ref=${orgId}`);
+      : `https://tree.pajotech.com.br/register?ref=${orgId}`);
 
   const defaultLandingUrl = cleanCustomDomain
     ? `https://${cleanCustomDomain}`
@@ -561,138 +508,98 @@ export default function WhiteLabelPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[500px] gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
-        <p className="text-slate-500 font-medium text-sm">Carregando painel White Label...</p>
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-slate-700" />
+        <p className="text-slate-500 text-xs">Carregando painel...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 pb-20 max-w-7xl mx-auto">
-      {/* Top Header Banner */}
-      <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-purple-500/20">
-        <div className="absolute right-0 top-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-400/30 text-purple-200 text-xs font-bold tracking-wide">
-              <Sparkles className="w-3.5 h-3.5 text-purple-300 animate-pulse" />
-              <span>PAINEL DE REVENDA & WHITE LABEL</span>
+    <div className="space-y-6 pb-20 max-w-6xl mx-auto">
+      {/* Top Header Card - Discreto, Limpo e Confortável */}
+      <div className="bg-white rounded-xl p-5 sm:p-6 border border-slate-200">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 text-slate-600 text-xs font-medium">
+              <Building2 className="w-4 h-4 text-slate-500" />
+              <span>Painel de Gerenciamento White Label</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Gerenciamento White Label & Banco Inter
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">
+              Personalização & Revenda
             </h1>
-            <p className="text-purple-200/80 text-sm max-w-2xl">
-              Personalize a marca da sua plataforma, configure sua própria conta do Banco Inter para receber pagamentos dos seus clientes e crie planos sob medida.
+            <p className="text-xs text-slate-500 max-w-2xl">
+              Gerencie a identidade visual da sua agência, configure seu domínio próprio, pagamentos via Pix e planos de assinatura.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => {
                 setIsGuideOpen(true);
                 setGuideStep(1);
               }}
-              className="px-4 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-xs flex items-center gap-2 shadow-lg shadow-amber-400/20 transition-all hover:scale-105 cursor-pointer border border-amber-300"
+              className="px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer"
             >
-              <HelpCircle className="w-4 h-4 text-slate-950" />
-              <span>Como Configurar (Passo a Passo)</span>
+              <HelpCircle className="w-4 h-4 text-slate-500" />
+              <span>Guia Passo a Passo</span>
             </button>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl px-4 py-3 border border-white/10">
-              <span className="text-xs text-purple-200 block">Clientes Ativos</span>
-              <span className="text-xl font-extrabold text-white">{clientsData.summary.activeClients}</span>
+            <div className="bg-slate-50 rounded-lg px-3 py-1.5 border border-slate-200">
+              <span className="text-[10px] text-slate-500 block">Clientes Ativos</span>
+              <span className="text-sm font-bold text-slate-900">{clientsData.summary.activeClients}</span>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl px-4 py-3 border border-white/10">
-              <span className="text-xs text-purple-200 block">Faturamento Mensal</span>
-              <span className="text-xl font-extrabold text-emerald-400">
+            <div className="bg-slate-50 rounded-lg px-3 py-1.5 border border-slate-200">
+              <span className="text-[10px] text-slate-500 block">Faturamento Mensal</span>
+              <span className="text-sm font-bold text-slate-900">
                 R$ {Number(clientsData.summary.monthlyRevenue).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex flex-wrap gap-2 mt-6 pt-6 border-t border-white/10">
-          <button
-            type="button"
-            onClick={() => setActiveTab("branding")}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition ${
-              activeTab === "branding"
-                ? "bg-white text-slate-900 shadow-md"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
-          >
-            <Palette className="w-4 h-4" />
-            <span>1. Marca & Domínio</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("payments")}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition ${
-              activeTab === "payments"
-                ? "bg-white text-slate-900 shadow-md"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
-          >
-            <CreditCard className="w-4 h-4" />
-            <span>2. Pagamentos (Banco Inter)</span>
-            {gatewayConfigured && <span className="w-2 h-2 rounded-full bg-emerald-400" />}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("plans")}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition ${
-              activeTab === "plans"
-                ? "bg-white text-slate-900 shadow-md"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
-          >
-            <Package className="w-4 h-4" />
-            <span>3. Gerenciar Meus Planos ({customPlans.length})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("clients")}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition ${
-              activeTab === "clients"
-                ? "bg-white text-slate-900 shadow-md"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>4. Meus Clientes ({clientsData.clients.length})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("landing")}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition ${
-              activeTab === "landing"
-                ? "bg-white text-slate-900 shadow-md"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
-          >
-            <Sparkles className="w-4 h-4 text-purple-300" />
-            <span>5. Landing Page de Vendas</span>
-          </button>
+        {/* Tab Navigation - Discreta e Neutra */}
+        <div className="flex flex-wrap gap-1 mt-5 pt-4 border-t border-slate-100">
+          {[
+            { id: "branding", label: "1. Marca & Domínio", icon: Palette },
+            { id: "payments", label: "2. Pagamentos (Banco Inter)", icon: CreditCard, hasBadge: gatewayConfigured },
+            { id: "plans", label: `3. Meus Planos (${customPlans.length})`, icon: Package },
+            { id: "clients", label: `4. Meus Clientes (${clientsData.clients.length})`, icon: Users },
+            { id: "landing", label: "5. Landing Page de Vendas", icon: Sparkles },
+          ].map((t) => {
+            const Icon = t.icon;
+            const isActive = activeTab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActiveTab(t.id as any)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition cursor-pointer ${
+                  isActive
+                    ? "bg-slate-900 text-white"
+                    : "bg-slate-100/70 hover:bg-slate-200 text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{t.label}</span>
+                {t.hasBadge && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Notifications */}
       {success && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold flex items-center gap-3 shadow-xs">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+        <div className="p-3.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center gap-2.5">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>{success}</span>
         </div>
       )}
 
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-sm font-semibold flex items-center gap-3 shadow-xs">
-          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+        <div className="p-3.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-center gap-2.5">
+          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
           <span>{error}</span>
         </div>
       )}
@@ -701,83 +608,83 @@ export default function WhiteLabelPage() {
       {/* TAB 1: IDENTIDADE VISUAL & DOMÍNIO                                        */}
       {/* ========================================================================= */}
       {activeTab === "branding" && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <form onSubmit={handleSaveBranding} className="lg:col-span-7 space-y-6">
             {/* Informações da Marca */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-              <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-                <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
-                  <Building2 className="w-5 h-5" />
+            <div className="bg-white rounded-xl p-5 sm:p-6 border border-slate-200 space-y-5">
+              <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
+                  <Building2 className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-base font-extrabold text-slate-900">Marca & Logomarca</h2>
-                  <p className="text-xs text-slate-500">Defina o nome fantasia e o logotipo que aparecerão para seus usuários</p>
+                  <h2 className="text-sm font-bold text-slate-900">Marca & Logomarca</h2>
+                  <p className="text-xs text-slate-500">Nome fantasia e logotipo para seus usuários</p>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Nome da Sua Marca / Empresa
                   </label>
                   <input
                     type="text"
                     value={form.brandName}
                     onChange={(e) => setForm({ ...form, brandName: e.target.value })}
-                    placeholder="Ex: Minha Agência Digital"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium focus:ring-2 focus:ring-purple-500 focus:bg-white transition"
+                    placeholder="Ex: Agência Ignis"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-900 outline-none"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     WhatsApp de Atendimento & Contato da Empresa
                   </label>
                   <input
                     type="text"
                     value={form.whatsapp}
                     onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
-                    placeholder="Ex: (87) 99683-6855 ou 87996836855"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium focus:ring-2 focus:ring-purple-500 focus:bg-white transition font-mono"
+                    placeholder="Ex: 87996836855"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-900 outline-none font-mono"
                   />
                   <span className="text-[11px] text-slate-400 mt-1 block">
-                    Este número será usado automaticamente nos botões de WhatsApp e no rodapé das suas páginas White Label.
+                    Utilizado nos botões de WhatsApp e no rodapé das suas páginas.
                   </span>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Logomarca da Empresa
                   </label>
                   <div className="flex flex-col sm:flex-row items-center gap-4">
                     {form.logoUrl ? (
-                      <div className="relative group w-24 h-24 rounded-2xl border border-slate-200 bg-slate-50 p-2 flex items-center justify-center shrink-0 shadow-xs">
+                      <div className="relative group w-20 h-20 rounded-xl border border-slate-200 bg-slate-50 p-2 flex items-center justify-center shrink-0">
                         <img src={form.logoUrl} alt="Logo" className="max-h-full max-w-full object-contain" />
                         <button
                           type="button"
                           onClick={() => setForm({ ...form, logoUrl: null })}
-                          className="absolute -top-2 -right-2 w-6 h-6 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-rose-600 transition"
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-rose-600 text-white rounded-full flex items-center justify-center shadow hover:bg-rose-700 transition"
                         >
-                          <X className="w-3.5 h-3.5" />
+                          <X className="w-3 h-3" />
                         </button>
                       </div>
                     ) : (
                       <div
                         onClick={() => logoInputRef.current?.click()}
-                        className="w-24 h-24 rounded-2xl border-2 border-dashed border-slate-300 hover:border-purple-400 bg-slate-50 flex flex-col items-center justify-center text-slate-400 hover:text-purple-600 cursor-pointer transition shrink-0"
+                        className="w-20 h-20 rounded-xl border border-dashed border-slate-300 hover:border-slate-400 bg-slate-50 flex flex-col items-center justify-center text-slate-400 hover:text-slate-600 cursor-pointer transition shrink-0"
                       >
-                        <Upload className="w-6 h-6 mb-1" />
-                        <span className="text-[10px] font-bold">Enviar Logo</span>
+                        <Upload className="w-5 h-5 mb-1" />
+                        <span className="text-[10px] font-medium">Enviar Logo</span>
                       </div>
                     )}
 
                     <div className="flex-1 text-xs text-slate-500 space-y-2">
-                      <p>Formatos suportados: PNG, JPG ou WebP (máximo 2.5 MB). Recomendamos logotipo com fundo transparente.</p>
+                      <p>Formatos suportados: PNG, JPG ou WebP (máximo 2.5 MB). Recomendamos imagem com fundo transparente.</p>
                       <button
                         type="button"
                         onClick={() => logoInputRef.current?.click()}
-                        className="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition text-xs inline-flex items-center gap-1.5"
+                        className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition text-xs inline-flex items-center gap-1.5 cursor-pointer"
                       >
                         <Upload className="w-3.5 h-3.5" />
                         <span>Selecionar Arquivo</span>
@@ -803,75 +710,60 @@ export default function WhiteLabelPage() {
             </div>
 
             {/* Domínio Próprio & DNS */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-3">
+            <div className="bg-white rounded-xl p-5 sm:p-6 border border-slate-200 space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold shrink-0">
-                    <Globe className="w-5 h-5" />
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                    <Globe className="w-4 h-4" />
                   </div>
                   <div>
-                    <h2 className="text-base font-extrabold text-slate-900">Domínio Próprio & DNS</h2>
-                    <p className="text-xs text-slate-500">Conecte seu domínio ou subdomínio exclusivo para a sua marca White Label</p>
+                    <h2 className="text-sm font-bold text-slate-900">Domínio Próprio & DNS</h2>
+                    <p className="text-xs text-slate-500">Conecte seu subdomínio exclusivo para a sua marca</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {form.customDomain && (
-                    <a
-                      href={`https://${form.customDomain.replace(/^https?:\/\//, "")}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition flex items-center gap-1.5"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>Abrir Página</span>
-                    </a>
-                  )}
-
                   {form.domainStatus === "VERIFIED" || dnsResult?.verified ? (
-                    <span className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold flex items-center gap-1.5">
+                    <span className="px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-medium flex items-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Conectado & Verificado</span>
+                      <span>Conectado</span>
                     </span>
                   ) : (
-                    <span className="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold flex items-center gap-1.5">
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                    <span className="px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 border border-slate-200 text-[11px] font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 text-slate-500" />
                       <span>Pendente DNS</span>
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Card de Domínio Ativo com Acesso Rápido */}
+              {/* Card de Domínio Ativo */}
               {form.customDomain && (
-                <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-950 text-white border border-indigo-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                      <span className="text-xs font-bold uppercase tracking-wider text-indigo-200">Endereço Oficial da Sua Agência</span>
-                    </div>
-                    <div className="font-mono text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                      <span>https://{form.customDomain.replace(/^https?:\/\//, "")}</span>
-                    </div>
+                <div className="p-3.5 rounded-lg bg-slate-900 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] text-slate-400 block uppercase font-medium">Endereço Configurado</span>
+                    <span className="font-mono text-xs font-semibold text-white">
+                      https://{form.customDomain.replace(/^https?:\/\//, "")}
+                    </span>
                   </div>
 
                   <div className="flex items-center gap-2 w-full sm:w-auto">
                     <button
                       type="button"
                       onClick={() => handleCopy(`https://${form.customDomain.replace(/^https?:\/\//, "")}`, "custom-url")}
-                      className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition flex items-center gap-1.5 border border-white/10 flex-1 sm:flex-initial justify-center"
+                      className="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium transition flex items-center gap-1.5 cursor-pointer"
                     >
                       {copiedDns === "custom-url" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copiedDns === "custom-url" ? "Copiado!" : "Copiar Link"}</span>
+                      <span>{copiedDns === "custom-url" ? "Copiado" : "Copiar"}</span>
                     </button>
                     <a
                       href={`https://${form.customDomain.replace(/^https?:\/\//, "")}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-600/30 flex-1 sm:flex-initial justify-center"
+                      className="px-3 py-1.5 rounded-md bg-white text-slate-900 hover:bg-slate-100 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
-                      <span>Testar no Navegador</span>
+                      <span>Abrir</span>
                     </a>
                   </div>
                 </div>
@@ -879,76 +771,72 @@ export default function WhiteLabelPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                    Domínio ou Subdomínio Personalizado
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Domínio ou Subdomínio
                   </label>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={form.customDomain}
                       onChange={(e) => setForm({ ...form, customDomain: e.target.value })}
-                      placeholder="Ex: bio.agenciaignis.com.br ou app.meudominio.com.br"
-                      className="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
+                      placeholder="Ex: bio.agenciaignis.com.br"
+                      className="flex-1 px-3.5 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-900 outline-none font-mono"
                     />
                     <button
                       type="button"
                       onClick={handleVerifyDns}
                       disabled={verifyingDns || !form.customDomain}
-                      className="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-2 shrink-0 disabled:opacity-50 shadow-sm"
+                      className="px-4 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition flex items-center gap-1.5 shrink-0 disabled:opacity-50 cursor-pointer"
                     >
-                      {verifyingDns ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                      <span>Verificar Apontamento</span>
+                      {verifyingDns ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                      <span>Verificar DNS</span>
                     </button>
                   </div>
-                  <span className="text-[11px] text-slate-500 mt-1 block">
-                    Digite o domínio que você deseja usar (ex: <code>bio.agenciaignis.com.br</code>) e clique em Salvar Alterações no final da página.
-                  </span>
                 </div>
 
                 {dnsResult && (
-                  <div className={`p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 ${
-                    dnsResult.verified ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-amber-50 text-amber-800 border border-amber-200"
+                  <div className={`p-3 rounded-lg text-xs font-medium flex items-center gap-2 ${
+                    dnsResult.verified ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-slate-100 text-slate-700 border border-slate-200"
                   }`}>
-                    {dnsResult.verified ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <Info className="w-4 h-4 text-amber-600 shrink-0" />}
+                    {dnsResult.verified ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <Info className="w-4 h-4 text-slate-500 shrink-0" />}
                     <span>{dnsResult.message}</span>
                   </div>
                 )}
 
                 {/* Tabela de Apontamentos DNS */}
-                <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 text-xs space-y-4">
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 text-xs space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-extrabold text-slate-800 block text-xs">
-                      Tabela de Apontamento DNS (Cloudflare, Registro.br, GoDaddy):
+                    <span className="font-semibold text-slate-800 block text-xs">
+                      Tabela de Apontamento DNS:
                     </span>
-                    <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold">
-                      Tipo CNAME
+                    <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md font-medium">
+                      CNAME
                     </span>
                   </div>
 
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-slate-600">
                       <thead>
-                        <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase">
-                          <th className="py-2.5 px-3">Tipo</th>
-                          <th className="py-2.5 px-3">Nome / Host</th>
-                          <th className="py-2.5 px-3">Destino / Valor</th>
-                          <th className="py-2.5 px-3 text-right">Ação</th>
+                        <tr className="border-b border-slate-200 text-[10px] font-semibold text-slate-500 uppercase">
+                          <th className="py-2 px-2.5">Tipo</th>
+                          <th className="py-2 px-2.5">Nome / Host</th>
+                          <th className="py-2 px-2.5">Destino / Valor</th>
+                          <th className="py-2 px-2.5 text-right">Ação</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-200/60 font-mono">
+                      <tbody className="divide-y divide-slate-200/60 font-mono text-xs">
                         <tr className="bg-white">
-                          <td className="py-3 px-3 font-bold text-indigo-600">CNAME</td>
-                          <td className="py-3 px-3">bio <span className="font-sans text-[11px] text-slate-400 font-normal">(ou app / @)</span></td>
-                          <td className="py-3 px-3 font-bold text-slate-800">tree.pajotech.com.br</td>
-                          <td className="py-3 px-3 text-right">
+                          <td className="py-2.5 px-2.5 font-bold text-slate-900">CNAME</td>
+                          <td className="py-2.5 px-2.5">bio</td>
+                          <td className="py-2.5 px-2.5 font-semibold text-slate-800">tree.pajotech.com.br</td>
+                          <td className="py-2.5 px-2.5 text-right">
                             <button
                               type="button"
                               onClick={() => handleCopy("tree.pajotech.com.br", "cname")}
-                              className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-sans text-xs font-semibold inline-flex items-center gap-1 transition"
-                              title="Copiar Destino"
+                              className="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-sans text-xs font-medium inline-flex items-center gap-1 transition cursor-pointer"
                             >
                               {copiedDns === "cname" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                              <span>{copiedDns === "cname" ? "Copiado!" : "Copiar"}</span>
+                              <span>{copiedDns === "cname" ? "Copiado" : "Copiar"}</span>
                             </button>
                           </td>
                         </tr>
@@ -956,40 +844,38 @@ export default function WhiteLabelPage() {
                     </table>
                   </div>
 
-                  <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-100 text-blue-900 space-y-1.5 text-[11px]">
-                    <p className="font-bold flex items-center gap-1.5">
-                      <span>💡 Dicas Importantes de Configuração:</span>
-                    </p>
-                    <ul className="list-disc pl-4 space-y-1 text-blue-800/90 leading-relaxed">
-                      <li><strong>Cloudflare:</strong> Ao criar o CNAME, configure inicialmente como <em>DNS Only (Nuvem Cinza)</em> para que o servidor gere o certificado SSL Let's Encrypt automaticamente.</li>
-                      <li><strong>Coolify:</strong> No painel do Coolify, acesse sua aplicação e adicione o domínio <code>https://{form.customDomain || 'bio.agenciaignis.com.br'}</code> na lista de <em>Domains</em>.</li>
+                  <div className="p-3 rounded-lg bg-white border border-slate-200 text-slate-600 space-y-1 text-[11px]">
+                    <p className="font-semibold text-slate-800">Orientações de Configuração:</p>
+                    <ul className="list-disc pl-4 space-y-0.5 text-slate-600">
+                      <li><strong>Cloudflare:</strong> Ao criar o CNAME, configure como <em>DNS Only (Nuvem Cinza)</em> inicialmente ou <em>Proxied (Nuvem Laranja)</em> com SSL em modo Full.</li>
+                      <li><strong>Coolify:</strong> No painel do Coolify, informe seu domínio <code>https://{form.customDomain || 'bio.agenciaignis.com.br'}</code>.</li>
                     </ul>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Tipografia & Estilo dos Botões */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-              <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                  <Type className="w-5 h-5" />
+            {/* Tipografia & Formato */}
+            <div className="bg-white rounded-xl p-5 sm:p-6 border border-slate-200 space-y-5">
+              <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
+                  <Type className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-base font-extrabold text-slate-900">Tipografia & Estilo</h2>
-                  <p className="text-xs text-slate-500">Escolha a fonte Google Fonts e o formato dos botões</p>
+                  <h2 className="text-sm font-bold text-slate-900">Tipografia & Botões</h2>
+                  <p className="text-xs text-slate-500">Formato e fonte padrão das suas páginas</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Fonte do Sistema & Páginas
                   </label>
                   <select
                     value={form.fontFamily}
                     onChange={(e) => setForm({ ...form, fontFamily: e.target.value as FontName })}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-900 outline-none"
                   >
                     {FONTS.map((f) => (
                       <option key={f.value} value={f.value}>{f.label}</option>
@@ -998,28 +884,28 @@ export default function WhiteLabelPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Estilo dos Botões
                   </label>
                   <select
                     value={form.buttonStyle}
                     onChange={(e) => setForm({ ...form, buttonStyle: e.target.value as any })}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-900 outline-none"
                   >
                     <option value="rounded-xl">Arredondado Moderno (Padrão)</option>
-                    <option value="pill">Pílula Totalmente Redonda</option>
+                    <option value="pill">Pílula Redonda</option>
                     <option value="rounded">Levemente Arredondado</option>
                     <option value="square">Quadrado Minimalista</option>
-                    <option value="glass">Glassmorphism (Vidro Translúcido)</option>
+                    <option value="glass">Vidro Translúcido (Glass)</option>
                   </select>
                 </div>
               </div>
 
-              {/* Remover Marca Pajotree */}
-              <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 flex items-center justify-between gap-4">
+              {/* Remover Marca */}
+              <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between gap-4">
                 <div className="space-y-0.5">
-                  <span className="text-xs font-bold text-slate-900 block">Remover Marca "Criado com Pajotree"</span>
-                  <span className="text-[11px] text-slate-500 block">Oculte os créditos do rodapé nas páginas e formulários públicos</span>
+                  <span className="text-xs font-semibold text-slate-900 block">Ocultar Créditos no Rodapé</span>
+                  <span className="text-[11px] text-slate-500 block">Remove quaisquer menções externas nas páginas e formulários públicos</span>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer shrink-0">
                   <input
@@ -1028,7 +914,7 @@ export default function WhiteLabelPage() {
                     onChange={(e) => setForm({ ...form, removeBrandingActive: e.target.checked })}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                  <div className="w-9 h-5 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-slate-900"></div>
                 </label>
               </div>
             </div>
@@ -1036,61 +922,61 @@ export default function WhiteLabelPage() {
             <button
               type="submit"
               disabled={saving}
-              className="w-full py-4 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm transition shadow-lg shadow-purple-200 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+              className="w-full py-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
-              {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-              <span>Salvar Alterações de Marca</span>
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              <span>Salvar Alterações</span>
             </button>
           </form>
 
-          {/* Live Preview */}
+          {/* Live Preview Discreto */}
           <div className="lg:col-span-5">
-            <div className="sticky top-24 space-y-4">
-              <div className="flex items-center justify-between px-2">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                  <span>Preview em Tempo Real</span>
+            <div className="sticky top-24 space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Prévia em Tempo Real</span>
                 </span>
-                <span className="text-[10px] text-slate-400 font-mono">Fonte: {form.fontFamily}</span>
+                <span className="text-[10px] text-slate-400 font-mono">{form.fontFamily}</span>
               </div>
 
               <div
-                className="w-full max-w-[340px] mx-auto rounded-[38px] p-6 shadow-2xl border-4 border-slate-900 min-h-[580px] flex flex-col justify-between relative overflow-hidden transition-all duration-300"
+                className="w-full max-w-[320px] mx-auto rounded-3xl p-5 border border-slate-300 shadow-sm min-h-[520px] flex flex-col justify-between relative overflow-hidden transition-all duration-200"
                 style={{
                   background: backgroundCss,
                   color: form.textColor,
                   fontFamily: form.fontFamily,
                 }}
               >
-                <div className="space-y-6 text-center">
-                  <div className="w-20 h-20 mx-auto rounded-full bg-white/10 backdrop-blur-md border border-white/20 p-2 flex items-center justify-center overflow-hidden shadow-md">
+                <div className="space-y-5 text-center">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-white/10 backdrop-blur-xs border border-white/20 p-2 flex items-center justify-center overflow-hidden">
                     {form.logoUrl ? (
                       <img src={form.logoUrl} alt="Logo" className="max-h-full max-w-full object-contain" />
                     ) : (
-                      <Building2 className="w-8 h-8 opacity-80" />
+                      <Building2 className="w-6 h-6 opacity-80" />
                     )}
                   </div>
 
                   <div>
-                    <h3 className="font-extrabold text-lg leading-tight">{form.brandName}</h3>
-                    <p className="text-xs opacity-75 mt-1">Conecte-se conosco através dos nossos canais</p>
+                    <h3 className="font-bold text-base leading-tight">{form.brandName}</h3>
+                    <p className="text-[11px] opacity-75 mt-0.5">Conecte-se conosco através dos canais oficiais</p>
                   </div>
 
-                  <div className="space-y-2.5">
-                    <div className={`p-3 text-xs font-bold text-center bg-white/15 backdrop-blur-xs border border-white/25 shadow-sm transition hover:scale-[1.02] ${buttonClass}`}>
+                  <div className="space-y-2">
+                    <div className={`p-2.5 text-xs font-medium text-center bg-white/15 backdrop-blur-xs border border-white/20 transition ${buttonClass}`}>
                       <span>Falar no WhatsApp</span>
                     </div>
-                    <div className={`p-3 text-xs font-bold text-center bg-white/15 backdrop-blur-xs border border-white/25 shadow-sm transition hover:scale-[1.02] ${buttonClass}`}>
+                    <div className={`p-2.5 text-xs font-medium text-center bg-white/15 backdrop-blur-xs border border-white/20 transition ${buttonClass}`}>
                       <span>Conhecer Nossos Planos</span>
                     </div>
-                    <div className={`p-3 text-xs font-bold text-center bg-white/15 backdrop-blur-xs border border-white/25 shadow-sm transition hover:scale-[1.02] ${buttonClass}`}>
+                    <div className={`p-2.5 text-xs font-medium text-center bg-white/15 backdrop-blur-xs border border-white/20 transition ${buttonClass}`}>
                       <span>Agendar Demonstração</span>
                     </div>
                   </div>
                 </div>
 
                 {!form.removeBrandingActive && (
-                  <div className="text-center pt-6 opacity-60 text-[10px] font-bold">
+                  <div className="text-center pt-4 opacity-60 text-[9px] font-medium">
                     <span>Criado com {form.brandName || "Minha Empresa"}</span>
                   </div>
                 )}
@@ -1104,25 +990,25 @@ export default function WhiteLabelPage() {
       {/* TAB 2: GERENCIAR PAGAMENTOS (BANCO INTER)                                 */}
       {/* ========================================================================= */}
       {activeTab === "payments" && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <form onSubmit={handleSaveGateway} className="lg:col-span-7 space-y-6">
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div className="bg-white rounded-xl p-5 sm:p-6 border border-slate-200 space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-                    <CreditCard className="w-5 h-5" />
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
+                    <CreditCard className="w-4 h-4" />
                   </div>
                   <div>
-                    <h2 className="text-base font-extrabold text-slate-900">Banco Inter PJ (Bolepix & Pix)</h2>
-                    <p className="text-xs text-slate-500">Configure suas credenciais mTLS para receber pagamentos diretamente na sua conta</p>
+                    <h2 className="text-sm font-bold text-slate-900">Banco Inter PJ (Pix Automático)</h2>
+                    <p className="text-xs text-slate-500">Receba mensalidades diretamente na sua conta corrente via mTLS</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                  <span className={`px-2.5 py-0.5 rounded-md text-[11px] font-medium ${
                     gatewayConfigured ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-600"
                   }`}>
-                    {gatewayConfigured ? "Configurado" : "Não Configurado"}
+                    {gatewayConfigured ? "Configurado" : "Pendente"}
                   </span>
                 </div>
               </div>
@@ -1130,13 +1016,13 @@ export default function WhiteLabelPage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                       Ambiente
                     </label>
                     <select
                       value={gatewayForm.ambiente}
                       onChange={(e) => setGatewayForm({ ...gatewayForm, ambiente: e.target.value as any })}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:bg-white transition"
+                      className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-900 outline-none"
                     >
                       <option value="PRODUCAO">Produção (Ambiente Real)</option>
                       <option value="SANDBOX">Sandbox (Ambiente de Testes)</option>
@@ -1144,7 +1030,7 @@ export default function WhiteLabelPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                       Chave Pix (Opcional)
                     </label>
                     <input
@@ -1152,13 +1038,13 @@ export default function WhiteLabelPage() {
                       value={gatewayForm.chavePix}
                       onChange={(e) => setGatewayForm({ ...gatewayForm, chavePix: e.target.value })}
                       placeholder="CNPJ, E-mail ou Chave Aleatória"
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:bg-white transition"
+                      className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-900 outline-none"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Client ID (da sua aplicação no Banco Inter)
                   </label>
                   <input
@@ -1166,12 +1052,12 @@ export default function WhiteLabelPage() {
                     value={gatewayForm.clientId}
                     onChange={(e) => setGatewayForm({ ...gatewayForm, clientId: e.target.value })}
                     placeholder="Ex: 12345678-abcd-1234-abcd-123456789abc"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-mono focus:ring-2 focus:ring-amber-500 focus:bg-white transition"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-mono text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-900 outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Client Secret
                   </label>
                   <input
@@ -1179,14 +1065,14 @@ export default function WhiteLabelPage() {
                     value={gatewayForm.clientSecret}
                     onChange={(e) => setGatewayForm({ ...gatewayForm, clientSecret: e.target.value })}
                     placeholder="••••••••••••••••••••••••••••••••"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-mono focus:ring-2 focus:ring-amber-500 focus:bg-white transition"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-mono text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-900 outline-none"
                   />
                 </div>
 
                 {/* Uploads ou Colagem dos Certificados */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                       Certificado (.crt)
                     </label>
                     <textarea
@@ -1194,12 +1080,12 @@ export default function WhiteLabelPage() {
                       onChange={(e) => setGatewayForm({ ...gatewayForm, certCrt: e.target.value })}
                       placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
                       rows={5}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono focus:ring-2 focus:ring-amber-500 focus:bg-white transition resize-none"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-[11px] font-mono focus:bg-white focus:ring-1 focus:ring-slate-900 outline-none resize-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                       Chave Privada (.key)
                     </label>
                     <textarea
@@ -1207,26 +1093,26 @@ export default function WhiteLabelPage() {
                       onChange={(e) => setGatewayForm({ ...gatewayForm, certKey: e.target.value })}
                       placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;...&#10;-----END RSA PRIVATE KEY-----"
                       rows={5}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono focus:ring-2 focus:ring-amber-500 focus:bg-white transition resize-none"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-[11px] font-mono focus:bg-white focus:ring-1 focus:ring-slate-900 outline-none resize-none"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     URL do Webhook (para baixa automática)
                   </label>
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      value={gatewayForm.webhookUrl || `${typeof window !== "undefined" ? window.location.origin : "https://seusite.com"}/api/webhooks/banco-inter`}
+                      value={gatewayForm.webhookUrl || `${typeof window !== "undefined" ? window.location.origin : "https://tree.pajotech.com.br"}/api/webhooks/banco-inter`}
                       onChange={(e) => setGatewayForm({ ...gatewayForm, webhookUrl: e.target.value })}
-                      className="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono focus:ring-2 focus:ring-amber-500 focus:bg-white transition"
+                      className="flex-1 px-3.5 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-mono text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-900 outline-none"
                     />
                     <button
                       type="button"
                       onClick={handleRegisterWebhook}
-                      className="px-4 py-3 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-xs font-bold transition shrink-0"
+                      className="px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-medium transition shrink-0 cursor-pointer"
                     >
                       Registrar
                     </button>
@@ -1234,63 +1120,63 @@ export default function WhiteLabelPage() {
                 </div>
 
                 {gatewayTestResult && (
-                  <div className={`p-4 rounded-xl text-xs font-semibold flex items-center gap-2.5 ${
+                  <div className={`p-3 rounded-lg text-xs font-medium flex items-center gap-2 ${
                     gatewayTestResult.success ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-rose-50 text-rose-800 border border-rose-200"
                   }`}>
-                    {gatewayTestResult.success ? <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" /> : <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />}
+                    {gatewayTestResult.success ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />}
                     <span>{gatewayTestResult.message}</span>
                   </div>
                 )}
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center gap-3 pt-4 border-t border-slate-100">
+              <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={handleTestGateway}
                   disabled={testingGateway}
-                  className="w-full sm:w-auto px-5 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  {testingGateway ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
+                  {testingGateway ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Key className="w-3.5 h-3.5" />}
                   <span>Testar Conexão mTLS</span>
                 </button>
 
                 <button
                   type="submit"
                   disabled={savingGateway}
-                  className="w-full sm:w-auto flex-1 py-3 px-6 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-md shadow-amber-200"
+                  className="w-full sm:w-auto flex-1 py-2.5 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  {savingGateway ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  <span>Salvar Credenciais do Banco Inter</span>
+                  {savingGateway ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  <span>Salvar Credenciais</span>
                 </button>
               </div>
             </div>
           </form>
 
-          {/* Guia & Manual do Banco Inter */}
+          {/* Guia Discreto do Banco Inter */}
           <div className="lg:col-span-5 space-y-4">
-            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
-              <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
-                <Info className="w-4 h-4 text-amber-600" />
-                <span>Manual de Integração Banco Inter PJ</span>
+            <div className="bg-white rounded-xl p-5 border border-slate-200 space-y-3">
+              <div className="flex items-center gap-2 text-slate-900 font-semibold text-xs">
+                <Info className="w-4 h-4 text-slate-500" />
+                <span>Integração Banco Inter PJ</span>
               </div>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                O Banco Inter PJ permite emitir **Bolepix (Boleto com QR Code Pix dinâmico)** com taxa zero ou reduzida diretamente na sua conta corrente.
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Gera cobranças Pix e Bolepix com conciliação automática diretamente na sua conta corrente PJ.
               </p>
 
-              <div className="space-y-3 text-xs text-slate-600">
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                  <strong className="text-slate-900 block">1. Acesse o Internet Banking PJ</strong>
-                  <span>Vá em *Conta Digital PJ &gt; Gestão de Acessos &gt; API*</span>
+              <div className="space-y-2 text-xs text-slate-600">
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 space-y-0.5">
+                  <strong className="text-slate-800 block text-[11px]">1. Acesse o Internet Banking PJ</strong>
+                  <span className="text-slate-500 text-[11px]">Vá em Conta Digital PJ &gt; Gestão de Acessos &gt; API</span>
                 </div>
 
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                  <strong className="text-slate-900 block">2. Crie uma Nova Aplicação</strong>
-                  <span>Selecione o escopo **Cobrança / Boletos** e gere os certificados `.crt` e `.key`.</span>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 space-y-0.5">
+                  <strong className="text-slate-800 block text-[11px]">2. Crie uma Nova Aplicação</strong>
+                  <span className="text-slate-500 text-[11px]">Selecione o escopo Cobrança / Boletos e baixe o certificado (.crt e .key).</span>
                 </div>
 
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                  <strong className="text-slate-900 block">3. Cole as Chaves</strong>
-                  <span>Abra os arquivos `.crt` e `.key` no bloco de notas e cole o conteúdo completo aqui.</span>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 space-y-0.5">
+                  <strong className="text-slate-800 block text-[11px]">3. Cole os Certificados</strong>
+                  <span className="text-slate-500 text-[11px]">Abra os arquivos no bloco de notas e cole o conteúdo completo nos campos correspondentes.</span>
                 </div>
               </div>
             </div>
@@ -1302,17 +1188,17 @@ export default function WhiteLabelPage() {
       {/* TAB 3: GERENCIAR MEUS PLANOS                                              */}
       {/* ========================================================================= */}
       {activeTab === "plans" && (
-        <div className="space-y-6">
+        <div className="space-y-5">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-extrabold text-slate-900">Planos de Assinatura para Seus Clientes</h2>
-              <p className="text-xs text-slate-500">Crie e edite os planos que seus clientes poderão assinar na sua plataforma</p>
+              <h2 className="text-base font-bold text-slate-900">Planos de Assinatura para Seus Clientes</h2>
+              <p className="text-xs text-slate-500">Crie e edite os planos comercializados na sua plataforma</p>
             </div>
 
             <button
               type="button"
               onClick={() => handleOpenNewPlanModal()}
-              className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-2 shadow-md shadow-purple-200"
+              className="px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition flex items-center gap-1.5 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Criar Novo Plano</span>
@@ -1320,29 +1206,29 @@ export default function WhiteLabelPage() {
           </div>
 
           {customPlans.length === 0 ? (
-            <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-sm space-y-4 max-w-xl mx-auto">
-              <div className="w-16 h-16 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mx-auto">
-                <Package className="w-8 h-8" />
+            <div className="bg-white rounded-xl p-10 text-center border border-slate-200 space-y-3 max-w-lg mx-auto">
+              <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center mx-auto">
+                <Package className="w-6 h-6" />
               </div>
-              <h3 className="font-extrabold text-base text-slate-900">Nenhum plano personalizado cadastrado</h3>
+              <h3 className="font-semibold text-sm text-slate-900">Nenhum plano cadastrado ainda</h3>
               <p className="text-xs text-slate-500">
-                Crie seu primeiro plano de revenda (ex: Plano Básico, Pro, Agência) com seus próprios preços e limites.
+                Cadastre seus pacotes de assinatura com limites e preços personalizados.
               </p>
               <button
                 type="button"
                 onClick={() => handleOpenNewPlanModal()}
-                className="px-5 py-2.5 rounded-xl bg-purple-600 text-white text-xs font-bold shadow-md hover:bg-purple-700 transition"
+                className="px-4 py-2 rounded-lg bg-slate-900 text-white text-xs font-medium hover:bg-slate-800 transition cursor-pointer"
               >
                 Criar Primeiro Plano
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {customPlans.map((plan) => (
-                <div key={plan.id} className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-6">
-                  <div className="space-y-4">
+                <div key={plan.id} className="bg-white rounded-xl p-5 border border-slate-200 transition flex flex-col justify-between space-y-4">
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className={`px-3 py-1 rounded-full text-xs font-extrabold ${
+                      <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-semibold ${
                         plan.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500"
                       }`}>
                         {plan.status === "ACTIVE" ? "Ativo" : "Inativo"}
@@ -1351,63 +1237,57 @@ export default function WhiteLabelPage() {
                         <button
                           type="button"
                           onClick={() => handleOpenNewPlanModal(plan)}
-                          className="p-2 rounded-lg text-slate-400 hover:text-purple-600 hover:bg-purple-50 transition"
+                          className="p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
                           title="Editar Plano"
                         >
-                          <Edit3 className="w-4 h-4" />
+                          <Edit3 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDeletePlan(plan.id)}
-                          className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                          className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
                           title="Excluir Plano"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
 
                     <div>
-                      <h3 className="text-xl font-extrabold text-slate-900">{plan.name}</h3>
-                      <p className="text-xs text-slate-500 mt-1 min-h-[32px]">{plan.description || "Sem descrição."}</p>
+                      <h3 className="text-base font-bold text-slate-900">{plan.name}</h3>
+                      <p className="text-xs text-slate-500 mt-0.5 min-h-[30px]">{plan.description || "Sem descrição."}</p>
                     </div>
 
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                    <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
                       <div className="flex items-baseline gap-1">
-                        <span className="text-xs font-bold text-slate-500">R$</span>
-                        <span className="text-2xl font-extrabold text-slate-900">
+                        <span className="text-xs font-semibold text-slate-500">R$</span>
+                        <span className="text-xl font-bold text-slate-900">
                           {Number(plan.priceMonthly).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                         </span>
                         <span className="text-xs text-slate-500">/mês</span>
                       </div>
-                      <span className="text-[11px] text-slate-400 block mt-1">
+                      <span className="text-[10px] text-slate-400 block mt-0.5">
                         Anual: R$ {Number(plan.priceYearly).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} ({plan.trialDays} dias trial)
                       </span>
                     </div>
 
-                    <ul className="space-y-2 text-xs text-slate-600">
+                    <ul className="space-y-1.5 text-xs text-slate-600">
                       <li className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <Check className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                         <span>Até <strong>{plan.features?.[0]?.maxPages || 1}</strong> páginas</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <Check className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                         <span>Até <strong>{plan.features?.[0]?.maxLinks || 10}</strong> links</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <Check className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                         <span>Até <strong>{plan.features?.[0]?.maxLeads || 100}</strong> leads</span>
                       </li>
-                      {plan.features?.[0]?.crmAllowed && (
-                        <li className="flex items-center gap-2 text-indigo-700 font-semibold">
-                          <Check className="w-4 h-4 text-indigo-500 shrink-0" />
-                          <span>CRM Kanban Liberado</span>
-                        </li>
-                      )}
                     </ul>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 font-medium">
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-medium">
                     <span>{plan._count?.organizations || 0} assinantes</span>
                   </div>
                 </div>
@@ -1417,25 +1297,25 @@ export default function WhiteLabelPage() {
 
           {/* Modal de Criação / Edição de Plano */}
           {isPlanModalOpen && editingPlan && (
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 space-y-6">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                  <h3 className="font-extrabold text-lg text-slate-900">
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-2xs z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl p-6 max-w-xl w-full max-h-[90vh] overflow-y-auto border border-slate-200 space-y-5">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <h3 className="font-bold text-sm text-slate-900">
                     {editingPlan.id ? "Editar Plano de Assinatura" : "Criar Novo Plano"}
                   </h3>
                   <button
                     type="button"
                     onClick={() => setIsPlanModalOpen(false)}
-                    className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                    className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100"
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
 
                 <form onSubmit={handleSavePlan} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
                         Nome do Plano
                       </label>
                       <input
@@ -1443,12 +1323,12 @@ export default function WhiteLabelPage() {
                         value={editingPlan.name}
                         onChange={(e) => setEditingPlan({ ...editingPlan, name: e.target.value })}
                         required
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
                         Dias de Teste (Trial Grátis)
                       </label>
                       <input
@@ -1457,27 +1337,27 @@ export default function WhiteLabelPage() {
                         max="90"
                         value={editingPlan.trialDays}
                         onChange={(e) => setEditingPlan({ ...editingPlan, trialDays: Number(e.target.value) })}
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
                       Descrição do Plano
                     </label>
                     <input
                       type="text"
                       value={editingPlan.description || ""}
                       onChange={(e) => setEditingPlan({ ...editingPlan, description: e.target.value })}
-                      placeholder="Ex: Ideal para profissionais autônomos"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-purple-500"
+                      placeholder="Ex: Ideal para profissionais e pequenos negócios"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none"
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
                         Preço Mensal (R$)
                       </label>
                       <input
@@ -1487,12 +1367,12 @@ export default function WhiteLabelPage() {
                         value={editingPlan.priceMonthly}
                         onChange={(e) => setEditingPlan({ ...editingPlan, priceMonthly: Number(e.target.value) })}
                         required
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
                         Preço Anual (R$)
                       </label>
                       <input
@@ -1501,90 +1381,59 @@ export default function WhiteLabelPage() {
                         min="0"
                         value={editingPlan.priceYearly}
                         onChange={(e) => setEditingPlan({ ...editingPlan, priceYearly: Number(e.target.value) })}
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none"
                       />
                     </div>
                   </div>
 
                   {/* Limites e Recursos */}
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-                    <span className="text-xs font-bold text-slate-800 block">Limites e Recursos Inclusos:</span>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-2.5">
+                    <span className="text-xs font-semibold text-slate-800 block">Limites Inclusos:</span>
+                    <div className="grid grid-cols-3 gap-2">
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 block uppercase">Máx. Páginas</label>
+                        <label className="text-[10px] font-semibold text-slate-500 block uppercase">Máx. Páginas</label>
                         <input
                           type="number"
                           value={editingPlan.features.maxPages}
                           onChange={(e) => setEditingPlan({ ...editingPlan, features: { ...editingPlan.features, maxPages: Number(e.target.value) } })}
-                          className="w-full p-2 bg-white rounded-lg border border-slate-200 text-xs font-semibold"
+                          className="w-full p-2 bg-white rounded-md border border-slate-200 text-xs"
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 block uppercase">Máx. Links</label>
+                        <label className="text-[10px] font-semibold text-slate-500 block uppercase">Máx. Links</label>
                         <input
                           type="number"
                           value={editingPlan.features.maxLinks}
                           onChange={(e) => setEditingPlan({ ...editingPlan, features: { ...editingPlan.features, maxLinks: Number(e.target.value) } })}
-                          className="w-full p-2 bg-white rounded-lg border border-slate-200 text-xs font-semibold"
+                          className="w-full p-2 bg-white rounded-md border border-slate-200 text-xs"
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 block uppercase">Máx. Leads</label>
+                        <label className="text-[10px] font-semibold text-slate-500 block uppercase">Máx. Leads</label>
                         <input
                           type="number"
                           value={editingPlan.features.maxLeads}
                           onChange={(e) => setEditingPlan({ ...editingPlan, features: { ...editingPlan.features, maxLeads: Number(e.target.value) } })}
-                          className="w-full p-2 bg-white rounded-lg border border-slate-200 text-xs font-semibold"
+                          className="w-full p-2 bg-white rounded-md border border-slate-200 text-xs"
                         />
                       </div>
                     </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
-
-                      <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={editingPlan.features.crmAllowed}
-                          onChange={(e) => setEditingPlan({ ...editingPlan, features: { ...editingPlan.features, crmAllowed: e.target.checked } })}
-                          className="rounded text-purple-600"
-                        />
-                        <span>CRM Kanban de Vendas</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={editingPlan.features.customDomainAllowed}
-                          onChange={(e) => setEditingPlan({ ...editingPlan, features: { ...editingPlan.features, customDomainAllowed: e.target.checked } })}
-                          className="rounded text-purple-600"
-                        />
-                        <span>Domínio Próprio</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={editingPlan.features.removeBranding}
-                          onChange={(e) => setEditingPlan({ ...editingPlan, features: { ...editingPlan.features, removeBranding: e.target.checked } })}
-                          className="rounded text-purple-600"
-                        />
-                        <span>Remover Créditos de Marca</span>
-                      </label>
-                    </div>
                   </div>
 
-                  <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                     <button
                       type="button"
                       onClick={() => setIsPlanModalOpen(false)}
-                      className="px-4 py-2.5 rounded-xl text-slate-600 font-bold text-xs hover:bg-slate-100 transition"
+                      className="px-3.5 py-2 rounded-lg text-slate-600 font-medium text-xs hover:bg-slate-100 transition cursor-pointer"
                     >
                       Cancelar
                     </button>
                     <button
                       type="submit"
                       disabled={savingPlan}
-                      className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition flex items-center gap-2 shadow-md shadow-purple-200"
+                      className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition flex items-center gap-1.5 cursor-pointer"
                     >
-                      {savingPlan ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      {savingPlan ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                       <span>Salvar Plano</span>
                     </button>
                   </div>
@@ -1599,13 +1448,13 @@ export default function WhiteLabelPage() {
       {/* TAB 4: MEUS CLIENTES (SUB-TENANTS)                                        */}
       {/* ========================================================================= */}
       {activeTab === "clients" && (
-        <div className="space-y-6">
-          {/* Link de Onboarding Exclusivo */}
-          <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 p-6 rounded-3xl border border-indigo-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <span className="text-xs font-bold text-indigo-900 block">Link Exclusivo de Cadastro para Seus Clientes</span>
-              <p className="text-xs text-indigo-700/80">
-                Divulgue este link ou cadastre em seu domínio próprio. Novos clientes cadastrados ficarão vinculados à sua revenda.
+        <div className="space-y-5">
+          {/* Link de Onboarding */}
+          <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <span className="text-xs font-semibold text-slate-900 block">Link de Cadastro para Seus Clientes</span>
+              <p className="text-xs text-slate-500">
+                Divulgue este link para novos clientes se cadastrarem na sua plataforma.
               </p>
             </div>
 
@@ -1614,81 +1463,78 @@ export default function WhiteLabelPage() {
                 type="text"
                 readOnly
                 value={referralUrl}
-                className="px-4 py-2.5 rounded-xl bg-white border border-indigo-200 text-xs font-mono text-slate-800 w-full md:w-80 shadow-2xs"
+                className="px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono text-slate-800 w-full md:w-80 select-all outline-none"
               />
               <button
                 type="button"
                 onClick={() => handleCopy(referralUrl, "ref")}
-                className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition shrink-0 flex items-center gap-1.5 shadow-md shadow-indigo-200"
+                className="px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition shrink-0 flex items-center gap-1.5 cursor-pointer"
               >
-                {copiedDns === "ref" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                <span>{copiedDns === "ref" ? "Copiado!" : "Copiar"}</span>
+                {copiedDns === "ref" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedDns === "ref" ? "Copiado" : "Copiar"}</span>
               </button>
             </div>
           </div>
 
           {/* Tabela de Clientes */}
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h3 className="font-extrabold text-base text-slate-900">Empresas Cadastradas na Sua Plataforma</h3>
-                <p className="text-xs text-slate-500">Lista completa de clientes e status de faturamento</p>
+                <h3 className="font-bold text-sm text-slate-900">Empresas Cadastradas</h3>
+                <p className="text-xs text-slate-500">Lista completa de clientes e faturamento</p>
               </div>
-              <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">
+              <span className="px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-medium">
                 {clientsData.clients.length} {clientsData.clients.length === 1 ? "Cliente" : "Clientes"}
               </span>
             </div>
 
             {clientsData.clients.length === 0 ? (
-              <div className="p-12 text-center space-y-3">
-                <Users className="w-10 h-10 text-slate-300 mx-auto" />
-                <p className="text-sm font-semibold text-slate-700">Nenhum cliente cadastrado ainda</p>
-                <p className="text-xs text-slate-400 max-w-md mx-auto">
+              <div className="p-10 text-center space-y-2">
+                <Users className="w-8 h-8 text-slate-300 mx-auto" />
+                <p className="text-xs font-semibold text-slate-700">Nenhum cliente cadastrado ainda</p>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">
                   Compartilhe seu link de cadastro ou configure seu domínio próprio para começar a receber novos assinantes.
                 </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold border-b border-slate-200">
+                  <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-semibold border-b border-slate-200">
                     <tr>
-                      <th className="py-3.5 px-6">Empresa / Cliente</th>
-                      <th className="py-3.5 px-4">Responsável / E-mail</th>
-                      <th className="py-3.5 px-4">WhatsApp</th>
-                      <th className="py-3.5 px-4">Plano</th>
-                      <th className="py-3.5 px-4">Status</th>
-                      <th className="py-3.5 px-6 text-right">Data de Cadastro</th>
+                      <th className="py-3 px-4">Empresa / Cliente</th>
+                      <th className="py-3 px-4">Responsável</th>
+                      <th className="py-3 px-4">WhatsApp</th>
+                      <th className="py-3 px-4">Plano</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4 text-right">Data</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
                     {clientsData.clients.map((c) => (
-                      <tr key={c.id} className="hover:bg-slate-50/70 transition">
-                        <td className="py-4 px-6 font-bold text-slate-900">
+                      <tr key={c.id} className="hover:bg-slate-50 transition">
+                        <td className="py-3.5 px-4 font-semibold text-slate-900">
                           <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0">
+                            <div className="w-7 h-7 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">
                               {c.name.substring(0, 2).toUpperCase()}
                             </div>
-                            <div>
-                              <span>{c.name}</span>
-                              {c.document && <span className="text-[10px] text-slate-400 block font-mono">{c.document}</span>}
-                            </div>
+                            <span>{c.name}</span>
                           </div>
                         </td>
 
-                        <td className="py-4 px-4">
+                        <td className="py-3.5 px-4">
                           <span>{c.owner?.name || c.name}</span>
-                          <span className="text-[11px] text-slate-400 block">{c.email}</span>
+                          <span className="text-[10px] text-slate-400 block">{c.email}</span>
                         </td>
 
-                        <td className="py-4 px-4">
+                        <td className="py-3.5 px-4">
                           {c.whatsapp ? (
                             <a
                               href={`https://wa.me/55${c.whatsapp.replace(/\D/g, "")}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1"
+                              className="text-slate-700 hover:text-slate-900 font-medium flex items-center gap-1"
                             >
-                              <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                              <MessageSquare className="w-3.5 h-3.5 text-slate-500" />
                               <span>{c.whatsapp}</span>
                             </a>
                           ) : (
@@ -1696,28 +1542,23 @@ export default function WhiteLabelPage() {
                           )}
                         </td>
 
-                        <td className="py-4 px-4">
-                          <span className="font-bold text-indigo-900 block">{c.planName}</span>
-                          {c.planPrice > 0 && (
-                            <span className="text-[10px] text-slate-400 font-mono">
-                              R$ {c.planPrice.toFixed(2)}/mês
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="py-4 px-4">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                            c.status === "ACTIVE"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              : c.status === "TRIAL"
-                              ? "bg-amber-50 text-amber-700 border border-amber-200"
-                              : "bg-rose-50 text-rose-700 border border-rose-200"
-                          }`}>
-                            {c.status}
+                        <td className="py-3.5 px-4">
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium text-[10px]">
+                            {c.plan?.name || "START"}
                           </span>
                         </td>
 
-                        <td className="py-4 px-6 text-right text-slate-400 font-mono text-[11px]">
+                        <td className="py-3.5 px-4">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                            c.status === "ACTIVE"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : "bg-slate-100 text-slate-600"
+                          }`}>
+                            {c.status === "ACTIVE" ? "Ativo" : c.status === "TRIAL" ? "Período Teste" : "Inativo"}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-4 text-right text-slate-500 font-mono text-[11px]">
                           {new Date(c.createdAt).toLocaleDateString("pt-BR")}
                         </td>
                       </tr>
@@ -1731,33 +1572,33 @@ export default function WhiteLabelPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 5: LANDING PAGE DE VENDAS PARA O PARCEIRO                             */}
+      {/* TAB 5: LANDING PAGE DE VENDAS                                             */}
       {/* ========================================================================= */}
       {activeTab === "landing" && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <form onSubmit={handleSaveLanding} className="lg:col-span-7 space-y-6">
-            {/* Link Público de Divulgação */}
-            <div className="bg-gradient-to-tr from-purple-900 to-indigo-950 p-6 rounded-3xl text-white border border-purple-500/30 shadow-xl space-y-4">
+            {/* Link Público */}
+            <div className="bg-slate-900 p-4 sm:p-5 rounded-xl text-white space-y-2.5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-purple-300">
-                  <Globe className="w-4 h-4" />
-                  <span>Sua Landing Page Exclusiva</span>
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
+                  <Globe className="w-4 h-4 text-slate-400" />
+                  <span>Sua Landing Page de Vendas</span>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
-                  Online e Pronta para Vender
+                <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-medium">
+                  Ativa
                 </span>
               </div>
 
               <div>
-                <p className="text-xs text-purple-200/80 mb-2">
-                  Divulgue este link para novos clientes se cadastrarem e assinarem seus planos comerciais:
+                <p className="text-xs text-slate-400 mb-2">
+                  Link para novos clientes conhecerem seus serviços:
                 </p>
-                <div className="flex items-center gap-2 bg-black/40 border border-white/15 rounded-2xl p-2">
+                <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg p-1.5">
                   <input
                     type="text"
                     readOnly
                     value={defaultLandingUrl}
-                    className="bg-transparent border-none text-xs text-purple-100 font-mono flex-1 outline-none px-2 select-all"
+                    className="bg-transparent border-none text-xs text-slate-200 font-mono flex-1 outline-none px-2 select-all"
                   />
                   <button
                     type="button"
@@ -1766,17 +1607,17 @@ export default function WhiteLabelPage() {
                       setCopiedLandingUrl(true);
                       setTimeout(() => setCopiedLandingUrl(false), 2000);
                     }}
-                    className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-sm"
+                    className="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
                   >
                     {copiedLandingUrl ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedLandingUrl ? "Copiado!" : "Copiar"}</span>
+                    <span>{copiedLandingUrl ? "Copiado" : "Copiar"}</span>
                   </button>
                   <a
                     href={defaultLandingUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition"
-                    title="Abrir Landing Page em nova aba"
+                    className="p-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-white transition"
+                    title="Abrir Página"
                   >
                     <ExternalLink className="w-4 h-4" />
                   </a>
@@ -1784,73 +1625,73 @@ export default function WhiteLabelPage() {
               </div>
             </div>
 
-            {/* Configurações de Texto & Conteúdo */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5">
+            {/* Configurações de Texto */}
+            <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 space-y-4">
               <div className="border-b border-slate-100 pb-3">
-                <h3 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
-                  <Edit3 className="w-4 h-4 text-indigo-600" />
-                  <span>Textos Principais da Página</span>
+                <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                  <Edit3 className="w-4 h-4 text-slate-600" />
+                  <span>Textos Principais</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Personalize as chamadas de impacto para atrair mais clientes para os seus planos.
+                  Defina o título principal e a descrição da sua página
                 </p>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Selo / Badge de Destaque</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Selo de Destaque</label>
                   <input
                     type="text"
                     value={landingConfig.badgeText}
                     onChange={(e) => setLandingConfig({ ...landingConfig, badgeText: e.target.value })}
-                    placeholder="Ex: 🚀 A Melhor Solução de Bio Links e CRM"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-indigo-600 font-medium"
+                    placeholder="Ex: Plataforma de Conversão & Bio Links"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-900 outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Título Principal (Headline) *</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Título Principal (Headline) *</label>
                   <input
                     type="text"
                     required
                     value={landingConfig.headline}
                     onChange={(e) => setLandingConfig({ ...landingConfig, headline: e.target.value })}
                     placeholder={`Ex: Acelere as Vendas da sua Empresa com ${form.brandName}`}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-indigo-600 font-semibold"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-900 outline-none font-medium"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Subtítulo / Descrição da Solução</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Subtítulo / Descrição</label>
                   <textarea
                     rows={3}
                     value={landingConfig.subtitle}
                     onChange={(e) => setLandingConfig({ ...landingConfig, subtitle: e.target.value })}
-                    placeholder="Ex: Crie páginas de alta performance, atenda leads no WhatsApp e gerencie oportunidades em um único lugar."
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-indigo-600 resize-none font-medium"
+                    placeholder="Ex: Páginas de alta performance, links diretos para WhatsApp e gestão de oportunidades."
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-900 outline-none resize-none"
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Texto do Botão Principal</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Texto do Botão Principal</label>
                     <input
                       type="text"
                       value={landingConfig.ctaText}
                       onChange={(e) => setLandingConfig({ ...landingConfig, ctaText: e.target.value })}
-                      placeholder="Ex: Criar Minha Conta Grátis"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-indigo-600"
+                      placeholder="Ex: Começar Agora"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-900 outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">WhatsApp para Leads / Suporte</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">WhatsApp para Contato</label>
                     <input
                       type="text"
                       value={landingConfig.whatsappContact}
                       onChange={(e) => setLandingConfig({ ...landingConfig, whatsappContact: e.target.value })}
-                      placeholder="Ex: 11999999999"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-indigo-600 font-mono"
+                      placeholder="Ex: 87996836855"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-900 outline-none font-mono"
                     />
                   </div>
                 </div>
@@ -1858,50 +1699,50 @@ export default function WhiteLabelPage() {
             </div>
 
             {/* Seções Ativas */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-              <h3 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-indigo-600" />
-                <span>Seções Visíveis na Página</span>
+            <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 space-y-3">
+              <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-slate-600" />
+                <span>Seções Visíveis</span>
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <label className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 cursor-pointer hover:bg-slate-100/70 transition">
-                  <span>Apresentação & Recursos</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                <label className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs font-medium text-slate-800 cursor-pointer hover:bg-slate-100 transition">
+                  <span>Recursos e Apresentação</span>
                   <input
                     type="checkbox"
                     checked={landingConfig.showFeatures}
                     onChange={(e) => setLandingConfig({ ...landingConfig, showFeatures: e.target.checked })}
-                    className="w-4 h-4 text-indigo-600 rounded-sm"
+                    className="w-4 h-4 rounded text-slate-900"
                   />
                 </label>
 
-                <label className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 cursor-pointer hover:bg-slate-100/70 transition">
-                  <span>Tabela de Planos e Preços</span>
+                <label className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs font-medium text-slate-800 cursor-pointer hover:bg-slate-100 transition">
+                  <span>Tabela de Preços</span>
                   <input
                     type="checkbox"
                     checked={landingConfig.showPricing}
                     onChange={(e) => setLandingConfig({ ...landingConfig, showPricing: e.target.checked })}
-                    className="w-4 h-4 text-indigo-600 rounded-sm"
+                    className="w-4 h-4 rounded text-slate-900"
                   />
                 </label>
 
-                <label className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 cursor-pointer hover:bg-slate-100/70 transition">
-                  <span>Depoimentos de Clientes</span>
+                <label className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs font-medium text-slate-800 cursor-pointer hover:bg-slate-100 transition">
+                  <span>Depoimentos</span>
                   <input
                     type="checkbox"
                     checked={landingConfig.showTestimonials}
                     onChange={(e) => setLandingConfig({ ...landingConfig, showTestimonials: e.target.checked })}
-                    className="w-4 h-4 text-indigo-600 rounded-sm"
+                    className="w-4 h-4 rounded text-slate-900"
                   />
                 </label>
 
-                <label className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 cursor-pointer hover:bg-slate-100/70 transition">
-                  <span>Perguntas Frequentes (FAQ)</span>
+                <label className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs font-medium text-slate-800 cursor-pointer hover:bg-slate-100 transition">
+                  <span>Dúvidas Frequentes (FAQ)</span>
                   <input
                     type="checkbox"
                     checked={landingConfig.showFaq}
                     onChange={(e) => setLandingConfig({ ...landingConfig, showFaq: e.target.checked })}
-                    className="w-4 h-4 text-indigo-600 rounded-sm"
+                    className="w-4 h-4 rounded text-slate-900"
                   />
                 </label>
               </div>
@@ -1910,74 +1751,67 @@ export default function WhiteLabelPage() {
             <button
               type="submit"
               disabled={savingLanding}
-              className="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+              className="w-full py-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
-              {savingLanding ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-              <span>Salvar Landing Page de Vendas</span>
+              {savingLanding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              <span>Salvar Landing Page</span>
             </button>
           </form>
 
           {/* Preview da Landing Page */}
           <div className="lg:col-span-5 space-y-4">
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4 sticky top-24">
+            <div className="bg-white p-5 rounded-xl border border-slate-200 space-y-3 sticky top-24">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-indigo-600" />
-                  <span>Prévia da Sua Página</span>
+                <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Prévia da Página</span>
                 </span>
                 <a
                   href={defaultLandingUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-xs text-indigo-600 hover:underline font-bold inline-flex items-center gap-1"
+                  className="text-xs text-slate-700 hover:text-slate-900 font-medium inline-flex items-center gap-1"
                 >
-                  <span>Ver Página Completa</span>
+                  <span>Abrir</span>
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
 
-              <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/70 space-y-4">
-                <div className="flex items-center gap-3">
+              <div className="border border-slate-200 rounded-lg p-3.5 bg-slate-50/70 space-y-3">
+                <div className="flex items-center gap-2.5">
                   {form.logoUrl ? (
-                    <img src={form.logoUrl} alt="Logo" className="w-8 h-8 rounded-lg object-contain bg-white border border-slate-200" />
+                    <img src={form.logoUrl} alt="Logo" className="w-7 h-7 rounded-md object-contain bg-white border border-slate-200" />
                   ) : (
-                    <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white font-black text-xs flex items-center justify-center">
+                    <div className="w-7 h-7 rounded-md bg-slate-900 text-white font-bold text-xs flex items-center justify-center">
                       {form.brandName?.charAt(0) || "W"}
                     </div>
                   )}
                   <div>
                     <h4 className="font-bold text-xs text-slate-900">{form.brandName}</h4>
-                    <span className="text-[10px] text-slate-400">Landing Page de Planos</span>
+                    <span className="text-[10px] text-slate-400">Página de Apresentação</span>
                   </div>
                 </div>
 
-                <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 inline-block">
-                    {landingConfig.badgeText || "🚀 Destaque"}
+                <div className="bg-white p-3.5 rounded-lg border border-slate-200 space-y-1.5">
+                  <span className="text-[9px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 inline-block">
+                    {landingConfig.badgeText || "Destaque"}
                   </span>
-                  <h5 className="font-extrabold text-sm text-slate-900 leading-tight">
-                    {landingConfig.headline || `A Plataforma Completa de Vendas para ${form.brandName}`}
+                  <h5 className="font-bold text-xs text-slate-900 leading-tight">
+                    {landingConfig.headline || `Solução Completa para ${form.brandName}`}
                   </h5>
                   <p className="text-[11px] text-slate-500 leading-relaxed">
-                    {landingConfig.subtitle || "Páginas com alta conversão, links diretos para WhatsApp e CRM sob medida."}
+                    {landingConfig.subtitle || "Páginas com alta conversão, atendimento direto no WhatsApp e gestão de leads."}
                   </p>
-                  <div className="pt-2 flex items-center gap-2">
-                    <span className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-[10px] font-bold">
-                      {landingConfig.ctaText || "Começar Agora"}
+                  <div className="pt-1.5 flex items-center gap-2">
+                    <span className="px-2.5 py-1 rounded-md bg-slate-900 text-white text-[10px] font-medium">
+                      {landingConfig.ctaText || "Começar"}
                     </span>
                     {customPlans.length > 0 && (
-                      <span className="text-[10px] text-slate-500 font-medium">
-                        {customPlans.length} {customPlans.length === 1 ? "plano disponível" : "planos disponíveis"}
+                      <span className="text-[10px] text-slate-500">
+                        {customPlans.length} {customPlans.length === 1 ? "plano" : "planos"}
                       </span>
                     )}
                   </div>
-                </div>
-
-                <div className="p-3 rounded-xl bg-purple-50 border border-purple-100 text-[11px] text-purple-900 space-y-1">
-                  <span className="font-bold block">💡 Dica de Conversão:</span>
-                  <p className="text-purple-700 text-[10px] leading-relaxed">
-                    Personalize os planos na aba <strong>3. Gerenciar Meus Planos</strong> e ative sua chave Pix na aba <strong>2. Pagamentos</strong> para receber automaticamente de cada novo cliente!
-                  </p>
                 </div>
               </div>
             </div>
@@ -1986,26 +1820,26 @@ export default function WhiteLabelPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL: GUIA COMPLETO DE CONFIGURAÇÃO WHITE LABEL                          */}
+      {/* MODAL: GUIA PASSO A PASSO (Discreto, Limpo e Confortável)                  */}
       {/* ========================================================================= */}
       {isGuideOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-purple-500/30 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden text-white max-h-[90vh] flex flex-col relative">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-2xs flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-150">
+          <div className="bg-white border border-slate-200 w-full max-w-3xl rounded-2xl shadow-xl overflow-hidden text-slate-900 max-h-[85vh] flex flex-col relative">
             {/* Header */}
-            <div className="p-6 bg-gradient-to-r from-purple-950 via-indigo-950 to-slate-900 border-b border-white/10 flex items-center justify-between shrink-0">
+            <div className="p-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-amber-400 text-slate-950 font-black flex items-center justify-center shadow-lg shadow-amber-400/20 shrink-0">
-                  <HelpCircle className="w-6 h-6" />
+                <div className="w-9 h-9 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0">
+                  <HelpCircle className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-base sm:text-lg font-extrabold tracking-tight text-white flex items-center gap-2">
-                    <span>Guia Passo a Passo: Configuração White Label</span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/30 text-purple-200 text-[10px] font-bold">
-                      5 Etapas
+                  <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <span>Guia de Configuração White Label</span>
+                    <span className="px-2 py-0.5 rounded-md bg-slate-200 text-slate-700 text-[10px] font-semibold">
+                      Etapa {guideStep} de 5
                     </span>
                   </h2>
-                  <p className="text-xs text-slate-400">
-                    Siga esta sequência para deixar sua plataforma 100% personalizada e pronta para vender
+                  <p className="text-xs text-slate-500">
+                    Orientações passo a passo para configurar sua plataforma
                   </p>
                 </div>
               </div>
@@ -2013,20 +1847,20 @@ export default function WhiteLabelPage() {
               <button
                 type="button"
                 onClick={() => setIsGuideOpen(false)}
-                className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+                className="w-8 h-8 rounded-lg bg-slate-200/70 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Stepper Tabs */}
-            <div className="bg-slate-950/60 p-3 border-b border-white/5 flex items-center gap-2 overflow-x-auto shrink-0">
+            <div className="bg-white px-4 py-2.5 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto shrink-0">
               {[
-                { step: 1, title: "1. Marca & Logo", tab: "branding", icon: Palette },
-                { step: 2, title: "2. Domínio & DNS", tab: "branding", icon: Globe },
-                { step: 3, title: "3. Banco Inter (Pix)", tab: "payments", icon: CreditCard },
-                { step: 4, title: "4. Seus Planos", tab: "plans", icon: Package },
-                { step: 5, title: "5. Landing Page", tab: "landing", icon: Sparkles },
+                { step: 1, title: "1. Marca", icon: Palette },
+                { step: 2, title: "2. Domínio", icon: Globe },
+                { step: 3, title: "3. Banco Inter", icon: CreditCard },
+                { step: 4, title: "4. Planos", icon: Package },
+                { step: 5, title: "5. Landing Page", icon: Sparkles },
               ].map((s) => {
                 const Icon = s.icon;
                 const isActive = guideStep === s.step;
@@ -2035,10 +1869,10 @@ export default function WhiteLabelPage() {
                     key={s.step}
                     type="button"
                     onClick={() => setGuideStep(s.step)}
-                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition whitespace-nowrap cursor-pointer ${
                       isActive
-                        ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
-                        : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
+                        ? "bg-slate-900 text-white"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
                     }`}
                   >
                     <Icon className="w-3.5 h-3.5" />
@@ -2049,301 +1883,217 @@ export default function WhiteLabelPage() {
             </div>
 
             {/* Step Content */}
-            <div className="p-6 sm:p-8 overflow-y-auto space-y-6 flex-1 text-slate-300 text-xs sm:text-sm">
+            <div className="p-6 overflow-y-auto space-y-4 flex-1 text-slate-700 text-xs sm:text-sm">
               {guideStep === 1 && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-300 font-extrabold flex items-center justify-center shrink-0">
+                <div className="space-y-3.5">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-6 h-6 rounded-md bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0">
                       1
                     </span>
-                    <h3 className="text-base font-extrabold text-white">
-                      Passo 1: Identidade Visual e Informações da Sua Marca
+                    <h3 className="text-sm font-bold text-slate-900">
+                      Identidade Visual e Informações da Sua Marca
                     </h3>
                   </div>
 
-                  <p className="text-slate-300 leading-relaxed">
-                    Personalize o nome da sua empresa, envie sua logomarca oficial e ative a remoção de marca para que seus clientes vejam apenas a sua empresa.
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Personalize o nome da sua empresa, envie a logomarca e configure o WhatsApp de atendimento.
                   </p>
 
-                  <div className="space-y-3 bg-slate-950/70 p-5 rounded-2xl border border-white/10 text-xs">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <div className="space-y-2 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                       <div>
-                        <strong className="text-white">Nome da Marca:</strong> Digite o nome comercial da sua agência (ex: <em>Agência Ignis</em>).
+                        <strong className="text-slate-900">Nome da Marca:</strong> Informe o nome comercial da sua empresa (ex: <em>Agência Ignis</em>).
                       </div>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                       <div>
-                        <strong className="text-white">WhatsApp de Atendimento:</strong> Insira o número oficial com DDD (ex: <em>87996836855</em>). Ele será aplicado automaticamente nos botões de atendimento e no rodapé.
+                        <strong className="text-slate-900">WhatsApp de Atendimento:</strong> Insira o número com DDD (ex: <em>87996836855</em>). Ele é aplicado automaticamente nos rodapés e botões.
                       </div>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                       <div>
-                        <strong className="text-white">Logomarca:</strong> Envie um logotipo em PNG com fundo transparente para melhor adaptação visual.
+                        <strong className="text-slate-900">Logomarca:</strong> Envie um logotipo em PNG com fundo transparente.
                       </div>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                       <div>
-                        <strong className="text-white">Remover Marca Pajotree:</strong> Ative a chave seletora para ocultar menções do sistema no rodapé das páginas dos seus clientes.
+                        <strong className="text-slate-900">Ocultar Créditos:</strong> Ative para remover menções externas das páginas dos seus clientes.
                       </div>
                     </div>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-200 text-xs flex items-center justify-between gap-4">
-                    <span>Deseja configurar sua marca agora?</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveTab("branding");
-                        setIsGuideOpen(false);
-                      }}
-                      className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition text-xs shrink-0 cursor-pointer"
-                    >
-                      Ir para Marca & Logo
-                    </button>
                   </div>
                 </div>
               )}
 
               {guideStep === 2 && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-300 font-extrabold flex items-center justify-center shrink-0">
+                <div className="space-y-3.5">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-6 h-6 rounded-md bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0">
                       2
                     </span>
-                    <h3 className="text-base font-extrabold text-white">
-                      Passo 2: Configuração de Domínio Próprio & DNS (Cloudflare)
+                    <h3 className="text-sm font-bold text-slate-900">
+                      Configuração de Domínio Próprio & DNS
                     </h3>
                   </div>
 
-                  <p className="text-slate-300 leading-relaxed">
-                    Aponte um subdomínio exclusivo para a sua marca (ex: <code className="text-indigo-300 font-bold">bio.agenciaignis.com.br</code> ou <code className="text-indigo-300 font-bold">app.suaempresa.com.br</code>).
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Aponte seu subdomínio exclusivo (ex: <code className="font-semibold text-slate-900">bio.agenciaignis.com.br</code>) para o servidor.
                   </p>
 
-                  <div className="bg-slate-950/70 p-5 rounded-2xl border border-white/10 space-y-4 text-xs">
-                    <span className="font-bold text-white block">Tabela de Apontamento no Cloudflare / Provedor de DNS:</span>
-                    <div className="bg-slate-900 rounded-xl p-3 font-mono border border-white/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 text-xs">
+                    <span className="font-semibold text-slate-800 block">Tabela de Apontamento DNS:</span>
+                    <div className="bg-white rounded-lg p-3 font-mono border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                       <div>
-                        <span className="text-indigo-400 font-bold">Tipo:</span> CNAME &nbsp;|&nbsp;
-                        <span className="text-slate-300">Nome/Host:</span> bio &nbsp;|&nbsp;
-                        <span className="text-emerald-400">Destino:</span> tree.pajotech.com.br
+                        <span className="font-bold text-slate-900">Tipo:</span> CNAME &nbsp;|&nbsp;
+                        <span className="text-slate-500">Host:</span> bio &nbsp;|&nbsp;
+                        <span className="font-semibold text-slate-800">Destino:</span> tree.pajotech.com.br
                       </div>
                       <button
                         type="button"
                         onClick={() => handleCopy("tree.pajotech.com.br", "guide-cname")}
-                        className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                        className="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-sans font-medium transition flex items-center gap-1 cursor-pointer"
                       >
-                        {copiedDns === "guide-cname" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                        <span>{copiedDns === "guide-cname" ? "Copiado!" : "Copiar Destino"}</span>
+                        {copiedDns === "guide-cname" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedDns === "guide-cname" ? "Copiado" : "Copiar Destino"}</span>
                       </button>
                     </div>
 
-                    <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 space-y-2 text-xs">
-                      <strong className="flex items-center gap-1.5 text-amber-300">
-                        <span>💡 Dica de Ouro: Nuvem Laranja (Proxy)</span>
-                      </strong>
+                    <div className="p-3 rounded-lg bg-white border border-slate-200 text-slate-600 space-y-1 text-xs">
+                      <strong className="text-slate-800 block">Cloudflare:</strong>
                       <p className="leading-relaxed">
-                        No <strong>Cloudflare</strong>, deixe o status do proxy em <strong>Proxied (Nuvem Laranja 🟠)</strong> e o SSL em modo <strong>Full</strong>. Isso gera o certificado SSL seguro instantaneamente para seu domínio e oferece proteção contra ataques!
+                        Configure o apontamento como <strong>DNS Only (Nuvem Cinza)</strong> ou como <strong>Proxied (Nuvem Laranja)</strong> com SSL em modo <strong>Full</strong>.
                       </p>
                     </div>
 
-                    <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-200 text-xs">
-                      <strong className="text-blue-300 block mb-1">No Coolify:</strong>
-                      <span>Na aba <em>Domains</em> da sua aplicação no Coolify, adicione <code>https://bio.suaempresa.com.br</code> com a porta <code>3011</code>.</span>
+                    <div className="p-3 rounded-lg bg-white border border-slate-200 text-slate-600 text-xs">
+                      <strong className="text-slate-800 block mb-0.5">Coolify:</strong>
+                      <span>Adicione <code>https://bio.agenciaignis.com.br</code> nos domínios da aplicação.</span>
                     </div>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-indigo-200 text-xs flex items-center justify-between gap-4">
-                    <span>Deseja testar ou cadastrar seu domínio?</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveTab("branding");
-                        setIsGuideOpen(false);
-                      }}
-                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition text-xs shrink-0 cursor-pointer"
-                    >
-                      Ir para Domínio & DNS
-                    </button>
                   </div>
                 </div>
               )}
 
               {guideStep === 3 && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-300 font-extrabold flex items-center justify-center shrink-0">
+                <div className="space-y-3.5">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-6 h-6 rounded-md bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0">
                       3
                     </span>
-                    <h3 className="text-base font-extrabold text-white">
-                      Passo 3: Conectar sua Conta do Banco Inter PJ (mTLS Pix)
+                    <h3 className="text-sm font-bold text-slate-900">
+                      Conta do Banco Inter PJ (Pix Automático mTLS)
                     </h3>
                   </div>
 
-                  <p className="text-slate-300 leading-relaxed">
-                    Configure a integração mTLS com o Banco Inter PJ para que todas as mensalidades e assinaturas dos seus clientes caiam <strong>100% diretamente na sua conta corrente</strong>.
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Integre sua conta do Banco Inter PJ para que todas as assinaturas caiam diretamente na sua conta corrente.
                   </p>
 
-                  <div className="space-y-3 bg-slate-950/70 p-5 rounded-2xl border border-white/10 text-xs">
-                    <div className="flex items-start gap-3">
-                      <span className="w-5 h-5 rounded-full bg-amber-400 text-slate-950 font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">1</span>
+                  <div className="space-y-2 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
+                    <div className="flex items-start gap-2">
+                      <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-800 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">1</span>
                       <div>
-                        <strong className="text-white">Acesse o Internet Banking do Banco Inter PJ:</strong> Vá em <em>Conta Digital ➔ Gestão de Cobrança ➔ Aplicações</em>.
+                        <strong className="text-slate-900">Internet Banking Banco Inter:</strong> Acesse <em>Conta Digital PJ &gt; Gestão de Acessos &gt; API</em>.
                       </div>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <span className="w-5 h-5 rounded-full bg-amber-400 text-slate-950 font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">2</span>
+                    <div className="flex items-start gap-2">
+                      <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-800 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">2</span>
                       <div>
-                        <strong className="text-white">Criar Nova Aplicação:</strong> Crie uma aplicação com os escopos de <em>Pix e Cobrança</em>.
+                        <strong className="text-slate-900">Nova Aplicação:</strong> Crie uma aplicação com o escopo de <em>Cobrança / Boletos / Pix</em>.
                       </div>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <span className="w-5 h-5 rounded-full bg-amber-400 text-slate-950 font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">3</span>
+                    <div className="flex items-start gap-2">
+                      <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-800 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">3</span>
                       <div>
-                        <strong className="text-white">Baixar o Par de Chaves:</strong> Copie o <strong>Client ID</strong>, o <strong>Client Secret</strong> e o conteúdo do certificado <strong>.crt</strong> e chave privada <strong>.key</strong>.
+                        <strong className="text-slate-900">Certificados:</strong> Cole o <strong>Client ID</strong>, <strong>Client Secret</strong>, e os arquivos <strong>.crt</strong> e <strong>.key</strong>.
                       </div>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <span className="w-5 h-5 rounded-full bg-amber-400 text-slate-950 font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">4</span>
-                      <div>
-                        <strong className="text-white">Testar Conexão:</strong> Cole os dados na aba 2 e clique em <em>Testar Conexão mTLS</em> para validar o certificado em tempo real!
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-500/30 text-amber-200 text-xs flex items-center justify-between gap-4">
-                    <span>Configurar credenciais do Banco Inter:</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveTab("payments");
-                        setIsGuideOpen(false);
-                      }}
-                      className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold transition text-xs shrink-0 cursor-pointer"
-                    >
-                      Ir para Pagamentos
-                    </button>
                   </div>
                 </div>
               )}
 
               {guideStep === 4 && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-300 font-extrabold flex items-center justify-center shrink-0">
+                <div className="space-y-3.5">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-6 h-6 rounded-md bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0">
                       4
                     </span>
-                    <h3 className="text-base font-extrabold text-white">
-                      Passo 4: Criar e Gerenciar seus Planos de Assinatura
+                    <h3 className="text-sm font-bold text-slate-900">
+                      Planos de Assinatura para Seus Clientes
                     </h3>
                   </div>
 
-                  <p className="text-slate-300 leading-relaxed">
-                    Crie os pacotes comerciais que serão oferecidos aos seus clientes, definindo valores mensais, limites de páginas e dias de teste grátis (Trial).
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Defina pacotes comerciais com preços mensais/anuais, limites de páginas e dias de teste gratuito.
                   </p>
 
-                  <div className="space-y-3 bg-slate-950/70 p-5 rounded-2xl border border-white/10 text-xs">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <div className="space-y-2 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                       <div>
-                        <strong className="text-white">Preço Mensal & Anual:</strong> Defina os preços que seus clientes pagarão (ex: R$ 39,90/mês ou R$ 399/ano).
+                        <strong className="text-slate-900">Preços & Condições:</strong> Defina valores mensais e anuais conforme seu mercado.
                       </div>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                       <div>
-                        <strong className="text-white">Limites de Recursos:</strong> Defina quantas páginas, quantos links, contatos de WhatsApp e leads no CRM cada plano permite.
+                        <strong className="text-slate-900">Limites:</strong> Estabeleça cotas de páginas, links e leads por plano.
                       </div>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                       <div>
-                        <strong className="text-white">Período de Teste (Trial):</strong> Ofereça 7 dias grátis para atrair mais cadastros sem fricção.
+                        <strong className="text-slate-900">Período de Teste:</strong> Configure 7 dias grátis para atrair novos clientes.
                       </div>
                     </div>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-200 text-xs flex items-center justify-between gap-4">
-                    <span>Criar ou editar seus planos:</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveTab("plans");
-                        setIsGuideOpen(false);
-                      }}
-                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition text-xs shrink-0 cursor-pointer"
-                    >
-                      Ir para Meus Planos
-                    </button>
                   </div>
                 </div>
               )}
 
               {guideStep === 5 && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-xl bg-pink-500/20 text-pink-300 font-extrabold flex items-center justify-center shrink-0">
+                <div className="space-y-3.5">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-6 h-6 rounded-md bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0">
                       5
                     </span>
-                    <h3 className="text-base font-extrabold text-white">
-                      Passo 5: Personalizar a Landing Page de Vendas & Divulgar
+                    <h3 className="text-sm font-bold text-slate-900">
+                      Landing Page de Vendas & Divulgação
                     </h3>
                   </div>
 
-                  <p className="text-slate-300 leading-relaxed">
-                    Sua plataforma já conta com uma página de vendas completa e profissional pronta para captar novos clientes.
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Sua página de vendas está pronta para apresentar seus serviços e converter visitantes em assinantes.
                   </p>
 
-                  <div className="space-y-3 bg-slate-950/70 p-5 rounded-2xl border border-white/10 text-xs">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <div className="space-y-2 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                       <div>
-                        <strong className="text-white">Headline & Chamadas:</strong> Personalize o título principal e os textos de impacto na aba 5.
+                        <strong className="text-slate-900">Link de Divulgação:</strong> Use <code>{defaultLandingUrl}</code> nas suas redes e campanhas.
                       </div>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                       <div>
-                        <strong className="text-white">Link Exclusivo de Divulgação:</strong> Divulgue <code>{defaultLandingUrl}</code> nas suas redes sociais, anúncios e propostas comerciais.
+                        <strong className="text-slate-900">Cadastro Direto:</strong> Compartilhe <code>{referralUrl}</code> para clientes diretos.
                       </div>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                      <div>
-                        <strong className="text-white">Link de Cadastro Direto:</strong> Envie <code>{referralUrl}</code> para clientes que já queiram criar a conta imediatamente.
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-pink-950/40 border border-pink-500/30 text-pink-200 text-xs flex items-center justify-between gap-4">
-                    <span>Personalizar sua Landing Page:</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveTab("landing");
-                        setIsGuideOpen(false);
-                      }}
-                      className="px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold transition text-xs shrink-0 cursor-pointer"
-                    >
-                      Ir para Landing Page
-                    </button>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Footer Navigation */}
-            <div className="p-5 bg-slate-950 border-t border-white/10 flex items-center justify-between shrink-0">
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
               <button
                 type="button"
                 onClick={() => setGuideStep((prev) => Math.max(1, prev - 1))}
                 disabled={guideStep === 1}
-                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                className="px-3.5 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-medium transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
               >
-                ← Anterior
+                Anterior
               </button>
 
               <div className="flex items-center gap-1.5">
@@ -2351,8 +2101,8 @@ export default function WhiteLabelPage() {
                   <div
                     key={s}
                     onClick={() => setGuideStep(s)}
-                    className={`w-2.5 h-2.5 rounded-full cursor-pointer transition ${
-                      guideStep === s ? "bg-purple-500 scale-125" : "bg-white/20 hover:bg-white/40"
+                    className={`w-2 h-2 rounded-full cursor-pointer transition ${
+                      guideStep === s ? "bg-slate-900 scale-125" : "bg-slate-300 hover:bg-slate-400"
                     }`}
                   />
                 ))}
@@ -2362,19 +2112,17 @@ export default function WhiteLabelPage() {
                 <button
                   type="button"
                   onClick={() => setGuideStep((prev) => Math.min(5, prev + 1))}
-                  className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition flex items-center gap-1 shadow-md shadow-purple-600/30 cursor-pointer"
+                  className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition cursor-pointer"
                 >
-                  <span>Próximo Passo</span>
-                  <span>→</span>
+                  Próximo
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={() => setIsGuideOpen(false)}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1 shadow-md shadow-emerald-600/30 cursor-pointer"
+                  className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition cursor-pointer"
                 >
-                  <Check className="w-4 h-4" />
-                  <span>Concluir Guia</span>
+                  Fechar Guia
                 </button>
               )}
             </div>
