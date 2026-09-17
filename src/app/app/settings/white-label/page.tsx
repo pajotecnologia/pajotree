@@ -132,6 +132,8 @@ export default function WhiteLabelPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [guideStep, setGuideStep] = useState(1);
 
   // Branding State
   const [form, setForm] = useState<WhiteLabelData>(DEFAULTS);
@@ -586,6 +588,17 @@ export default function WhiteLabelPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setIsGuideOpen(true);
+                setGuideStep(1);
+              }}
+              className="px-4 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-xs flex items-center gap-2 shadow-lg shadow-amber-400/20 transition-all hover:scale-105 cursor-pointer border border-amber-300"
+            >
+              <HelpCircle className="w-4 h-4 text-slate-950" />
+              <span>Como Configurar (Passo a Passo)</span>
+            </button>
             <div className="bg-white/10 backdrop-blur-md rounded-2xl px-4 py-3 border border-white/10">
               <span className="text-xs text-purple-200 block">Clientes Ativos</span>
               <span className="text-xl font-extrabold text-white">{clientsData.summary.activeClients}</span>
@@ -1967,6 +1980,403 @@ export default function WhiteLabelPage() {
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: GUIA COMPLETO DE CONFIGURAÇÃO WHITE LABEL                          */}
+      {/* ========================================================================= */}
+      {isGuideOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-purple-500/30 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden text-white max-h-[90vh] flex flex-col relative">
+            {/* Header */}
+            <div className="p-6 bg-gradient-to-r from-purple-950 via-indigo-950 to-slate-900 border-b border-white/10 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-amber-400 text-slate-950 font-black flex items-center justify-center shadow-lg shadow-amber-400/20 shrink-0">
+                  <HelpCircle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-extrabold tracking-tight text-white flex items-center gap-2">
+                    <span>Guia Passo a Passo: Configuração White Label</span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/30 text-purple-200 text-[10px] font-bold">
+                      5 Etapas
+                    </span>
+                  </h2>
+                  <p className="text-xs text-slate-400">
+                    Siga esta sequência para deixar sua plataforma 100% personalizada e pronta para vender
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsGuideOpen(false)}
+                className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Stepper Tabs */}
+            <div className="bg-slate-950/60 p-3 border-b border-white/5 flex items-center gap-2 overflow-x-auto shrink-0">
+              {[
+                { step: 1, title: "1. Marca & Logo", tab: "branding", icon: Palette },
+                { step: 2, title: "2. Domínio & DNS", tab: "branding", icon: Globe },
+                { step: 3, title: "3. Banco Inter (Pix)", tab: "payments", icon: CreditCard },
+                { step: 4, title: "4. Seus Planos", tab: "plans", icon: Package },
+                { step: 5, title: "5. Landing Page", tab: "landing", icon: Sparkles },
+              ].map((s) => {
+                const Icon = s.icon;
+                const isActive = guideStep === s.step;
+                return (
+                  <button
+                    key={s.step}
+                    type="button"
+                    onClick={() => setGuideStep(s.step)}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                      isActive
+                        ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
+                        : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{s.title}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Step Content */}
+            <div className="p-6 sm:p-8 overflow-y-auto space-y-6 flex-1 text-slate-300 text-xs sm:text-sm">
+              {guideStep === 1 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-300 font-extrabold flex items-center justify-center shrink-0">
+                      1
+                    </span>
+                    <h3 className="text-base font-extrabold text-white">
+                      Passo 1: Identidade Visual e Informações da Sua Marca
+                    </h3>
+                  </div>
+
+                  <p className="text-slate-300 leading-relaxed">
+                    Personalize o nome da sua empresa, envie sua logomarca oficial e ative a remoção de marca para que seus clientes vejam apenas a sua empresa.
+                  </p>
+
+                  <div className="space-y-3 bg-slate-950/70 p-5 rounded-2xl border border-white/10 text-xs">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-white">Nome da Marca:</strong> Digite o nome comercial da sua agência (ex: <em>Agência Ignis</em>).
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-white">WhatsApp de Atendimento:</strong> Insira o número oficial com DDD (ex: <em>87996836855</em>). Ele será aplicado automaticamente nos botões de atendimento e no rodapé.
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-white">Logomarca:</strong> Envie um logotipo em PNG com fundo transparente para melhor adaptação visual.
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-white">Remover Marca Pajotree:</strong> Ative a chave seletora para ocultar menções do sistema no rodapé das páginas dos seus clientes.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-200 text-xs flex items-center justify-between gap-4">
+                    <span>Deseja configurar sua marca agora?</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab("branding");
+                        setIsGuideOpen(false);
+                      }}
+                      className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition text-xs shrink-0 cursor-pointer"
+                    >
+                      Ir para Marca & Logo
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {guideStep === 2 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-300 font-extrabold flex items-center justify-center shrink-0">
+                      2
+                    </span>
+                    <h3 className="text-base font-extrabold text-white">
+                      Passo 2: Configuração de Domínio Próprio & DNS (Cloudflare)
+                    </h3>
+                  </div>
+
+                  <p className="text-slate-300 leading-relaxed">
+                    Aponte um subdomínio exclusivo para a sua marca (ex: <code className="text-indigo-300 font-bold">bio.agenciaignis.com.br</code> ou <code className="text-indigo-300 font-bold">app.suaempresa.com.br</code>).
+                  </p>
+
+                  <div className="bg-slate-950/70 p-5 rounded-2xl border border-white/10 space-y-4 text-xs">
+                    <span className="font-bold text-white block">Tabela de Apontamento no Cloudflare / Provedor de DNS:</span>
+                    <div className="bg-slate-900 rounded-xl p-3 font-mono border border-white/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                      <div>
+                        <span className="text-indigo-400 font-bold">Tipo:</span> CNAME &nbsp;|&nbsp;
+                        <span className="text-slate-300">Nome/Host:</span> bio &nbsp;|&nbsp;
+                        <span className="text-emerald-400">Destino:</span> tree.pajotech.com.br
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy("tree.pajotech.com.br", "guide-cname")}
+                        className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                      >
+                        {copiedDns === "guide-cname" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                        <span>{copiedDns === "guide-cname" ? "Copiado!" : "Copiar Destino"}</span>
+                      </button>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 space-y-2 text-xs">
+                      <strong className="flex items-center gap-1.5 text-amber-300">
+                        <span>💡 Dica de Ouro: Nuvem Laranja (Proxy)</span>
+                      </strong>
+                      <p className="leading-relaxed">
+                        No <strong>Cloudflare</strong>, deixe o status do proxy em <strong>Proxied (Nuvem Laranja 🟠)</strong> e o SSL em modo <strong>Full</strong>. Isso gera o certificado SSL seguro instantaneamente para seu domínio e oferece proteção contra ataques!
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-200 text-xs">
+                      <strong className="text-blue-300 block mb-1">No Coolify:</strong>
+                      <span>Na aba <em>Domains</em> da sua aplicação no Coolify, adicione <code>https://bio.suaempresa.com.br</code> com a porta <code>3011</code>.</span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-indigo-200 text-xs flex items-center justify-between gap-4">
+                    <span>Deseja testar ou cadastrar seu domínio?</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab("branding");
+                        setIsGuideOpen(false);
+                      }}
+                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition text-xs shrink-0 cursor-pointer"
+                    >
+                      Ir para Domínio & DNS
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {guideStep === 3 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-300 font-extrabold flex items-center justify-center shrink-0">
+                      3
+                    </span>
+                    <h3 className="text-base font-extrabold text-white">
+                      Passo 3: Conectar sua Conta do Banco Inter PJ (mTLS Pix)
+                    </h3>
+                  </div>
+
+                  <p className="text-slate-300 leading-relaxed">
+                    Configure a integração mTLS com o Banco Inter PJ para que todas as mensalidades e assinaturas dos seus clientes caiam <strong>100% diretamente na sua conta corrente</strong>.
+                  </p>
+
+                  <div className="space-y-3 bg-slate-950/70 p-5 rounded-2xl border border-white/10 text-xs">
+                    <div className="flex items-start gap-3">
+                      <span className="w-5 h-5 rounded-full bg-amber-400 text-slate-950 font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">1</span>
+                      <div>
+                        <strong className="text-white">Acesse o Internet Banking do Banco Inter PJ:</strong> Vá em <em>Conta Digital ➔ Gestão de Cobrança ➔ Aplicações</em>.
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="w-5 h-5 rounded-full bg-amber-400 text-slate-950 font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">2</span>
+                      <div>
+                        <strong className="text-white">Criar Nova Aplicação:</strong> Crie uma aplicação com os escopos de <em>Pix e Cobrança</em>.
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="w-5 h-5 rounded-full bg-amber-400 text-slate-950 font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">3</span>
+                      <div>
+                        <strong className="text-white">Baixar o Par de Chaves:</strong> Copie o <strong>Client ID</strong>, o <strong>Client Secret</strong> e o conteúdo do certificado <strong>.crt</strong> e chave privada <strong>.key</strong>.
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="w-5 h-5 rounded-full bg-amber-400 text-slate-950 font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">4</span>
+                      <div>
+                        <strong className="text-white">Testar Conexão:</strong> Cole os dados na aba 2 e clique em <em>Testar Conexão mTLS</em> para validar o certificado em tempo real!
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-500/30 text-amber-200 text-xs flex items-center justify-between gap-4">
+                    <span>Configurar credenciais do Banco Inter:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab("payments");
+                        setIsGuideOpen(false);
+                      }}
+                      className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold transition text-xs shrink-0 cursor-pointer"
+                    >
+                      Ir para Pagamentos
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {guideStep === 4 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-300 font-extrabold flex items-center justify-center shrink-0">
+                      4
+                    </span>
+                    <h3 className="text-base font-extrabold text-white">
+                      Passo 4: Criar e Gerenciar seus Planos de Assinatura
+                    </h3>
+                  </div>
+
+                  <p className="text-slate-300 leading-relaxed">
+                    Crie os pacotes comerciais que serão oferecidos aos seus clientes, definindo valores mensais, limites de páginas e dias de teste grátis (Trial).
+                  </p>
+
+                  <div className="space-y-3 bg-slate-950/70 p-5 rounded-2xl border border-white/10 text-xs">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-white">Preço Mensal & Anual:</strong> Defina os preços que seus clientes pagarão (ex: R$ 39,90/mês ou R$ 399/ano).
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-white">Limites de Recursos:</strong> Defina quantas páginas, quantos links, contatos de WhatsApp e leads no CRM cada plano permite.
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-white">Período de Teste (Trial):</strong> Ofereça 7 dias grátis para atrair mais cadastros sem fricção.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-200 text-xs flex items-center justify-between gap-4">
+                    <span>Criar ou editar seus planos:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab("plans");
+                        setIsGuideOpen(false);
+                      }}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition text-xs shrink-0 cursor-pointer"
+                    >
+                      Ir para Meus Planos
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {guideStep === 5 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-xl bg-pink-500/20 text-pink-300 font-extrabold flex items-center justify-center shrink-0">
+                      5
+                    </span>
+                    <h3 className="text-base font-extrabold text-white">
+                      Passo 5: Personalizar a Landing Page de Vendas & Divulgar
+                    </h3>
+                  </div>
+
+                  <p className="text-slate-300 leading-relaxed">
+                    Sua plataforma já conta com uma página de vendas completa e profissional pronta para captar novos clientes.
+                  </p>
+
+                  <div className="space-y-3 bg-slate-950/70 p-5 rounded-2xl border border-white/10 text-xs">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-white">Headline & Chamadas:</strong> Personalize o título principal e os textos de impacto na aba 5.
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-white">Link Exclusivo de Divulgação:</strong> Divulgue <code>{defaultLandingUrl}</code> nas suas redes sociais, anúncios e propostas comerciais.
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-white">Link de Cadastro Direto:</strong> Envie <code>{referralUrl}</code> para clientes que já queiram criar a conta imediatamente.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-pink-950/40 border border-pink-500/30 text-pink-200 text-xs flex items-center justify-between gap-4">
+                    <span>Personalizar sua Landing Page:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab("landing");
+                        setIsGuideOpen(false);
+                      }}
+                      className="px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold transition text-xs shrink-0 cursor-pointer"
+                    >
+                      Ir para Landing Page
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Navigation */}
+            <div className="p-5 bg-slate-950 border-t border-white/10 flex items-center justify-between shrink-0">
+              <button
+                type="button"
+                onClick={() => setGuideStep((prev) => Math.max(1, prev - 1))}
+                disabled={guideStep === 1}
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+              >
+                ← Anterior
+              </button>
+
+              <div className="flex items-center gap-1.5">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <div
+                    key={s}
+                    onClick={() => setGuideStep(s)}
+                    className={`w-2.5 h-2.5 rounded-full cursor-pointer transition ${
+                      guideStep === s ? "bg-purple-500 scale-125" : "bg-white/20 hover:bg-white/40"
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {guideStep < 5 ? (
+                <button
+                  type="button"
+                  onClick={() => setGuideStep((prev) => Math.min(5, prev + 1))}
+                  className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition flex items-center gap-1 shadow-md shadow-purple-600/30 cursor-pointer"
+                >
+                  <span>Próximo Passo</span>
+                  <span>→</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsGuideOpen(false)}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1 shadow-md shadow-emerald-600/30 cursor-pointer"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Concluir Guia</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
