@@ -137,17 +137,12 @@ export async function ensureDatabaseSchema(): Promise<void> {
   }
   migrationDone = true;
 
-  try {
-    const combinedSql = migrationStatements.join(";\n") + ";";
-    await db.$executeRawUnsafe(combinedSql);
-  } catch {
-    // Non-blocking fallback
-    for (const sql of migrationStatements) {
-      try {
-        await db.$executeRawUnsafe(sql);
-      } catch {
-        // Ignored
-      }
+  for (const sql of migrationStatements) {
+    try {
+      await db.$executeRawUnsafe(sql);
+    } catch {
+      // Ignored if table/column already exists
     }
   }
 }
+
