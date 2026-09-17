@@ -1,3 +1,4 @@
+import React, { cache } from "react";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { headers } from "next/headers";
@@ -10,9 +11,16 @@ interface Props {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-async function findPageBySlug(slug: string) {
-  let page = await db.page.findUnique({
-    where: { slug },
+const findPageBySlug = cache(async (slug: string) => {
+  const cleanSlug = decodeURIComponent(slug).toLowerCase().trim();
+
+  let page = await db.page.findFirst({
+    where: {
+      OR: [
+        { slug: cleanSlug },
+        { slug: { equals: cleanSlug, mode: "insensitive" } },
+      ],
+    },
     include: {
       organization: {
         include: {
@@ -29,28 +37,8 @@ async function findPageBySlug(slug: string) {
   });
 
   if (!page) {
-    // Fallback: busca por slug insensível a maiúsculas/minúsculas
-    page = await db.page.findFirst({
-      where: { slug: { equals: slug, mode: "insensitive" } },
-      include: {
-        organization: {
-          include: {
-            plan: { include: { features: true } },
-            metaPixels: { where: { status: "ACTIVE" } },
-            googleIntegrations: { where: { status: "ACTIVE" } },
-            whiteLabelParent: true,
-          },
-        },
-        settings: true,
-        links: { where: { status: "ACTIVE" }, orderBy: { position: "asc" }, include: { shortLinks: true } },
-        blocks: { where: { status: "ACTIVE" }, orderBy: { position: "asc" } },
-      },
-    });
-  }
-
-  if (!page) {
-    // Fallback 2: busca por nome ou tradeName da organização
-    const normalized = slug.toLowerCase().replace(/[^a-z0-9]/g, " ");
+    // Fallback: busca por nome ou tradeName da organização
+    const normalized = cleanSlug.replace(/[^a-z0-9]/g, " ");
     const org = await db.organization.findFirst({
       where: {
         OR: [
@@ -84,7 +72,7 @@ async function findPageBySlug(slug: string) {
   }
 
   return page;
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -127,16 +115,19 @@ export default async function PublicPage({ params, searchParams }: Props) {
   const utmMedium = typeof sParams.utm_medium === "string" ? sParams.utm_medium : undefined;
   const utmCampaign = typeof sParams.utm_campaign === "string" ? sParams.utm_campaign : undefined;
 
-  TrackingService.recordEvent({
-    organizationId: page.organizationId,
-    pageId: page.id,
-    eventType: "PageView",
-    eventName: "PageView",
-    referrer,
-    userAgent,
-    ipAddress,
-    utms: { source: utmSource, medium: utmMedium, campaign: utmCampaign },
-  }).catch((e) => console.error("Erro PageView:", e));
+  // Gravação de telemetria 100% assíncrona desacoplada para TTFB ultrarrápido
+  setTimeout(() => {
+    TrackingService.recordEvent({
+      organizationId: page.organizationId,
+      pageId: page.id,
+      eventType: "PageView",
+      eventName: "PageView",
+      referrer,
+      userAgent,
+      ipAddress,
+      utms: { source: utmSource, medium: utmMedium, campaign: utmCampaign },
+    }).catch(() => {});
+  }, 0);
 
   const defaultMetaPixel = page.organization.metaPixels.find((p) => p.isDefault) || page.organization.metaPixels[0];
   const gaIntegration = page.organization.googleIntegrations[0];

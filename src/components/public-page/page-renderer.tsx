@@ -339,23 +339,23 @@ export function PublicPageRenderer({ page }: PageProps) {
       </main>
 
       {!page.organization?.removeBranding && (
-        <footer className="relative z-20 mt-12 mb-4 text-center text-xs text-slate-300 flex items-center justify-center gap-1.5 py-1.5 px-4 rounded-full bg-slate-950/70 border border-white/10 backdrop-blur-md shadow-sm mx-auto">
-          <span>Criado com</span>
+        <footer className="relative z-20 mt-12 mb-4 text-center text-xs text-slate-300 flex items-center justify-center gap-1.5 py-2 px-5 rounded-full bg-slate-950/80 border border-white/15 backdrop-blur-md shadow-md mx-auto">
+          <span className="text-slate-400">Criado por</span>
           <a
             href={brandHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-bold text-indigo-400 hover:text-indigo-300 hover:underline inline-flex items-center gap-1.5"
+            className="font-bold text-white hover:text-indigo-300 hover:underline inline-flex items-center gap-1.5"
           >
             {brandLogo && (
               <img
                 src={brandLogo}
                 alt={brandName}
-                className="w-3.5 h-3.5 rounded-xs object-contain inline-block bg-white/20 p-0.5"
+                className="w-4 h-4 rounded-xs object-contain inline-block bg-white/20 p-0.5"
               />
             )}
-            <span>{brandName}</span>
-            <Sparkles className="w-3 h-3 text-indigo-400" />
+            <span className="text-indigo-400 font-extrabold">{brandName}</span>
+            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
           </a>
         </footer>
       )}
