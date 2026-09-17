@@ -157,26 +157,55 @@ export default async function PublicPage({ params, searchParams }: Props) {
   // Apenas remove a marca se o plano permitir E o usuário tiver ativado explicitamente a opção
   const shouldRemoveBranding = canRemoveBranding && Boolean(userCustomConfig.removeBranding);
 
+  const host = headerList.get("x-custom-host") || headerList.get("host") || "";
+  const cleanHost = host.split(":")[0].toLowerCase().trim();
+  const withoutWww = cleanHost.replace(/^www\./, "");
+
+  let effectiveWlParent = page.organization.whiteLabelParent;
+
+  // Se não possui whiteLabelParent direto no banco, mas está sendo acessado via domínio White Label
+  if (
+    !effectiveWlParent &&
+    !page.organization.isWhiteLabel &&
+    cleanHost &&
+    !cleanHost.includes("localhost") &&
+    !cleanHost.includes("pajotree") &&
+    !cleanHost.includes("pajotech") &&
+    !cleanHost.includes("127.0.0.1") &&
+    !cleanHost.includes("vercel.app")
+  ) {
+    const wlOrg = await db.organization.findFirst({
+      where: {
+        OR: [
+          { whiteLabelDomain: cleanHost },
+          { whiteLabelDomain: withoutWww },
+        ],
+      },
+    });
+    if (wlOrg) {
+      effectiveWlParent = wlOrg;
+    }
+  }
+
   const displayName = page.title || page.name || page.organization.tradeName || page.organization.name;
-  const isWhiteLabel = Boolean(
-    page.organization.isWhiteLabel ||
-    page.organization.whiteLabelParentId ||
-    page.organization.whiteLabelDomain ||
-    page.organization.logoUrl
-  );
-  const brandName =
-    page.organization.whiteLabelParent?.tradeName ||
-    page.organization.whiteLabelParent?.name ||
-    page.organization.tradeName ||
-    page.organization.name ||
-    "Plataforma Digital";
-  const brandLogoUrl =
-    page.organization.whiteLabelParent?.logoUrl ||
-    page.organization.logoUrl ||
-    null;
-  const brandUrl = page.organization.whiteLabelParent
-    ? `/wl/${page.organization.whiteLabelParent.whiteLabelDomain || page.organization.whiteLabelParent.id}`
-    : (page.organization.whiteLabelDomain ? `/wl/${page.organization.whiteLabelDomain}` : "/");
+  
+  // Determina o nome da marca parceira White Label que fornece o sistema
+  const brandName = effectiveWlParent
+    ? (effectiveWlParent.tradeName || effectiveWlParent.name)
+    : (page.organization.isWhiteLabel
+        ? (page.organization.tradeName || page.organization.name)
+        : "Pajotree");
+
+  // Logomarca do parceiro White Label
+  const brandLogoUrl = effectiveWlParent
+    ? (effectiveWlParent.logoUrl || null)
+    : (page.organization.isWhiteLabel ? (page.organization.logoUrl || null) : null);
+
+  // Link do rodapé
+  const brandDomain = effectiveWlParent?.whiteLabelDomain || (page.organization.isWhiteLabel ? page.organization.whiteLabelDomain : null);
+  const brandUrl = brandDomain
+    ? (brandDomain.startsWith("http") ? brandDomain : `https://${brandDomain}`)
+    : (effectiveWlParent ? `/wl/${effectiveWlParent.id}` : "/");
 
   const isContactFormActive = Boolean(
     (page.settings as any)?.showContactForm ?? userCustomConfig.showContactForm

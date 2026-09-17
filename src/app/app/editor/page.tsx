@@ -448,9 +448,19 @@ export default function VisualEditorPage() {
       ...(pageData?.organization || {}),
       name: title || pageData?.name || "Minha Empresa",
       logoUrl: logoUrl !== undefined ? logoUrl : pageData?.organization?.logoUrl,
-      brandName: pageData?.organization?.tradeName || pageData?.organization?.name || "Minha Empresa",
-      brandLogoUrl: logoUrl !== undefined ? logoUrl : pageData?.organization?.logoUrl || null,
-      brandUrl: pageData?.organization?.whiteLabelDomain ? `https://${pageData.organization.whiteLabelDomain}` : "/",
+      brandName:
+        pageData?.organization?.whiteLabelParent?.tradeName ||
+        pageData?.organization?.whiteLabelParent?.name ||
+        (pageData?.organization?.isWhiteLabel
+          ? (pageData?.organization?.tradeName || pageData?.organization?.name)
+          : "Pajotree"),
+      brandLogoUrl:
+        pageData?.organization?.whiteLabelParent?.logoUrl ||
+        (pageData?.organization?.isWhiteLabel ? pageData?.organization?.logoUrl : null),
+      brandUrl:
+        pageData?.organization?.whiteLabelParent?.whiteLabelDomain
+          ? `https://${pageData.organization.whiteLabelParent.whiteLabelDomain}`
+          : (pageData?.organization?.whiteLabelDomain ? `https://${pageData.organization.whiteLabelDomain}` : "/"),
     },
     links: pageData?.links || [],
     blocks: pageData?.blocks || [],

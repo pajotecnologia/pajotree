@@ -26,6 +26,7 @@ interface PageProps {
       logoUrl?: string | null;
       whatsapp?: string | null;
       removeBranding?: boolean;
+      isWhiteLabel?: boolean;
       brandName?: string;
       brandLogoUrl?: string | null;
       brandUrl?: string;
@@ -113,7 +114,7 @@ export function PublicPageRenderer({ page }: PageProps) {
   const displayName = page?.title || page?.name || page?.organization?.name || "Minha Empresa";
   const initialLetter = displayName ? displayName.charAt(0).toUpperCase() : "P";
   const logoUrl = page?.organization?.logoUrl || (page as any)?.logoUrl;
-  const brandName = page?.organization?.brandName || page?.organization?.tradeName || page?.organization?.name || "Plataforma Digital";
+  const brandName = page?.organization?.brandName || (page?.organization?.isWhiteLabel ? (page?.organization?.tradeName || page?.organization?.name) : "Pajotree");
   const brandLogo = page?.organization?.brandLogoUrl || null;
   const brandHref = page?.organization?.brandUrl || "/";
 

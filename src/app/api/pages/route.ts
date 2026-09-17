@@ -12,10 +12,15 @@ export async function GET() {
 
     const orgId = auth.organization.id;
 
-    let page = await db.page.findFirst({
+    let page: any = await db.page.findFirst({
       where: { organizationId: orgId },
       include: {
-        organization: true,
+        organization: {
+          include: {
+            whiteLabelParent: true,
+            plan: { include: { features: true } },
+          },
+        },
         settings: true,
         links: {
           orderBy: { position: "asc" },
@@ -52,7 +57,12 @@ export async function GET() {
           },
         },
         include: {
-          organization: true,
+          organization: {
+            include: {
+              whiteLabelParent: true,
+              plan: { include: { features: true } },
+            },
+          },
           settings: true,
           links: { include: { shortLinks: true } },
           blocks: true,
@@ -161,13 +171,6 @@ export async function PUT(request: NextRequest) {
       } catch {
         // Ignored if column not yet added
       }
-    }
-
-    if (title || name) {
-      await db.organization.update({
-        where: { id: auth.organization.id },
-        data: { tradeName: title || name },
-      }).catch(() => {});
     }
 
     const updatedPage = await db.page.update({

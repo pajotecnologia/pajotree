@@ -1502,6 +1502,7 @@ export default function WhiteLabelPage() {
                   <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-semibold border-b border-slate-200">
                     <tr>
                       <th className="py-3 px-4">Empresa / Cliente</th>
+                      <th className="py-3 px-4">Página Pública</th>
                       <th className="py-3 px-4">Responsável</th>
                       <th className="py-3 px-4">WhatsApp</th>
                       <th className="py-3 px-4">Plano</th>
@@ -1519,6 +1520,24 @@ export default function WhiteLabelPage() {
                             </div>
                             <span>{c.name}</span>
                           </div>
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          {c.pageSlug ? (
+                            <a
+                              href={`/p/${c.pageSlug}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium text-[11px] border border-indigo-200/60 transition group"
+                              title={`Abrir página de ${c.name}`}
+                            >
+                              <Globe className="w-3.5 h-3.5 text-indigo-500" />
+                              <span className="font-mono truncate max-w-[130px]">/p/{c.pageSlug}</span>
+                              <ExternalLink className="w-3 h-3 text-indigo-400 group-hover:text-indigo-700 shrink-0" />
+                            </a>
+                          ) : (
+                            <span className="text-slate-400 text-[11px] italic">Sem página ativa</span>
+                          )}
                         </td>
 
                         <td className="py-3.5 px-4">

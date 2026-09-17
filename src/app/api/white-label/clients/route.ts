@@ -17,6 +17,10 @@ export async function GET(request: NextRequest) {
         plan: {
           select: { id: true, name: true, priceMonthly: true, priceYearly: true },
         },
+        pages: {
+          select: { id: true, slug: true, title: true, name: true, status: true },
+          take: 5,
+        },
         users: {
           include: {
             user: {
@@ -68,6 +72,14 @@ export async function GET(request: NextRequest) {
         subscriptionStatus: c.subscriptions[0]?.status || "TRIAL",
         usersCount: c.users.length,
         pagesCount: c._count.pages,
+        pageSlug: c.pages[0]?.slug || null,
+        pageTitle: c.pages[0]?.title || c.pages[0]?.name || null,
+        pages: c.pages.map((p) => ({
+          id: p.id,
+          slug: p.slug,
+          title: p.title || p.name,
+          status: p.status,
+        })),
         linksCount: c._count.links,
         leadsCount: c._count.leads,
         owner: c.users[0]?.user || null,
