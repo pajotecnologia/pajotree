@@ -543,13 +543,19 @@ export default function WhiteLabelPage() {
     setTimeout(() => setCopiedDns(null), 2500);
   }
 
-  const referralUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/register?ref=${orgId}`
-    : `https://pajotree.com/register?ref=${orgId}`;
+  const cleanCustomDomain = form.customDomain?.replace(/^https?:\/\//, "").trim();
 
-  const defaultLandingUrl = landingPublicUrl || (typeof window !== "undefined"
-    ? `${window.location.origin}/wl/${orgId}`
-    : `/wl/${orgId}`);
+  const referralUrl = cleanCustomDomain
+    ? `https://${cleanCustomDomain}/register?ref=${orgId}`
+    : (typeof window !== "undefined"
+      ? `${window.location.origin}/register?ref=${orgId}`
+      : `https://pajotree.com/register?ref=${orgId}`);
+
+  const defaultLandingUrl = cleanCustomDomain
+    ? `https://${cleanCustomDomain}`
+    : (landingPublicUrl || (typeof window !== "undefined"
+      ? `${window.location.origin}/wl/${orgId}`
+      : `/wl/${orgId}`));
 
   if (loading) {
     return (
