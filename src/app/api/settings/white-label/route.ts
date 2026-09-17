@@ -34,6 +34,7 @@ const imageUrlSchema = z.string().max(2_800_000).refine(
 const schema = z.object({
   brandName: z.string().trim().min(1).max(120),
   description: z.string().trim().max(500).optional().default(""),
+  whatsapp: z.string().trim().optional().default(""),
   logoUrl: imageUrlSchema.nullable().optional(),
   faviconUrl: imageUrlSchema.nullable().optional(),
   primaryColor: z.string().regex(HEX_COLOR, "Cor primária inválida"),
@@ -96,6 +97,7 @@ export async function GET() {
       whiteLabel: {
         brandName: organization.tradeName || organization.name,
         description: organization.description || page?.description || "",
+        whatsapp: organization.whatsapp || organization.phone || "",
         logoUrl: organization.logoUrl,
         faviconUrl: page?.settings?.faviconUrl || organization.faviconUrl,
         primaryColor: page?.settings?.primaryColor || "#6366f1",
@@ -105,7 +107,7 @@ export async function GET() {
         backgroundValue: bgVal,
         buttonStyle: page?.settings?.buttonStyle || "rounded-xl",
         fontFamily: page?.settings?.fontFamily || "Inter",
-        customDomain: domain?.domain || "",
+        customDomain: organization.whiteLabelDomain || domain?.domain || "",
         domainStatus: domain?.verificationStatus || "NOT_CONFIGURED",
         removeBrandingActive,
       },
@@ -149,14 +151,20 @@ export async function PUT(request: NextRequest) {
       removeBranding: Boolean(data.removeBrandingActive),
     });
 
+    const cleanDomain = data.customDomain
+      ? data.customDomain.toLowerCase().replace(/^(https?:\/\/)/, "").replace(/\/+$/, "")
+      : null;
+
     const result = await db.$transaction(async (tx) => {
       const organization = await tx.organization.update({
         where: { id: organizationId },
         data: {
           tradeName: data.brandName,
           description: data.description || null,
+          whatsapp: data.whatsapp || null,
           logoUrl: data.logoUrl || null,
           faviconUrl: data.faviconUrl || null,
+          whiteLabelDomain: cleanDomain,
         },
       });
 

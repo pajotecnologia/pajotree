@@ -93,6 +93,7 @@ const HD_IMAGE_PRESETS = [
 type WhiteLabelData = {
   brandName: string;
   description: string;
+  whatsapp: string;
   logoUrl: string | null;
   faviconUrl: string | null;
   primaryColor: string;
@@ -110,6 +111,7 @@ type WhiteLabelData = {
 const DEFAULTS: WhiteLabelData = {
   brandName: "Minha Empresa",
   description: "",
+  whatsapp: "",
   logoUrl: null,
   faviconUrl: null,
   primaryColor: "#6366f1",
@@ -707,6 +709,22 @@ export default function WhiteLabelPage() {
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium focus:ring-2 focus:ring-purple-500 focus:bg-white transition"
                     required
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    WhatsApp de Atendimento & Contato da Empresa
+                  </label>
+                  <input
+                    type="text"
+                    value={form.whatsapp}
+                    onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
+                    placeholder="Ex: (87) 99683-6855 ou 87996836855"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium focus:ring-2 focus:ring-purple-500 focus:bg-white transition font-mono"
+                  />
+                  <span className="text-[11px] text-slate-400 mt-1 block">
+                    Este número será usado automaticamente nos botões de WhatsApp e no rodapé das suas páginas White Label.
+                  </span>
                 </div>
 
                 <div>

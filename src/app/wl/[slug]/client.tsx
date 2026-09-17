@@ -120,9 +120,13 @@ export default function WhiteLabelLandingClient({ org, plans, config }: LandingP
     }).format(val);
   };
 
-  const whatsappClean = (config.whatsappContact || org.whatsapp || "").replace(/\D/g, "");
-  const whatsappLink = whatsappClean
-    ? `https://wa.me/55${whatsappClean.replace(/^55/, "")}?text=${encodeURIComponent(`Olá, gostaria de saber mais sobre os planos da ${brandName}!`)}`
+  const rawWhatsapp = org.whatsapp || config.whatsappContact || org.phone || "";
+  const digitsOnly = rawWhatsapp.replace(/\D/g, "");
+  const nationalDigits = digitsOnly.startsWith("55") && digitsOnly.length >= 12
+    ? digitsOnly.slice(2)
+    : digitsOnly;
+  const whatsappLink = nationalDigits.length >= 10
+    ? `https://wa.me/55${nationalDigits}?text=${encodeURIComponent(`Olá, gostaria de saber mais sobre os planos e soluções da ${brandName}!`)}`
     : null;
 
   const faqs = [
@@ -674,17 +678,37 @@ export default function WhiteLabelLandingClient({ org, plans, config }: LandingP
             <span>© {new Date().getFullYear()} {brandName}. Todos os direitos reservados.</span>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center gap-6">
             <Link href={loginUrl} className="hover:text-white transition">Fazer Login</Link>
             <Link href={registerUrl} className="hover:text-white transition">Criar Conta</Link>
             {whatsappLink && (
-              <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition">
-                WhatsApp
+              <a
+                href={whatsappLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-emerald-300 text-emerald-400 font-semibold transition inline-flex items-center gap-1.5"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>WhatsApp ({rawWhatsapp})</span>
               </a>
             )}
           </div>
         </div>
       </footer>
+
+      {/* Floating WhatsApp Action Button */}
+      {whatsappLink && (
+        <a
+          href={whatsappLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="fixed bottom-6 right-6 z-50 p-3.5 sm:px-5 sm:py-3.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-xs shadow-2xl shadow-emerald-500/40 hover:scale-105 transition-all flex items-center gap-2 group"
+          title={`Falar com ${brandName} no WhatsApp`}
+        >
+          <MessageSquare className="w-5 h-5 group-hover:animate-bounce" />
+          <span className="hidden sm:inline">Falar no WhatsApp</span>
+        </a>
+      )}
     </div>
   );
 }
