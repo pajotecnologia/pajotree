@@ -121,54 +121,64 @@ export default function VisualEditorPage() {
   const [newBlockTitle, setNewBlockTitle] = useState("");
   const [newBlockText, setNewBlockText] = useState("");
 
-  useEffect(() => {
-    async function loadPage() {
-      try {
-        const res = await fetch("/api/pages");
-        if (res.ok) {
-          const json = await res.json();
-          setPageData(json.page);
-          setThemes(json.themes || []);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-          setTitle(json.page.title || "");
-          setDescription(json.page.description || "");
-          setSlug(json.page.slug || "");
-          setLogoUrl(json.page?.organization?.logoUrl || null);
-
-          const settings = json.page.settings;
-          if (settings) {
-            const isImage =
-              settings.backgroundType === "image" ||
-              Boolean(
-                settings.backgroundValue &&
-                (settings.backgroundValue.startsWith("data:image/") ||
-                 settings.backgroundValue.startsWith("http://") ||
-                 settings.backgroundValue.startsWith("https://") ||
-                 settings.backgroundValue.startsWith("url("))
-              );
-
-            setBackgroundType(settings.backgroundType || (isImage ? "image" : "gradient"));
-            setBackgroundValue(settings.backgroundValue || "linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)");
-            setBgMode(isImage ? "image" : "gradient");
-            setPrimaryColor(settings.primaryColor || "#6366f1");
-            setSecondaryColor(settings.secondaryColor || "#ec4899");
-            setTextColor(settings.textColor || "#ffffff");
-            setButtonStyle(settings.buttonStyle || "rounded-xl");
-            setFontFamily(settings.fontFamily || "Inter");
-
-            let customCfg: any = {};
-            try {
-              customCfg = JSON.parse(settings.customCss || "{}");
-            } catch {}
-            setShowContactForm(Boolean(settings.showContactForm ?? customCfg.showContactForm ?? false));
-          }
-        }
-      } catch (err) {
-        console.error("Erro ao carregar editor:", err);
-      } finally {
-        setLoading(false);
+  const loadPage = async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const res = await fetch("/api/pages");
+      if (!res.ok) {
+        throw new Error("Erro ao carregar dados da página.");
       }
+      const json = await res.json();
+      if (!json.page) {
+        throw new Error("Página não encontrada.");
+      }
+      setPageData(json.page);
+      setThemes(json.themes || []);
+
+      setTitle(json.page.title || json.page.name || "");
+      setDescription(json.page.description || "");
+      setSlug(json.page.slug || "");
+      setLogoUrl(json.page?.organization?.logoUrl || null);
+
+      const settings = json.page.settings;
+      if (settings) {
+        const isImage =
+          settings.backgroundType === "image" ||
+          Boolean(
+            settings.backgroundValue &&
+            (settings.backgroundValue.startsWith("data:image/") ||
+             settings.backgroundValue.startsWith("http://") ||
+             settings.backgroundValue.startsWith("https://") ||
+             settings.backgroundValue.startsWith("url("))
+          );
+
+        setBackgroundType(settings.backgroundType || (isImage ? "image" : "gradient"));
+        setBackgroundValue(settings.backgroundValue || "linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)");
+        setBgMode(isImage ? "image" : "gradient");
+        setPrimaryColor(settings.primaryColor || "#6366f1");
+        setSecondaryColor(settings.secondaryColor || "#ec4899");
+        setTextColor(settings.textColor || "#ffffff");
+        setButtonStyle(settings.buttonStyle || "rounded-xl");
+        setFontFamily(settings.fontFamily || "Inter");
+
+        let customCfg: any = {};
+        try {
+          customCfg = JSON.parse(settings.customCss || "{}");
+        } catch {}
+        setShowContactForm(Boolean(settings.showContactForm ?? customCfg.showContactForm ?? false));
+      }
+    } catch (err: any) {
+      console.error("Erro ao carregar editor:", err);
+      setLoadError(err.message || "Erro ao carregar editor");
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     loadPage();
   }, []);
 
@@ -389,8 +399,29 @@ export default function VisualEditorPage() {
 
   if (loading) {
     return (
-      <div className="h-96 flex items-center justify-center">
+      <div className="h-96 flex flex-col items-center justify-center gap-3">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+        <span className="text-xs text-slate-500 font-medium">Carregando editor visual...</span>
+      </div>
+    );
+  }
+
+  if (loadError || !pageData) {
+    return (
+      <div className="h-96 flex flex-col items-center justify-center gap-4 text-center max-w-md mx-auto p-6 bg-white rounded-2xl border border-slate-200">
+        <AlertCircle className="w-10 h-10 text-rose-500" />
+        <div className="space-y-1">
+          <h3 className="text-sm font-bold text-slate-900">Não foi possível carregar a página</h3>
+          <p className="text-xs text-slate-500">{loadError || "Erro ao conectar com o banco de dados."}</p>
+        </div>
+        <button
+          type="button"
+          onClick={loadPage}
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-xs cursor-pointer"
+        >
+          <RefreshCw className="w-4 h-4" />
+          <span>Tentar Novamente</span>
+        </button>
       </div>
     );
   }

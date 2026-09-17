@@ -125,29 +125,29 @@ const migrationStatements = [
   `CREATE INDEX IF NOT EXISTS "TrackingConsent_visitorId_idx" ON "TrackingConsent"("visitorId")`,
 ];
 
-let migrationPromise: Promise<void> | null = null;
+let migrationDone = false;
 
 /**
  * Ensures all new columns and tables exist in PostgreSQL database.
- * Executes once per server process and caches the result to avoid connection pool exhaustion.
+ * Executes once and never blocks API requests.
  */
 export async function ensureDatabaseSchema(): Promise<void> {
-  if (migrationPromise) {
-    return migrationPromise;
+  if (migrationDone) {
+    return;
   }
+  migrationDone = true;
 
-  migrationPromise = (async () => {
+  try {
+    const combinedSql = migrationStatements.join(";\n") + ";";
+    await db.$executeRawUnsafe(combinedSql);
+  } catch {
+    // Non-blocking fallback
     for (const sql of migrationStatements) {
       try {
         await db.$executeRawUnsafe(sql);
-      } catch (error: any) {
-        // Ignored if column/index/table already exists or minor notice
+      } catch {
+        // Ignored
       }
     }
-  })().catch((err) => {
-    migrationPromise = null;
-    throw err;
-  });
-
-  return migrationPromise;
+  }
 }

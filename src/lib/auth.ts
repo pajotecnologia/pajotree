@@ -88,11 +88,8 @@ export async function getCurrentAuthContext() {
   const session = await getSession();
   if (!session) return null;
 
-  try {
-    await ensureDatabaseSchema();
-  } catch {
-    // Non-blocking
-  }
+  // Non-blocking schema initialization
+  ensureDatabaseSchema().catch(() => {});
 
   let user: any = null;
   try {
