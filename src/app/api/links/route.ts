@@ -15,6 +15,7 @@ const linkSchema = z.object({
   openNewTab: z.boolean().optional().default(true),
   metaPixelId: z.string().optional(),
   eventName: z.string().optional().default("LinkClick"),
+  position: z.number().int().optional(),
 });
 
 export async function GET() {

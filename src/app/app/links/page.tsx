@@ -17,6 +17,9 @@ import {
   HelpCircle,
   Zap,
   Pencil,
+  ChevronUp,
+  ChevronDown,
+  ArrowUpDown,
 } from "lucide-react";
 
 export default function LinksPage() {
@@ -24,6 +27,7 @@ export default function LinksPage() {
   const [metaPixels, setMetaPixels] = useState<any[]>([]);
   const [planUsage, setPlanUsage] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [reordering, setReordering] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
@@ -60,6 +64,51 @@ export default function LinksPage() {
       setLoading(false);
     }
   }
+
+  const syncReorder = async (updatedLinks: any[]) => {
+    try {
+      setReordering(true);
+      const res = await fetch("/api/links/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ linkIds: updatedLinks.map((l) => l.id) }),
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || "Erro ao salvar nova ordem dos links");
+      }
+    } catch (err) {
+      console.error("Erro ao reordenar links:", err);
+      await loadData();
+    } finally {
+      setReordering(false);
+    }
+  };
+
+  const handleMoveLink = async (currentIndex: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= links.length) return;
+
+    const newLinks = [...links];
+    const [movedLink] = newLinks.splice(currentIndex, 1);
+    newLinks.splice(targetIndex, 0, movedLink);
+
+    const remapped = newLinks.map((l, idx) => ({ ...l, position: idx }));
+    setLinks(remapped);
+    await syncReorder(remapped);
+  };
+
+  const handleSetPosition = async (currentIndex: number, targetIndex: number) => {
+    if (targetIndex === currentIndex || targetIndex < 0 || targetIndex >= links.length) return;
+
+    const newLinks = [...links];
+    const [movedLink] = newLinks.splice(currentIndex, 1);
+    newLinks.splice(targetIndex, 0, movedLink);
+
+    const remapped = newLinks.map((l, idx) => ({ ...l, position: idx }));
+    setLinks(remapped);
+    await syncReorder(remapped);
+  };
 
   useEffect(() => {
     loadData();
@@ -291,24 +340,78 @@ export default function LinksPage() {
       </div>
 
       <div className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs font-semibold text-slate-500">
+            Arraste ou use os botões / seletor de posição (<span className="font-bold text-slate-700">#1, #2, #3...</span>) para definir a ordem na bio.
+          </span>
+          {reordering && (
+            <span className="text-xs text-indigo-600 font-semibold flex items-center gap-1.5 animate-pulse">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>Salvando ordem...</span>
+            </span>
+          )}
+        </div>
+
         {links.length > 0 ? (
-          links.map((link) => {
+          links.map((link, index) => {
             const shortCode = link.shortLinks?.[0]?.code;
             const clickCount = link._count?.analyticsEvents || 0;
             return (
               <div
                 key={link.id}
-                className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-indigo-200 transition min-w-0"
+                className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3.5 hover:border-indigo-200 transition min-w-0"
               >
-                <div className="flex items-start sm:items-center gap-3.5 min-w-0">
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-indigo-600 shrink-0">
+                <div className="flex items-start sm:items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1">
+                  {/* Reorder Buttons & Position Selector */}
+                  <div className="flex items-center gap-1 shrink-0 bg-slate-50 p-1 rounded-xl border border-slate-100">
+                    <div className="flex flex-col items-center justify-center">
+                      <button
+                        type="button"
+                        disabled={index === 0 || reordering}
+                        onClick={() => handleMoveLink(index, "up")}
+                        className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-white disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition"
+                        title="Subir posição"
+                        aria-label="Subir posição"
+                      >
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={index === links.length - 1 || reordering}
+                        onClick={() => handleMoveLink(index, "down")}
+                        className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-white disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition"
+                        title="Descer posição"
+                        aria-label="Descer posição"
+                      >
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="relative">
+                      <select
+                        value={index}
+                        disabled={reordering}
+                        onChange={(e) => handleSetPosition(index, parseInt(e.target.value, 10))}
+                        className="appearance-none cursor-pointer w-9 h-9 rounded-lg bg-white border border-slate-200 hover:border-indigo-300 text-xs font-black text-slate-800 text-center transition flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-indigo-200 shadow-2xs"
+                        title={`Posição ${index + 1} de ${links.length}. Clique para alterar.`}
+                      >
+                        {links.map((_, i) => (
+                          <option key={i} value={i}>
+                            #{i + 1}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 border border-slate-100 text-indigo-600 shrink-0">
                     {link.icon === "whatsapp" ? (
                       <MessageCircle className="w-5 h-5 text-emerald-600" />
                     ) : (
                       <Globe className="w-5 h-5" />
                     )}
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-sm text-slate-900 break-words">{link.title}</span>
                       {link.featured && (
@@ -321,23 +424,23 @@ export default function LinksPage() {
                       {link.url}
                     </span>
                     {shortCode && (
-                      <span className="text-[10px] text-indigo-600 font-mono mt-1 block break-all">
+                      <span className="text-[10px] text-indigo-600 font-mono mt-0.5 block break-all">
                         Link de tracking: /go/{shortCode}
                       </span>
                     )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 sm:gap-3 border-t md:border-t-0 border-slate-100 pt-3 md:pt-0 justify-between md:justify-end flex-wrap">
-                  <div className="min-h-11 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-100 text-center flex flex-col justify-center">
-                    <span className="text-xs font-extrabold text-slate-900 block">{clickCount}</span>
+                <div className="flex items-center gap-2 sm:gap-2.5 border-t md:border-t-0 border-slate-100 pt-2.5 md:pt-0 justify-between md:justify-end flex-wrap">
+                  <div className="min-h-10 px-3 py-1 rounded-xl bg-slate-50 border border-slate-100 text-center flex flex-col justify-center">
+                    <span className="text-xs font-extrabold text-slate-900 block leading-tight">{clickCount}</span>
                     <span className="text-[9px] text-slate-400 uppercase tracking-wider">Cliques</span>
                   </div>
                   {shortCode && (
                     <button
                       type="button"
                       onClick={() => handleCopyShortLink(shortCode, link.id)}
-                      className="min-h-11 min-w-11 p-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition shadow-2xs flex items-center justify-center"
+                      className="min-h-10 min-w-10 p-2 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition shadow-2xs flex items-center justify-center"
                       title="Copiar Link de Redirecionamento"
                       aria-label="Copiar Link de Redirecionamento"
                     >
@@ -352,7 +455,7 @@ export default function LinksPage() {
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="min-h-11 min-w-11 p-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition shadow-2xs flex items-center justify-center"
+                    className="min-h-10 min-w-10 p-2 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition shadow-2xs flex items-center justify-center"
                     title="Acessar Destino Real"
                     aria-label="Acessar Destino Real"
                   >
@@ -361,7 +464,7 @@ export default function LinksPage() {
                   <button
                     type="button"
                     onClick={() => handleOpenEdit(link)}
-                    className="min-h-11 min-w-11 p-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:bg-indigo-50 hover:border-indigo-200 text-indigo-600 transition shadow-2xs flex items-center justify-center"
+                    className="min-h-10 min-w-10 p-2 rounded-xl bg-slate-50 border border-slate-200 hover:bg-indigo-50 hover:border-indigo-200 text-indigo-600 transition shadow-2xs flex items-center justify-center"
                     title="Editar Link"
                     aria-label="Editar Link"
                   >
@@ -370,7 +473,7 @@ export default function LinksPage() {
                   <button
                     type="button"
                     onClick={() => handleDelete(link.id)}
-                    className="min-h-11 min-w-11 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition shadow-2xs flex items-center justify-center"
+                    className="min-h-10 min-w-10 p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition shadow-2xs flex items-center justify-center"
                     title="Excluir Link"
                     aria-label="Excluir Link"
                   >
