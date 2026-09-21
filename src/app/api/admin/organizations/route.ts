@@ -300,7 +300,7 @@ export async function PUT(request: NextRequest) {
 
     const org = await db.organization.findUnique({
       where: { id: organizationId },
-      include: { users: { include: { user: true } } },
+      include: { users: { include: { user: true, role: true } } },
     });
     if (!org) {
       return NextResponse.json({ error: "Organização não encontrada" }, { status: 404 });
@@ -322,60 +322,77 @@ export async function PUT(request: NextRequest) {
       adminPassword,
     } = body;
 
-    // Se foram enviados dados para atualizar o usuário admin da empresa
+    // Localiza o usuário administrador da empresa
     let targetUserId = adminUserId;
-    if (!targetUserId && org.users.length > 0) {
-      targetUserId = org.users[0]?.userId;
+    if (!targetUserId && org.users && org.users.length > 0) {
+      const adminRoleUser = org.users.find((u) => u.role?.name === "Administrador") || org.users[0];
+      targetUserId = adminRoleUser?.userId;
+    }
+
+    if (!targetUserId) {
+      const searchEmail = (adminEmail || org.email || "").trim().toLowerCase();
+      const searchUsername = (adminUsername || "").trim().toLowerCase();
+
+      const existingUser = await db.user.findFirst({
+        where: {
+          OR: [
+            ...(searchEmail ? [{ email: { equals: searchEmail, mode: "insensitive" as const } }] : []),
+            ...(searchUsername ? [{ username: { equals: searchUsername, mode: "insensitive" as const } }] : []),
+          ],
+        },
+      });
+
+      if (existingUser) {
+        targetUserId = existingUser.id;
+      }
     }
 
     let updatedUserData: { name?: string; username?: string; email?: string; passwordHash?: string } = {};
 
-    if (targetUserId) {
-      if (adminName && adminName.trim()) {
-        updatedUserData.name = adminName.trim();
-      }
+    if (adminName && adminName.trim()) {
+      updatedUserData.name = adminName.trim();
+    }
 
-      if (adminUsername && adminUsername.trim()) {
-        const cleanUsername = adminUsername.trim().toLowerCase();
-        const existingWithUsername = await db.user.findFirst({
-          where: {
-            username: { equals: cleanUsername, mode: "insensitive" },
-            id: { not: targetUserId },
-          },
-        });
-        if (existingWithUsername) {
-          return NextResponse.json({ error: "Este login/usuário já está em uso por outra conta." }, { status: 409 });
-        }
-        updatedUserData.username = cleanUsername;
+    if (adminUsername && adminUsername.trim()) {
+      const cleanUsername = adminUsername.trim().toLowerCase();
+      const existingWithUsername = await db.user.findFirst({
+        where: {
+          username: { equals: cleanUsername, mode: "insensitive" },
+          ...(targetUserId ? { id: { not: targetUserId } } : {}),
+        },
+      });
+      if (existingWithUsername) {
+        return NextResponse.json({ error: "Este login/usuário já está em uso por outra conta." }, { status: 409 });
       }
+      updatedUserData.username = cleanUsername;
+    }
 
-      if (adminEmail && adminEmail.trim()) {
-        const cleanEmail = adminEmail.trim().toLowerCase();
-        const existingWithEmail = await db.user.findFirst({
-          where: {
-            email: { equals: cleanEmail, mode: "insensitive" },
-            id: { not: targetUserId },
-          },
-        });
-        if (existingWithEmail) {
-          return NextResponse.json({ error: "Este e-mail já está em uso por outra conta." }, { status: 409 });
-        }
-        updatedUserData.email = cleanEmail;
+    if (adminEmail && adminEmail.trim()) {
+      const cleanEmail = adminEmail.trim().toLowerCase();
+      const existingWithEmail = await db.user.findFirst({
+        where: {
+          email: { equals: cleanEmail, mode: "insensitive" },
+          ...(targetUserId ? { id: { not: targetUserId } } : {}),
+        },
+      });
+      if (existingWithEmail) {
+        return NextResponse.json({ error: "Este e-mail já está em uso por outra conta." }, { status: 409 });
       }
+      updatedUserData.email = cleanEmail;
+    }
 
-      if (adminPassword && adminPassword.trim().length > 0) {
-        if (adminPassword.trim().length < 6) {
-          return NextResponse.json({ error: "A nova senha deve ter no mínimo 6 caracteres." }, { status: 400 });
-        }
-        updatedUserData.passwordHash = await hashPassword(adminPassword.trim());
+    if (adminPassword && adminPassword.trim().length > 0) {
+      if (adminPassword.trim().length < 6) {
+        return NextResponse.json({ error: "A nova senha deve ter no mínimo 6 caracteres." }, { status: 400 });
       }
+      updatedUserData.passwordHash = await hashPassword(adminPassword.trim());
     }
 
     const fields = parsed.data;
     const { address: addrField, ...orgFields } = fields;
 
     const updated = await db.$transaction(async (tx) => {
-      // Atualiza os dados da organização
+      // 1. Atualiza os dados da organização
       const organization = await tx.organization.update({
         where: { id: organizationId },
         data: {
@@ -405,12 +422,82 @@ export async function PUT(request: NextRequest) {
         include: { plan: true, addresses: true },
       });
 
-      // Atualiza os dados do usuário administrador se aplicável
-      if (targetUserId && Object.keys(updatedUserData).length > 0) {
-        await tx.user.update({
-          where: { id: targetUserId },
-          data: updatedUserData,
+      // 2. Atualiza ou cria o usuário administrador vinculado
+      if (targetUserId) {
+        if (Object.keys(updatedUserData).length > 0) {
+          await tx.user.update({
+            where: { id: targetUserId },
+            data: updatedUserData,
+          });
+        }
+
+        // Garante o vínculo na tabela OrganizationUser
+        const existingLink = await tx.organizationUser.findFirst({
+          where: { organizationId, userId: targetUserId },
         });
+
+        if (!existingLink) {
+          let adminRole = await tx.role.findFirst({
+            where: { organizationId, name: "Administrador" },
+          });
+          if (!adminRole) {
+            adminRole = await tx.role.create({
+              data: {
+                organizationId,
+                name: "Administrador",
+                description: "Acesso total à administração da empresa",
+                isSystem: true,
+              },
+            });
+          }
+          await tx.organizationUser.create({
+            data: {
+              organizationId,
+              userId: targetUserId,
+              roleId: adminRole.id,
+              status: "ACTIVE",
+            },
+          });
+        }
+      } else if (adminEmail || adminUsername || adminPassword) {
+        // Cria um novo usuário administrador se ainda não existia nenhum vinculado
+        const newEmail = (adminEmail || org.email).trim().toLowerCase();
+        const newUsername = (adminUsername || newEmail.split("@")[0] || org.name.replace(/[^a-zA-Z0-9]/g, "")).toLowerCase().trim();
+        const fallbackPasswordHash = updatedUserData.passwordHash || (await hashPassword("123456"));
+
+        const newUser = await tx.user.create({
+          data: {
+            name: adminName?.trim() || org.name,
+            username: newUsername,
+            email: newEmail,
+            passwordHash: fallbackPasswordHash,
+            status: "ACTIVE",
+          },
+        });
+
+        let adminRole = await tx.role.findFirst({
+          where: { organizationId, name: "Administrador" },
+        });
+        if (!adminRole) {
+          adminRole = await tx.role.create({
+            data: {
+              organizationId,
+              name: "Administrador",
+              description: "Acesso total à administração da empresa",
+              isSystem: true,
+            },
+          });
+        }
+
+        await tx.organizationUser.create({
+          data: {
+            organizationId,
+            userId: newUser.id,
+            roleId: adminRole.id,
+            status: "ACTIVE",
+          },
+        });
+        targetUserId = newUser.id;
       }
 
       return organization;

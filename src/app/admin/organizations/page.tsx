@@ -219,7 +219,7 @@ export default function AdminOrganizationsPage() {
 
   function openEdit(org: Organization) {
     const address = org.addresses?.[0] || {};
-    const primaryUser = org.users?.[0]?.user;
+    const primaryUser = org.users?.find((u) => u.role?.name === "Administrador")?.user || org.users?.[0]?.user;
     setEditing(org);
     setFeedback(null);
     setForm({

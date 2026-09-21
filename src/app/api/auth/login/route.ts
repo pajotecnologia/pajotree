@@ -46,14 +46,21 @@ export async function POST(req: Request) {
     const usernamePrefix = loginIdentifier.includes("@") ? loginIdentifier.split("@")[0] : loginIdentifier;
     const alphanumericOnly = loginIdentifier.replace(/[^a-z0-9]/g, "");
 
-    const user = await db.user.findFirst({
+    // Busca usuários candidatos que coincidam com email, username, prefixo, domínio whitelabel ou nome da organização
+    const candidateUsers = await db.user.findMany({
       where: {
         OR: [
           { username: { equals: loginIdentifier, mode: "insensitive" } },
-          { username: { equals: usernamePrefix, mode: "insensitive" } },
-          { username: { equals: alphanumericOnly, mode: "insensitive" } },
           { email: { equals: loginIdentifier, mode: "insensitive" } },
-          { email: { startsWith: `${usernamePrefix}@`, mode: "insensitive" } },
+          ...(!loginIdentifier.includes("@")
+            ? [{ email: { startsWith: `${loginIdentifier}@`, mode: "insensitive" as const } }]
+            : []),
+          ...(usernamePrefix !== loginIdentifier
+            ? [{ username: { equals: usernamePrefix, mode: "insensitive" as const } }]
+            : []),
+          ...(alphanumericOnly && alphanumericOnly !== loginIdentifier
+            ? [{ username: { equals: alphanumericOnly, mode: "insensitive" as const } }]
+            : []),
           {
             organizations: {
               some: {
@@ -91,13 +98,36 @@ export async function POST(req: Request) {
           },
         },
       },
+      take: 10,
     });
 
-    if (!user) return apiError("UNAUTHORIZED", "Credenciais inválidas.", 401);
-    if (user.status !== "ACTIVE") return apiError("FORBIDDEN", "Esta conta está inativa ou bloqueada.", 403);
+    if (!candidateUsers || candidateUsers.length === 0) {
+      return apiError("UNAUTHORIZED", "Credenciais inválidas.", 401);
+    }
 
-    const isValid = await verifyPassword(password, user.passwordHash);
-    if (!isValid) return apiError("UNAUTHORIZED", "Credenciais inválidas.", 401);
+    // Ordena priorizando correspondência exata de e-mail e username
+    candidateUsers.sort((a, b) => {
+      const aEmailExact = a.email.toLowerCase() === loginIdentifier ? 100 : 0;
+      const bEmailExact = b.email.toLowerCase() === loginIdentifier ? 100 : 0;
+      const aUserExact = a.username?.toLowerCase() === loginIdentifier ? 90 : 0;
+      const bUserExact = b.username?.toLowerCase() === loginIdentifier ? 90 : 0;
+      return (bEmailExact + bUserExact) - (aEmailExact + aUserExact);
+    });
+
+    // Testa as credenciais nos candidatos encontrados
+    let user = null;
+    for (const candidate of candidateUsers) {
+      if (candidate.status !== "ACTIVE") continue;
+      const isValid = await verifyPassword(password, candidate.passwordHash);
+      if (isValid) {
+        user = candidate;
+        break;
+      }
+    }
+
+    if (!user) {
+      return apiError("UNAUTHORIZED", "Credenciais inválidas.", 401);
+    }
 
     try {
       await db.user.update({
