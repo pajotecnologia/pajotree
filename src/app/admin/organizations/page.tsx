@@ -10,6 +10,9 @@ import {
   Building2,
   CheckCircle2,
   AlertCircle,
+  KeyRound,
+  ShieldCheck,
+  User,
 } from "lucide-react";
 
 type Plan = { id: string; name: string; priceMonthly: number };
@@ -39,6 +42,18 @@ type Organization = {
   planId?: string | null;
   plan?: Plan | null;
   addresses?: Address[];
+  users?: Array<{
+    user: {
+      id: string;
+      name: string;
+      username?: string | null;
+      email: string;
+      phone?: string | null;
+      status: string;
+      createdAt?: string;
+    };
+    role?: { id?: string; name: string };
+  }>;
   _count?: { links?: number; leads?: number; users?: number };
 };
 
@@ -62,6 +77,7 @@ type FormState = {
   neighborhood: string;
   city: string;
   state: string;
+  adminUserId: string;
   adminName: string;
   adminUsername: string;
   adminEmail: string;
@@ -71,7 +87,8 @@ type FormState = {
 const emptyForm: FormState = {
   name: "", legalName: "", tradeName: "", document: "", email: "", phone: "", whatsapp: "",
   website: "", description: "", segment: "", status: "TRIAL", planId: "", zipCode: "", street: "",
-  number: "", complement: "", neighborhood: "", city: "", state: "", adminName: "", adminUsername: "", adminEmail: "", adminPassword: "",
+  number: "", complement: "", neighborhood: "", city: "", state: "",
+  adminUserId: "", adminName: "", adminUsername: "", adminEmail: "", adminPassword: "",
 };
 
 export default function AdminOrganizationsPage() {
@@ -111,6 +128,7 @@ export default function AdminOrganizationsPage() {
 
   function openEdit(org: Organization) {
     const address = org.addresses?.[0] || {};
+    const primaryUser = org.users?.[0]?.user;
     setEditing(org);
     setFeedback(null);
     setForm({
@@ -134,6 +152,11 @@ export default function AdminOrganizationsPage() {
       neighborhood: address.neighborhood || "",
       city: address.city || "",
       state: address.state || "",
+      adminUserId: primaryUser?.id || "",
+      adminName: primaryUser?.name || "",
+      adminUsername: primaryUser?.username || "",
+      adminEmail: primaryUser?.email || "",
+      adminPassword: "",
     });
     setModalOpen(true);
   }
@@ -147,7 +170,7 @@ export default function AdminOrganizationsPage() {
     setSaving(true);
     setFeedback(null);
 
-    const payload = {
+    const payload: any = {
       ...(editing ? { organizationId: editing.id } : {}),
       name: form.name,
       legalName: form.legalName || null,
@@ -171,13 +194,20 @@ export default function AdminOrganizationsPage() {
         state: form.state || null,
         country: "BR",
       },
-      ...(editing ? {} : {
-        adminName: form.adminName,
-        adminUsername: form.adminUsername.trim().toLowerCase() || null,
-        adminEmail: form.adminEmail,
-        adminPassword: form.adminPassword,
-      }),
     };
+
+    if (editing) {
+      if (form.adminUserId) payload.adminUserId = form.adminUserId;
+      if (form.adminName) payload.adminName = form.adminName;
+      if (form.adminUsername) payload.adminUsername = form.adminUsername.trim().toLowerCase();
+      if (form.adminEmail) payload.adminEmail = form.adminEmail.trim().toLowerCase();
+      if (form.adminPassword && form.adminPassword.trim()) payload.adminPassword = form.adminPassword.trim();
+    } else {
+      payload.adminName = form.adminName;
+      payload.adminUsername = form.adminUsername.trim().toLowerCase() || null;
+      payload.adminEmail = form.adminEmail.trim().toLowerCase();
+      payload.adminPassword = form.adminPassword;
+    }
 
     try {
       const res = await fetch("/api/admin/organizations", {
@@ -189,7 +219,7 @@ export default function AdminOrganizationsPage() {
       if (!res.ok) throw new Error(json.error || "Não foi possível salvar a empresa.");
 
       setModalOpen(false);
-      setFeedback({ type: "success", text: editing ? "Empresa atualizada com sucesso." : "Empresa cadastrada com sucesso." });
+      setFeedback({ type: "success", text: editing ? "Empresa e credenciais atualizadas com sucesso." : "Empresa cadastrada com sucesso." });
       await loadOrgs();
     } catch (err) {
       setFeedback({ type: "error", text: err instanceof Error ? err.message : "Erro ao salvar empresa." });
@@ -275,39 +305,49 @@ export default function AdminOrganizationsPage() {
               <tr><th className="p-4 pl-6">Empresa</th><th className="p-4">Plano</th><th className="p-4">Consumo</th><th className="p-4">Status</th><th className="p-4 text-right pr-6">Ações</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
-              {filtered.length > 0 ? filtered.map((org: any) => (
-                <tr key={org.id} className="hover:bg-slate-50/60 transition">
-                  <td data-label="Empresa" className="p-4 pl-6">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900 block break-words">{org.name}</span>
-                      {(org.isWhiteLabel || org.plan?.name?.toUpperCase().includes("WHITE")) && (
-                        <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold">
-                          White Label
-                        </span>
-                      )}
-                      {org.whiteLabelParent && (
-                        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px]">
-                          Via: {org.whiteLabelParent.name}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[11px] text-slate-500 block break-all">{org.email}</span>
-                  </td>
-                  <td data-label="Plano" className="p-4">
-                    <select value={org.planId || ""} onChange={(e) => handleChangePlan(org.id, e.target.value)} disabled={updatingId === org.id} className="min-h-11 w-full sm:w-auto px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs text-amber-700 font-bold focus:outline-none focus:border-amber-500 shadow-sm">
-                      <option value="">Sem plano</option>{plans.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
-                  </td>
-                  <td data-label="Consumo" className="p-4 text-slate-600 text-[11px]">{org._count?.links || 0} links &bull; {org._count?.leads || 0} leads &bull; {org._count?.users || 1} usuários</td>
-                  <td data-label="Status" className="p-4"><span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold border ${org.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : org.status === "TRIAL" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-rose-50 text-rose-700 border-rose-200"}`}>{org.status}</span></td>
-                  <td data-label="Ações" className="p-4 pr-6 text-right">
-                    <div className="flex items-center justify-start sm:justify-end gap-2">
-                      <button type="button" onClick={() => openEdit(org)} className="min-h-11 px-3 rounded-lg bg-slate-50 text-slate-700 border border-slate-200 text-[11px] font-bold hover:bg-slate-100 transition inline-flex items-center gap-1.5"><Pencil className="w-3.5 h-3.5" /> Editar</button>
-                      {org.status === "SUSPENDED" ? <button type="button" onClick={() => handleUpdateStatus(org.id, "ACTIVE")} disabled={updatingId === org.id} className="min-h-11 px-3 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-300 text-[11px] font-bold hover:bg-emerald-100 transition">Reativar</button> : <button type="button" onClick={() => handleUpdateStatus(org.id, "SUSPENDED")} disabled={updatingId === org.id} className="min-h-11 px-3 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-bold hover:bg-rose-100 transition">Suspender</button>}
-                    </div>
-                  </td>
-                </tr>
-              )) : <tr><td colSpan={5} className="p-12 text-center text-slate-400 text-xs">Nenhuma empresa encontrada.</td></tr>}
+              {filtered.length > 0 ? filtered.map((org: any) => {
+                const primaryAdmin = org.users?.[0]?.user;
+                return (
+                  <tr key={org.id} className="hover:bg-slate-50/60 transition">
+                    <td data-label="Empresa" className="p-4 pl-6">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-slate-900 block break-words">{org.name}</span>
+                        {(org.isWhiteLabel || org.plan?.name?.toUpperCase().includes("WHITE")) && (
+                          <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold">
+                            White Label
+                          </span>
+                        )}
+                        {org.whiteLabelParent && (
+                          <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px]">
+                            Via: {org.whiteLabelParent.name}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap mt-0.5 text-[11px] text-slate-500">
+                        <span>{org.email}</span>
+                        {primaryAdmin?.username && (
+                          <span className="px-1.5 py-0.2 rounded-md bg-amber-50 text-amber-900 font-mono text-[10px] font-bold border border-amber-200">
+                            login: @{primaryAdmin.username}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td data-label="Plano" className="p-4">
+                      <select value={org.planId || ""} onChange={(e) => handleChangePlan(org.id, e.target.value)} disabled={updatingId === org.id} className="min-h-11 w-full sm:w-auto px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs text-amber-700 font-bold focus:outline-none focus:border-amber-500 shadow-sm">
+                        <option value="">Sem plano</option>{plans.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                    </td>
+                    <td data-label="Consumo" className="p-4 text-slate-600 text-[11px]">{org._count?.links || 0} links &bull; {org._count?.leads || 0} leads &bull; {org._count?.users || 1} usuários</td>
+                    <td data-label="Status" className="p-4"><span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold border ${org.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : org.status === "TRIAL" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-rose-50 text-rose-700 border-rose-200"}`}>{org.status}</span></td>
+                    <td data-label="Ações" className="p-4 pr-6 text-right">
+                      <div className="flex items-center justify-start sm:justify-end gap-2">
+                        <button type="button" onClick={() => openEdit(org)} className="min-h-11 px-3 rounded-lg bg-slate-50 text-slate-700 border border-slate-200 text-[11px] font-bold hover:bg-slate-100 transition inline-flex items-center gap-1.5"><Pencil className="w-3.5 h-3.5" /> Editar</button>
+                        {org.status === "SUSPENDED" ? <button type="button" onClick={() => handleUpdateStatus(org.id, "ACTIVE")} disabled={updatingId === org.id} className="min-h-11 px-3 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-300 text-[11px] font-bold hover:bg-emerald-100 transition">Reativar</button> : <button type="button" onClick={() => handleUpdateStatus(org.id, "SUSPENDED")} disabled={updatingId === org.id} className="min-h-11 px-3 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-bold hover:bg-rose-100 transition">Suspender</button>}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              }) : <tr><td colSpan={5} className="p-12 text-center text-slate-400 text-xs">Nenhuma empresa encontrada.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -318,14 +358,14 @@ export default function AdminOrganizationsPage() {
           <div className="min-h-full flex items-start sm:items-center justify-center py-3 sm:py-8">
             <form onSubmit={handleSubmit} className="w-full max-w-4xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden">
               <div className="px-5 sm:px-6 py-4 border-b border-slate-200 flex items-center justify-between gap-4 sticky top-0 bg-white z-10">
-                <div><h2 className="text-lg font-bold text-slate-900">{editing ? "Editar empresa" : "Cadastrar nova empresa"}</h2><p className="text-[11px] text-slate-500 mt-0.5">{editing ? "Atualize os dados cadastrais e comerciais." : "Cadastre a empresa e seu primeiro administrador."}</p></div>
+                <div><h2 className="text-lg font-bold text-slate-900">{editing ? "Editar empresa" : "Cadastrar nova empresa"}</h2><p className="text-[11px] text-slate-500 mt-0.5">{editing ? "Atualize os dados cadastrais, comerciais e credenciais de acesso." : "Cadastre a empresa e seu primeiro administrador."}</p></div>
                 <button type="button" onClick={() => setModalOpen(false)} className="min-h-11 min-w-11 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center"><X className="w-5 h-5" /></button>
               </div>
 
               <div className="p-5 sm:p-6 space-y-6">
                 <section><h3 className="text-xs font-bold uppercase tracking-wider text-amber-700 mb-3">Dados da empresa</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <Field label="Nome da empresa *" value={form.name} onChange={(v) => setField("name", v)} required />
-                  <Field label="E-mail *" type="email" value={form.email} onChange={(v) => setField("email", v)} required />
+                  <Field label="E-mail da empresa *" type="email" value={form.email} onChange={(v) => setField("email", v)} required />
                   <Field label="Razão social" value={form.legalName} onChange={(v) => setField("legalName", v)} />
                   <Field label="Nome fantasia" value={form.tradeName} onChange={(v) => setField("tradeName", v)} />
                   <Field label="CNPJ / CPF" value={form.document} onChange={(v) => setField("document", v)} />
@@ -343,12 +383,58 @@ export default function AdminOrganizationsPage() {
                   <Field label="Complemento" value={form.complement} onChange={(v) => setField("complement", v)} /><Field label="Bairro" value={form.neighborhood} onChange={(v) => setField("neighborhood", v)} /><Field label="Cidade" value={form.city} onChange={(v) => setField("city", v)} /><Field label="UF" value={form.state} onChange={(v) => setField("state", v)} maxLength={2} />
                 </div></section>
 
-                {!editing && <section className="rounded-2xl bg-slate-50 border border-slate-200 p-4"><h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-3">Primeiro administrador</h3><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                  <Field label="Nome *" value={form.adminName} onChange={(v) => setField("adminName", v)} required />
-                  <Field label="Login de acesso *" value={form.adminUsername} onChange={(v) => setField("adminUsername", v.toLowerCase().replace(/[^a-z0-9._-]/g, ""))} required placeholder="Ex.: admin.empresa" />
-                  <Field label="E-mail *" type="email" value={form.adminEmail} onChange={(v) => setField("adminEmail", v)} required />
-                  <Field label="Senha inicial *" type="password" value={form.adminPassword} onChange={(v) => setField("adminPassword", v)} required minLength={6} />
-                </div><p className="text-[10px] text-slate-500 mt-3">A conta será criada com login e senha para acesso ao painel da empresa, sem privilégios de Super Admin.</p></section>}
+                {editing ? (
+                  <section className="rounded-2xl bg-amber-50/50 border border-amber-200/80 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <KeyRound className="w-4 h-4 text-amber-700" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-amber-800">
+                        Acesso & Credenciais do Administrador
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <Field
+                        label="Nome do administrador"
+                        value={form.adminName}
+                        onChange={(v) => setField("adminName", v)}
+                        placeholder="Nome do usuário"
+                      />
+                      <Field
+                        label="Login de acesso (Usuário)"
+                        value={form.adminUsername}
+                        onChange={(v) => setField("adminUsername", v.toLowerCase().replace(/[^a-z0-9._-]/g, ""))}
+                        placeholder="Ex.: admin.empresa"
+                      />
+                      <Field
+                        label="E-mail do administrador"
+                        type="email"
+                        value={form.adminEmail}
+                        onChange={(v) => setField("adminEmail", v)}
+                      />
+                      <Field
+                        label="Nova Senha de Acesso"
+                        type="password"
+                        value={form.adminPassword}
+                        onChange={(v) => setField("adminPassword", v)}
+                        placeholder="Deixar em branco para manter"
+                        minLength={6}
+                      />
+                    </div>
+                    <p className="text-[10px] text-amber-900/70 mt-2.5">
+                      💡 Para redefinir a senha de acesso da empresa, basta digitar a nova senha no campo acima e clicar em &quot;Salvar alterações&quot;. Deixe em branco para não alterar a senha atual.
+                    </p>
+                  </section>
+                ) : (
+                  <section className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-3">Primeiro administrador</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <Field label="Nome *" value={form.adminName} onChange={(v) => setField("adminName", v)} required />
+                      <Field label="Login de acesso *" value={form.adminUsername} onChange={(v) => setField("adminUsername", v.toLowerCase().replace(/[^a-z0-9._-]/g, ""))} required placeholder="Ex.: admin.empresa" />
+                      <Field label="E-mail *" type="email" value={form.adminEmail} onChange={(v) => setField("adminEmail", v)} required />
+                      <Field label="Senha inicial *" type="password" value={form.adminPassword} onChange={(v) => setField("adminPassword", v)} required minLength={6} />
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-3">A conta será criada com login e senha para acesso ao painel da empresa, sem privilégios de Super Admin.</p>
+                  </section>
+                )}
               </div>
 
               <div className="px-5 sm:px-6 py-4 border-t border-slate-200 bg-slate-50 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">

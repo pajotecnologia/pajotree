@@ -70,6 +70,26 @@ export async function GET() {
           plan: true,
           addresses: true,
           whiteLabelParent: { select: { id: true, name: true } },
+          users: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  username: true,
+                  email: true,
+                  status: true,
+                  createdAt: true,
+                },
+              },
+              role: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
           _count: {
             select: {
               users: true,
@@ -87,6 +107,20 @@ export async function GET() {
         include: {
           plan: true,
           addresses: true,
+          users: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  username: true,
+                  email: true,
+                  status: true,
+                },
+              },
+              role: true,
+            },
+          },
         },
         orderBy: { createdAt: "desc" },
       });
@@ -263,7 +297,10 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || "Dados inválidos" }, { status: 400 });
     }
 
-    const org = await db.organization.findUnique({ where: { id: organizationId } });
+    const org = await db.organization.findUnique({
+      where: { id: organizationId },
+      include: { users: { include: { user: true } } },
+    });
     if (!org) {
       return NextResponse.json({ error: "Organização não encontrada" }, { status: 404 });
     }
@@ -275,21 +312,106 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    const { address, ...fields } = parsed.data;
+    const {
+      address,
+      adminUserId,
+      adminUsername,
+      adminEmail,
+      adminName,
+      adminPassword,
+    } = body;
+
+    // Se foram enviados dados para atualizar o usuário admin da empresa
+    let targetUserId = adminUserId;
+    if (!targetUserId && org.users.length > 0) {
+      targetUserId = org.users[0]?.userId;
+    }
+
+    let updatedUserData: { name?: string; username?: string; email?: string; passwordHash?: string } = {};
+
+    if (targetUserId) {
+      if (adminName && adminName.trim()) {
+        updatedUserData.name = adminName.trim();
+      }
+
+      if (adminUsername && adminUsername.trim()) {
+        const cleanUsername = adminUsername.trim().toLowerCase();
+        const existingWithUsername = await db.user.findFirst({
+          where: {
+            username: { equals: cleanUsername, mode: "insensitive" },
+            id: { not: targetUserId },
+          },
+        });
+        if (existingWithUsername) {
+          return NextResponse.json({ error: "Este login/usuário já está em uso por outra conta." }, { status: 409 });
+        }
+        updatedUserData.username = cleanUsername;
+      }
+
+      if (adminEmail && adminEmail.trim()) {
+        const cleanEmail = adminEmail.trim().toLowerCase();
+        const existingWithEmail = await db.user.findFirst({
+          where: {
+            email: { equals: cleanEmail, mode: "insensitive" },
+            id: { not: targetUserId },
+          },
+        });
+        if (existingWithEmail) {
+          return NextResponse.json({ error: "Este e-mail já está em uso por outra conta." }, { status: 409 });
+        }
+        updatedUserData.email = cleanEmail;
+      }
+
+      if (adminPassword && adminPassword.trim().length > 0) {
+        if (adminPassword.trim().length < 6) {
+          return NextResponse.json({ error: "A nova senha deve ter no mínimo 6 caracteres." }, { status: 400 });
+        }
+        updatedUserData.passwordHash = await hashPassword(adminPassword.trim());
+      }
+    }
+
+    const fields = parsed.data;
+    const { address: addrField, ...orgFields } = fields;
+
     const updated = await db.$transaction(async (tx) => {
+      // Atualiza os dados da organização
       const organization = await tx.organization.update({
         where: { id: organizationId },
         data: {
-          ...Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, key === "status" ? value : clean(value as string | null | undefined)])),
-          ...(address !== undefined ? {
-            addresses: {
-              deleteMany: {},
-              ...(address ? { create: { ...Object.fromEntries(Object.entries(address).map(([key, value]) => [key, clean(value)])) } } : {}),
-            },
-          } : {}),
+          ...Object.fromEntries(
+            Object.entries(orgFields).map(([key, value]) => [
+              key,
+              key === "status" ? value : clean(value as string | null | undefined),
+            ])
+          ),
+          ...(address !== undefined
+            ? {
+                addresses: {
+                  deleteMany: {},
+                  ...(address
+                    ? {
+                        create: {
+                          ...Object.fromEntries(
+                            Object.entries(address).map(([key, value]) => [key, clean(value as string | null | undefined)])
+                          ),
+                        },
+                      }
+                    : {}),
+                },
+              }
+            : {}),
         },
         include: { plan: true, addresses: true },
       });
+
+      // Atualiza os dados do usuário administrador se aplicável
+      if (targetUserId && Object.keys(updatedUserData).length > 0) {
+        await tx.user.update({
+          where: { id: targetUserId },
+          data: updatedUserData,
+        });
+      }
+
       return organization;
     });
 
@@ -299,7 +421,10 @@ export async function PUT(request: NextRequest) {
       action: "ADMIN_UPDATE_ORGANIZATION",
       entity: "Organization",
       entityId: organizationId,
-      metadata: { fields: Object.keys(parsed.data) },
+      metadata: {
+        fields: Object.keys(parsed.data),
+        userUpdated: targetUserId ? Object.keys(updatedUserData) : [],
+      },
     });
 
     return NextResponse.json({ success: true, organization: updated });
