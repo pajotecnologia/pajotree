@@ -44,14 +44,30 @@ export async function POST(req: Request) {
     const rawIdentifier = (parsed.data.login || parsed.data.username || parsed.data.email || "").trim();
     const loginIdentifier = rawIdentifier.toLowerCase();
     const usernamePrefix = loginIdentifier.includes("@") ? loginIdentifier.split("@")[0] : loginIdentifier;
+    const alphanumericOnly = loginIdentifier.replace(/[^a-z0-9]/g, "");
 
     const user = await db.user.findFirst({
       where: {
         OR: [
           { username: { equals: loginIdentifier, mode: "insensitive" } },
           { username: { equals: usernamePrefix, mode: "insensitive" } },
+          { username: { equals: alphanumericOnly, mode: "insensitive" } },
           { email: { equals: loginIdentifier, mode: "insensitive" } },
           { email: { startsWith: `${usernamePrefix}@`, mode: "insensitive" } },
+          {
+            organizations: {
+              some: {
+                organization: {
+                  OR: [
+                    { id: loginIdentifier },
+                    { whiteLabelDomain: loginIdentifier },
+                    { name: { equals: loginIdentifier, mode: "insensitive" } },
+                    { tradeName: { equals: loginIdentifier, mode: "insensitive" } },
+                  ],
+                },
+              },
+            },
+          },
           ...(loginIdentifier === "admin" || loginIdentifier === "pajotecnologia" ? [{ isSuperAdmin: true }] : []),
         ],
       },
