@@ -38,8 +38,12 @@ const createSchema = organizationSchema.extend({
   adminPassword: z.string().min(6, "Senha do administrador deve ter pelo menos 6 caracteres"),
 });
 
-function clean(value: string | null | undefined) {
-  return value?.trim() || null;
+function clean(value: unknown): string | null {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  return null;
 }
 
 import { ensureDatabaseSchema } from "@/lib/db-migrate";
@@ -399,7 +403,7 @@ export async function PUT(request: NextRequest) {
           ...Object.fromEntries(
             Object.entries(orgFields).map(([key, value]) => [
               key,
-              key === "status" ? value : clean(value as string | null | undefined),
+              key === "status" || key === "isWhiteLabel" || typeof value !== "string" ? value : clean(value),
             ])
           ),
           ...(address !== undefined
@@ -410,7 +414,7 @@ export async function PUT(request: NextRequest) {
                     ? {
                         create: {
                           ...Object.fromEntries(
-                            Object.entries(address).map(([key, value]) => [key, clean(value as string | null | undefined)])
+                            Object.entries(address).map(([key, value]) => [key, typeof value === "string" ? clean(value) : value])
                           ),
                         },
                       }
