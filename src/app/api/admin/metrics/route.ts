@@ -36,12 +36,22 @@ export async function GET() {
       db.link.count(),
       db.subscription.findMany({
         where: { status: "ACTIVE" },
-        include: { plan: true },
+        select: {
+          plan: { select: { priceMonthly: true } },
+        },
       }),
       db.auditLog.findMany({
         orderBy: { createdAt: "desc" },
         take: 8,
-        include: { user: true, organization: true },
+        select: {
+          id: true,
+          action: true,
+          entity: true,
+          entityId: true,
+          createdAt: true,
+          user: { select: { email: true, username: true } },
+          organization: { select: { name: true } },
+        },
       }),
     ]);
 

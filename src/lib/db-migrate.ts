@@ -131,24 +131,25 @@ const migrationStatements = [
   `CREATE INDEX IF NOT EXISTS "TrackingConsent_visitorId_idx" ON "TrackingConsent"("visitorId")`,
 ];
 
-let migrationDone = false;
+let migrationPromise: Promise<void> | null = null;
 
 /**
  * Ensures all new columns and tables exist in PostgreSQL database.
- * Executes once and never blocks API requests.
+ * Executes concurrently in parallel once and never blocks API requests.
  */
-export async function ensureDatabaseSchema(): Promise<void> {
-  if (migrationDone) {
-    return;
+export function ensureDatabaseSchema(): Promise<void> {
+  if (migrationPromise) {
+    return migrationPromise;
   }
-  migrationDone = true;
 
-  for (const sql of migrationStatements) {
+  migrationPromise = (async () => {
     try {
-      await db.$executeRawUnsafe(sql);
+      await Promise.allSettled(migrationStatements.map((sql) => db.$executeRawUnsafe(sql)));
     } catch {
-      // Ignored if table/column already exists
+      // Non-blocking
     }
-  }
+  })();
+
+  return migrationPromise;
 }
 
