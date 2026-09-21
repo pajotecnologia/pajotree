@@ -113,6 +113,16 @@ export default function AdminOrganizationsPage() {
   const [editing, setEditing] = useState<Organization | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [modalFeedback, setModalFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    if (feedback) {
+      const timer = setTimeout(() => {
+        setFeedback(null);
+      }, 7000);
+      return () => clearTimeout(timer);
+    }
+  }, [feedback]);
 
   async function loadOrgs() {
     try {
@@ -214,6 +224,7 @@ export default function AdminOrganizationsPage() {
     setEditing(null);
     setForm(emptyForm);
     setFeedback(null);
+    setModalFeedback(null);
     setModalOpen(true);
   }
 
@@ -222,6 +233,7 @@ export default function AdminOrganizationsPage() {
     const primaryUser = org.users?.find((u) => u.role?.name === "Administrador")?.user || org.users?.[0]?.user;
     setEditing(org);
     setFeedback(null);
+    setModalFeedback(null);
     setForm({
       ...emptyForm,
       name: org.name || "",
@@ -260,6 +272,7 @@ export default function AdminOrganizationsPage() {
     event.preventDefault();
     setSaving(true);
     setFeedback(null);
+    setModalFeedback(null);
 
     const payload: any = {
       ...(editing ? { organizationId: editing.id } : {}),
@@ -310,10 +323,18 @@ export default function AdminOrganizationsPage() {
       if (!res.ok) throw new Error(json.error || "Não foi possível salvar a empresa.");
 
       setModalOpen(false);
-      setFeedback({ type: "success", text: editing ? "Empresa e credenciais atualizadas com sucesso." : "Empresa cadastrada com sucesso." });
+      setModalFeedback(null);
+      setFeedback({
+        type: "success",
+        text: editing
+          ? `Empresa "${form.name}" e dados de acesso salvos com sucesso!`
+          : `Empresa "${form.name}" cadastrada com sucesso!`,
+      });
       await loadOrgs();
     } catch (err) {
-      setFeedback({ type: "error", text: err instanceof Error ? err.message : "Erro ao salvar empresa." });
+      const errorMsg = err instanceof Error ? err.message : "Erro ao salvar empresa.";
+      setModalFeedback({ type: "error", text: errorMsg });
+      setFeedback({ type: "error", text: errorMsg });
     } finally {
       setSaving(false);
     }
@@ -329,6 +350,8 @@ export default function AdminOrganizationsPage() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Erro ao alterar status.");
+      const statusLabel = status === "ACTIVE" ? "Ativo" : status === "SUSPENDED" ? "Suspenso" : status;
+      setFeedback({ type: "success", text: `Status da empresa alterado para "${statusLabel}" com sucesso!` });
       await loadOrgs();
     } catch (err) {
       setFeedback({ type: "error", text: err instanceof Error ? err.message : "Erro ao alterar status." });
@@ -347,6 +370,8 @@ export default function AdminOrganizationsPage() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Erro ao alterar plano.");
+      const planName = plans.find((p) => p.id === planId)?.name || "Sem plano";
+      setFeedback({ type: "success", text: `Plano da empresa alterado para "${planName}" com sucesso!` });
       await loadOrgs();
     } catch (err) {
       setFeedback({ type: "error", text: err instanceof Error ? err.message : "Erro ao alterar plano." });
@@ -389,18 +414,33 @@ export default function AdminOrganizationsPage() {
 
       {feedback && (
         <div
-          className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-xs font-semibold ${
+          className={`flex items-center justify-between gap-3 rounded-xl border p-4 text-xs font-semibold shadow-sm transition-all duration-300 ${
             feedback.type === "success"
-              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-              : "bg-rose-50 text-rose-700 border-rose-200"
+              ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+              : "bg-rose-50 text-rose-800 border-rose-300"
           }`}
         >
-          {feedback.type === "success" ? (
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-          ) : (
-            <AlertCircle className="w-4 h-4 shrink-0" />
-          )}
-          {feedback.text}
+          <div className="flex items-center gap-2.5 min-w-0">
+            {feedback.type === "success" ? (
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+            )}
+            <div className="break-words">
+              <span className="font-bold mr-1.5">
+                {feedback.type === "success" ? "Sucesso:" : "Atenção:"}
+              </span>
+              <span>{feedback.text}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFeedback(null)}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-black/5 transition shrink-0 cursor-pointer"
+            title="Fechar aviso"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
@@ -727,6 +767,38 @@ export default function AdminOrganizationsPage() {
               </div>
 
               <div className="p-5 sm:p-6 space-y-6">
+                {modalFeedback && (
+                  <div
+                    className={`flex items-start justify-between gap-3 rounded-xl border p-4 text-xs font-semibold shadow-xs ${
+                      modalFeedback.type === "success"
+                        ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                        : "bg-rose-50 text-rose-800 border-rose-300"
+                    }`}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      {modalFeedback.type === "success" ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                      )}
+                      <div>
+                        <div className="font-bold">
+                          {modalFeedback.type === "success" ? "Operação realizada com sucesso!" : "Não foi possível salvar:"}
+                        </div>
+                        <div className="mt-0.5 font-normal">{modalFeedback.text}</div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setModalFeedback(null)}
+                      className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer"
+                      title="Fechar"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
                 <section><h3 className="text-xs font-bold uppercase tracking-wider text-amber-700 mb-3">Dados da empresa</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <Field label="Nome da empresa *" value={form.name} onChange={(v) => setField("name", v)} required />
                   <Field label="E-mail da empresa *" type="email" value={form.email} onChange={(v) => setField("email", v)} required />

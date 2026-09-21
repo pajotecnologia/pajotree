@@ -12,6 +12,7 @@ import {
   Trash2,
   CheckCircle2,
   RefreshCw,
+  X,
 } from "lucide-react";
 
 const MAX_IMAGE_SIZE = 2.5 * 1024 * 1024; // 2.5 MB
@@ -195,7 +196,7 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error(json.error || "Erro ao salvar dados da empresa");
 
       setSuccess("Dados da empresa atualizados com sucesso!");
-      setTimeout(() => setSuccess(null), 3000);
+      setTimeout(() => setSuccess(null), 6000);
     } catch (err: any) {
       setError(err.message || "Erro ao atualizar dados.");
     } finally {
@@ -223,7 +224,7 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error(data.error || "Erro ao salvar SMTP.");
 
       setSuccess("Configurações do Servidor SMTP salvas com sucesso!");
-      setTimeout(() => setSuccess(null), 3000);
+      setTimeout(() => setSuccess(null), 6000);
     } catch (err: any) {
       setError(err.message || "Erro ao salvar SMTP.");
     } finally {
@@ -309,16 +310,34 @@ export default function SettingsPage() {
 
       {/* Status Messages */}
       {success && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold flex items-center gap-3">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-          <span>{success}</span>
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-sm font-semibold flex items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span>{success}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSuccess(null)}
+            className="p-1 rounded-lg text-emerald-600 hover:text-emerald-900 hover:bg-emerald-100/50 transition cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-sm font-semibold flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
-          <span>{error}</span>
+        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-300 text-rose-900 text-sm font-semibold flex items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+            <span>{error}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setError(null)}
+            className="p-1 rounded-lg text-rose-600 hover:text-rose-900 hover:bg-rose-100/50 transition cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
