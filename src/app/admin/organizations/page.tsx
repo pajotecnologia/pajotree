@@ -21,7 +21,7 @@ import {
   Layers,
 } from "lucide-react";
 
-type Plan = { id: string; name: string; priceMonthly: number };
+type Plan = { id: string; name: string; priceMonthly: number; organizationId?: string | null };
 type Address = {
   zipCode?: string | null;
   street?: string | null;
@@ -219,6 +219,16 @@ export default function AdminOrganizationsPage() {
     const rootIds = new Set(rootOrganizations.map((r) => r.id));
     return organizations.filter((o) => o.whiteLabelParentId && !rootIds.has(o.whiteLabelParentId));
   }, [organizations, rootOrganizations]);
+
+  // Planos disponíveis no Modal de edição/criação:
+  // Se for sub-cliente de uma agência White Label -> exibe apenas os planos criados por essa agência White Label.
+  // Se for empresa direta ou a própria agência White Label -> exibe apenas os planos globais da plataforma.
+  const availableModalPlans = useMemo(() => {
+    if (editing?.whiteLabelParentId) {
+      return plans.filter((p) => p.organizationId === editing.whiteLabelParentId);
+    }
+    return plans.filter((p) => !p.organizationId);
+  }, [plans, editing]);
 
   function openCreate() {
     setEditing(null);
@@ -582,14 +592,16 @@ export default function AdminOrganizationsPage() {
                             value={root.planId || ""}
                             onChange={(e) => handleChangePlan(root.id, e.target.value)}
                             disabled={updatingId === root.id}
-                            className="min-h-11 w-full sm:w-auto px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs text-amber-700 font-bold focus:outline-none focus:border-amber-500 shadow-sm"
+                            className="min-h-11 w-full sm:w-auto px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs text-amber-700 font-bold focus:outline-none focus:border-amber-500 shadow-sm cursor-pointer"
                           >
                             <option value="">Sem plano</option>
-                            {plans.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.name}
-                              </option>
-                            ))}
+                            {plans
+                              .filter((p) => !p.organizationId)
+                              .map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.name}
+                                </option>
+                              ))}
                           </select>
                         </td>
                         <td data-label="Consumo" className="p-4 text-slate-600 text-[11px]">
@@ -681,14 +693,16 @@ export default function AdminOrganizationsPage() {
                                   value={child.planId || ""}
                                   onChange={(e) => handleChangePlan(child.id, e.target.value)}
                                   disabled={updatingId === child.id}
-                                  className="min-h-10 w-full sm:w-auto px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs text-amber-700 font-bold focus:outline-none focus:border-amber-500 shadow-sm"
+                                  className="min-h-10 w-full sm:w-auto px-2.5 py-1 bg-white border border-purple-200 rounded-lg text-xs text-purple-700 font-bold focus:outline-none focus:border-purple-500 shadow-sm cursor-pointer"
                                 >
                                   <option value="">Sem plano</option>
-                                  {plans.map((p) => (
-                                    <option key={p.id} value={p.id}>
-                                      {p.name}
-                                    </option>
-                                  ))}
+                                  {plans
+                                    .filter((p) => p.organizationId === root.id)
+                                    .map((p) => (
+                                      <option key={p.id} value={p.id}>
+                                        {p.name}
+                                      </option>
+                                    ))}
                                 </select>
                               </td>
                               <td data-label="Consumo" className="p-3.5 text-slate-600 text-[11px]">
@@ -809,7 +823,28 @@ export default function AdminOrganizationsPage() {
                   <Field label="Telefone" value={form.phone} onChange={(v) => setField("phone", v)} />
                   <Field label="WhatsApp" value={form.whatsapp} onChange={(v) => setField("whatsapp", v)} />
                   <Field label="Website" value={form.website} onChange={(v) => setField("website", v)} />
-                  <SelectField label="Plano" value={form.planId} onChange={(v) => setField("planId", v)} options={[{ value: "", label: "Sem plano" }, ...plans.map((p) => ({ value: p.id, label: p.name }))]} />
+                  <SelectField
+                    label={
+                      editing?.whiteLabelParentId
+                        ? `Plano (Planos da Agência White Label: ${editing.whiteLabelParent?.tradeName || editing.whiteLabelParent?.name || "Agência"})`
+                        : "Plano"
+                    }
+                    value={form.planId}
+                    onChange={(v) => setField("planId", v)}
+                    options={[
+                      {
+                        value: "",
+                        label:
+                          availableModalPlans.length === 0 && editing?.whiteLabelParentId
+                            ? "Sem plano (Nenhum plano cadastrado por esta agência)"
+                            : "Sem plano",
+                      },
+                      ...availableModalPlans.map((p) => ({
+                        value: p.id,
+                        label: p.priceMonthly > 0 ? `${p.name} (R$ ${Number(p.priceMonthly).toFixed(2)}/mês)` : p.name,
+                      })),
+                    ]}
+                  />
                   <SelectField label="Status" value={form.status} onChange={(v) => setField("status", v)} options={["TRIAL", "ACTIVE", "SUSPENDED", "BLOCKED"].map((v) => ({ value: v, label: v }))} />
                   <div className="md:col-span-2"><label className="block text-[11px] font-semibold text-slate-600 mb-1.5">Descrição</label><textarea value={form.description} onChange={(e) => setField("description", e.target.value)} rows={3} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500" /></div>
                 </div></section>
