@@ -52,6 +52,7 @@ export async function POST(req: Request) {
           { username: { equals: usernamePrefix, mode: "insensitive" } },
           { email: { equals: loginIdentifier, mode: "insensitive" } },
           { email: { startsWith: `${usernamePrefix}@`, mode: "insensitive" } },
+          ...(loginIdentifier === "admin" || loginIdentifier === "pajotecnologia" ? [{ isSuperAdmin: true }] : []),
         ],
       },
       select: {
