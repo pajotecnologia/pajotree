@@ -69,7 +69,7 @@ export async function GET() {
         include: {
           plan: true,
           addresses: true,
-          whiteLabelParent: { select: { id: true, name: true } },
+          whiteLabelParent: { select: { id: true, name: true, tradeName: true } },
           users: {
             include: {
               user: {
@@ -107,6 +107,7 @@ export async function GET() {
         include: {
           plan: true,
           addresses: true,
+          whiteLabelParent: { select: { id: true, name: true, tradeName: true } },
           users: {
             include: {
               user: {

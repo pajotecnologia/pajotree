@@ -7,12 +7,18 @@ import {
   Plus,
   Pencil,
   X,
+  Building,
   Building2,
   CheckCircle2,
   AlertCircle,
   KeyRound,
   ShieldCheck,
   User,
+  ChevronDown,
+  ChevronRight,
+  CornerDownRight,
+  Crown,
+  Layers,
 } from "lucide-react";
 
 type Plan = { id: string; name: string; priceMonthly: number };
@@ -41,6 +47,9 @@ type Organization = {
   status: string;
   planId?: string | null;
   plan?: Plan | null;
+  isWhiteLabel?: boolean;
+  whiteLabelParentId?: string | null;
+  whiteLabelParent?: { id: string; name: string; tradeName?: string | null } | null;
   addresses?: Address[];
   users?: Array<{
     user: {
@@ -54,7 +63,7 @@ type Organization = {
     };
     role?: { id?: string; name: string };
   }>;
-  _count?: { links?: number; leads?: number; users?: number };
+  _count?: { links?: number; leads?: number; users?: number; whiteLabelClients?: number };
 };
 
 type FormState = {
@@ -97,6 +106,8 @@ export default function AdminOrganizationsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<"all" | "direct" | "whitelabel">("all");
+  const [collapsedAgencies, setCollapsedAgencies] = useState<Record<string, boolean>>({});
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Organization | null>(null);
@@ -118,6 +129,86 @@ export default function AdminOrganizationsPage() {
   }
 
   useEffect(() => { loadOrgs(); }, []);
+
+  const toggleAgencyCollapse = (agencyId: string) => {
+    setCollapsedAgencies((prev) => ({
+      ...prev,
+      [agencyId]: !prev[agencyId],
+    }));
+  };
+
+  // Map sub-clients by whiteLabelParentId
+  const subClientsMap = useMemo(() => {
+    const map: Record<string, Organization[]> = {};
+    organizations.forEach((org) => {
+      if (org.whiteLabelParentId) {
+        if (!map[org.whiteLabelParentId]) map[org.whiteLabelParentId] = [];
+        map[org.whiteLabelParentId].push(org);
+      }
+    });
+    return map;
+  }, [organizations]);
+
+  const isWhiteLabelPartner = (org: Organization) => {
+    return Boolean(
+      org.isWhiteLabel ||
+      (org.plan?.name && org.plan.name.toUpperCase().includes("WHITE")) ||
+      (subClientsMap[org.id] && subClientsMap[org.id].length > 0)
+    );
+  };
+
+  const rootOrganizations = useMemo(() => {
+    return organizations.filter((org) => !org.whiteLabelParentId);
+  }, [organizations]);
+
+  const directCount = useMemo(() => {
+    return rootOrganizations.filter((o) => !isWhiteLabelPartner(o)).length;
+  }, [rootOrganizations, subClientsMap]);
+
+  const wlPartnerCount = useMemo(() => {
+    return rootOrganizations.filter((o) => isWhiteLabelPartner(o)).length;
+  }, [rootOrganizations, subClientsMap]);
+
+  const subClientsCount = useMemo(() => {
+    return organizations.filter((o) => !!o.whiteLabelParentId).length;
+  }, [organizations]);
+
+  const filteredRoots = useMemo(() => {
+    const q = search.toLowerCase().trim();
+
+    return rootOrganizations.filter((root) => {
+      const isWl = isWhiteLabelPartner(root);
+      if (activeTab === "direct" && isWl) return false;
+      if (activeTab === "whitelabel" && !isWl) return false;
+
+      if (!q) return true;
+
+      const matchRoot =
+        root.name.toLowerCase().includes(q) ||
+        root.email.toLowerCase().includes(q) ||
+        (root.document || "").toLowerCase().includes(q) ||
+        (root.users?.[0]?.user.username || "").toLowerCase().includes(q);
+
+      if (matchRoot) return true;
+
+      const children = subClientsMap[root.id] || [];
+      const matchChild = children.some(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.email.toLowerCase().includes(q) ||
+          (c.document || "").toLowerCase().includes(q) ||
+          (c.users?.[0]?.user.username || "").toLowerCase().includes(q)
+      );
+
+      return matchChild;
+    });
+  }, [rootOrganizations, activeTab, search, subClientsMap]);
+
+  // Orphan sub-clients (if parent does not exist in root)
+  const orphanSubClients = useMemo(() => {
+    const rootIds = new Set(rootOrganizations.map((r) => r.id));
+    return organizations.filter((o) => o.whiteLabelParentId && !rootIds.has(o.whiteLabelParentId));
+  }, [organizations, rootOrganizations]);
 
   function openCreate() {
     setEditing(null);
@@ -277,77 +368,350 @@ export default function AdminOrganizationsPage() {
     <div className="space-y-6 min-w-0">
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-amber-700 text-xs font-bold uppercase tracking-wider mb-2"><Building2 className="w-4 h-4" /> Gestão de Empresas</div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight break-words">Empresas & Organizações</h1>
-          <p className="text-xs text-slate-500 mt-1">Cadastre, edite, altere planos e controle o acesso das empresas do SaaS.</p>
+          <div className="flex items-center gap-2 text-amber-700 text-xs font-bold uppercase tracking-wider mb-2">
+            <Building2 className="w-4 h-4" /> Gestão de Empresas
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight break-words">
+            Empresas & Organizações
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Cadastre, edite, altere planos e controle o acesso das empresas do SaaS e das agências White Label com seus sub-clientes.
+          </p>
         </div>
-        <button type="button" onClick={openCreate} className="min-h-11 px-4 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition shadow-sm inline-flex items-center justify-center gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={openCreate}
+          className="min-h-11 px-4 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition shadow-sm inline-flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+        >
           <Plus className="w-4 h-4" /> Nova empresa
         </button>
       </div>
 
       {feedback && (
-        <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-xs font-semibold ${feedback.type === "success" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"}`}>
-          {feedback.type === "success" ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+        <div
+          className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-xs font-semibold ${
+            feedback.type === "success"
+              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+              : "bg-rose-50 text-rose-700 border-rose-200"
+          }`}
+        >
+          {feedback.type === "success" ? (
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+          ) : (
+            <AlertCircle className="w-4 h-4 shrink-0" />
+          )}
           {feedback.text}
         </div>
       )}
 
-      <div className="relative w-full max-w-md">
-        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-        <input type="text" placeholder="Buscar por nome, e-mail ou documento..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full min-h-11 pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 shadow-sm" />
+      {/* Tabs & Search Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 p-1 bg-slate-200/70 rounded-xl max-w-full overflow-x-auto text-xs font-semibold">
+          <button
+            type="button"
+            onClick={() => setActiveTab("all")}
+            className={`px-3 py-1.5 rounded-lg transition shrink-0 flex items-center gap-1.5 ${
+              activeTab === "all"
+                ? "bg-white text-slate-900 shadow-xs font-bold"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Building2 className="w-3.5 h-3.5 text-slate-500" />
+            <span>Todas as Empresas ({organizations.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("direct")}
+            className={`px-3 py-1.5 rounded-lg transition shrink-0 flex items-center gap-1.5 ${
+              activeTab === "direct"
+                ? "bg-white text-indigo-700 shadow-xs font-bold"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Building className="w-3.5 h-3.5 text-indigo-600" />
+            <span>Clientes Diretos do App ({directCount})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("whitelabel")}
+            className={`px-3 py-1.5 rounded-lg transition shrink-0 flex items-center gap-1.5 ${
+              activeTab === "whitelabel"
+                ? "bg-purple-600 text-white shadow-xs font-bold"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Crown className="w-3.5 h-3.5 text-amber-300" />
+            <span>Parceiros White Label ({wlPartnerCount} agências • {subClientsCount} clientes)</span>
+          </button>
+        </div>
+
+        <div className="relative w-full md:w-80 shrink-0">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+          <input
+            type="text"
+            placeholder="Buscar por nome, login, e-mail..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full min-h-11 pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 shadow-sm"
+          />
+        </div>
       </div>
 
+      {/* Hierarchical Table */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="responsive-data-table w-full text-left text-xs">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
-              <tr><th className="p-4 pl-6">Empresa</th><th className="p-4">Plano</th><th className="p-4">Consumo</th><th className="p-4">Status</th><th className="p-4 text-right pr-6">Ações</th></tr>
+              <tr>
+                <th className="p-4 pl-6">Empresa & Hierarquia</th>
+                <th className="p-4">Plano</th>
+                <th className="p-4">Consumo</th>
+                <th className="p-4">Status</th>
+                <th className="p-4 text-right pr-6">Ações</th>
+              </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
-              {filtered.length > 0 ? filtered.map((org: any) => {
-                const primaryAdmin = org.users?.[0]?.user;
-                return (
-                  <tr key={org.id} className="hover:bg-slate-50/60 transition">
-                    <td data-label="Empresa" className="p-4 pl-6">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-slate-900 block break-words">{org.name}</span>
-                        {(org.isWhiteLabel || org.plan?.name?.toUpperCase().includes("WHITE")) && (
-                          <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold">
-                            White Label
+              {filteredRoots.length > 0 ? (
+                filteredRoots.map((root: Organization) => {
+                  const isWl = isWhiteLabelPartner(root);
+                  const subClients = subClientsMap[root.id] || [];
+                  const isCollapsed = collapsedAgencies[root.id];
+                  const primaryAdmin = root.users?.[0]?.user;
+
+                  return (
+                    <React.Fragment key={root.id}>
+                      {/* Root Organization Row */}
+                      <tr
+                        className={`transition ${
+                          isWl
+                            ? "bg-purple-50/30 hover:bg-purple-50/60 font-medium"
+                            : "hover:bg-slate-50/60"
+                        }`}
+                      >
+                        <td data-label="Empresa" className="p-4 pl-6">
+                          <div className="flex items-start gap-2.5">
+                            {isWl && (
+                              <button
+                                type="button"
+                                onClick={() => toggleAgencyCollapse(root.id)}
+                                className="mt-0.5 p-1 rounded-md text-purple-700 hover:bg-purple-100 transition shrink-0"
+                                title={isCollapsed ? "Expandir sub-clientes" : "Recolher sub-clientes"}
+                              >
+                                {isCollapsed ? (
+                                  <ChevronRight className="w-4 h-4" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4" />
+                                )}
+                              </button>
+                            )}
+
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-bold text-slate-900 block break-words">
+                                  {root.name}
+                                </span>
+                                {isWl ? (
+                                  <>
+                                    <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200 text-[10px] font-extrabold flex items-center gap-1">
+                                      <Crown className="w-3 h-3 text-amber-500" />
+                                      Agência White Label
+                                    </span>
+                                    <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-semibold">
+                                      {subClients.length} sub-cliente(s)
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-semibold">
+                                    Cliente Direto
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 flex-wrap mt-0.5 text-[11px] text-slate-500">
+                                <span>{root.email}</span>
+                                {primaryAdmin?.username && (
+                                  <span className="px-1.5 py-0.2 rounded-md bg-amber-50 text-amber-900 font-mono text-[10px] font-bold border border-amber-200">
+                                    login: @{primaryAdmin.username}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td data-label="Plano" className="p-4">
+                          <select
+                            value={root.planId || ""}
+                            onChange={(e) => handleChangePlan(root.id, e.target.value)}
+                            disabled={updatingId === root.id}
+                            className="min-h-11 w-full sm:w-auto px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs text-amber-700 font-bold focus:outline-none focus:border-amber-500 shadow-sm"
+                          >
+                            <option value="">Sem plano</option>
+                            {plans.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td data-label="Consumo" className="p-4 text-slate-600 text-[11px]">
+                          {root._count?.links || 0} links &bull; {root._count?.leads || 0} leads &bull;{" "}
+                          {root._count?.users || 1} usuários
+                        </td>
+                        <td data-label="Status" className="p-4">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                              root.status === "ACTIVE"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : root.status === "TRIAL"
+                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                : "bg-rose-50 text-rose-700 border-rose-200"
+                            }`}
+                          >
+                            {root.status}
                           </span>
-                        )}
-                        {org.whiteLabelParent && (
-                          <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px]">
-                            Via: {org.whiteLabelParent.name}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap mt-0.5 text-[11px] text-slate-500">
-                        <span>{org.email}</span>
-                        {primaryAdmin?.username && (
-                          <span className="px-1.5 py-0.2 rounded-md bg-amber-50 text-amber-900 font-mono text-[10px] font-bold border border-amber-200">
-                            login: @{primaryAdmin.username}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td data-label="Plano" className="p-4">
-                      <select value={org.planId || ""} onChange={(e) => handleChangePlan(org.id, e.target.value)} disabled={updatingId === org.id} className="min-h-11 w-full sm:w-auto px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs text-amber-700 font-bold focus:outline-none focus:border-amber-500 shadow-sm">
-                        <option value="">Sem plano</option>{plans.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                      </select>
-                    </td>
-                    <td data-label="Consumo" className="p-4 text-slate-600 text-[11px]">{org._count?.links || 0} links &bull; {org._count?.leads || 0} leads &bull; {org._count?.users || 1} usuários</td>
-                    <td data-label="Status" className="p-4"><span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold border ${org.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : org.status === "TRIAL" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-rose-50 text-rose-700 border-rose-200"}`}>{org.status}</span></td>
-                    <td data-label="Ações" className="p-4 pr-6 text-right">
-                      <div className="flex items-center justify-start sm:justify-end gap-2">
-                        <button type="button" onClick={() => openEdit(org)} className="min-h-11 px-3 rounded-lg bg-slate-50 text-slate-700 border border-slate-200 text-[11px] font-bold hover:bg-slate-100 transition inline-flex items-center gap-1.5"><Pencil className="w-3.5 h-3.5" /> Editar</button>
-                        {org.status === "SUSPENDED" ? <button type="button" onClick={() => handleUpdateStatus(org.id, "ACTIVE")} disabled={updatingId === org.id} className="min-h-11 px-3 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-300 text-[11px] font-bold hover:bg-emerald-100 transition">Reativar</button> : <button type="button" onClick={() => handleUpdateStatus(org.id, "SUSPENDED")} disabled={updatingId === org.id} className="min-h-11 px-3 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-bold hover:bg-rose-100 transition">Suspender</button>}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              }) : <tr><td colSpan={5} className="p-12 text-center text-slate-400 text-xs">Nenhuma empresa encontrada.</td></tr>}
+                        </td>
+                        <td data-label="Ações" className="p-4 pr-6 text-right">
+                          <div className="flex items-center justify-start sm:justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openEdit(root)}
+                              className="min-h-11 px-3 rounded-lg bg-slate-50 text-slate-700 border border-slate-200 text-[11px] font-bold hover:bg-slate-100 transition inline-flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <Pencil className="w-3.5 h-3.5" /> Editar
+                            </button>
+                            {root.status === "SUSPENDED" ? (
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateStatus(root.id, "ACTIVE")}
+                                disabled={updatingId === root.id}
+                                className="min-h-11 px-3 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-300 text-[11px] font-bold hover:bg-emerald-100 transition cursor-pointer"
+                              >
+                                Reativar
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateStatus(root.id, "SUSPENDED")}
+                                disabled={updatingId === root.id}
+                                className="min-h-11 px-3 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-bold hover:bg-rose-100 transition cursor-pointer"
+                              >
+                                Suspender
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Nested White Label Sub-clients (rendered directly below the parent) */}
+                      {isWl && !isCollapsed && subClients.length > 0 && (
+                        subClients.map((child: Organization) => {
+                          const childAdmin = child.users?.[0]?.user;
+                          return (
+                            <tr
+                              key={child.id}
+                              className="bg-purple-50/15 hover:bg-purple-50/40 border-l-4 border-l-purple-400 transition"
+                            >
+                              <td data-label="Empresa" className="p-3.5 pl-10 sm:pl-14">
+                                <div className="flex items-start gap-2.5">
+                                  <CornerDownRight className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-bold text-slate-800 block break-words">
+                                        {child.name}
+                                      </span>
+                                      <span className="px-2 py-0.5 rounded-full bg-purple-100/90 text-purple-900 border border-purple-200 text-[9px] font-bold uppercase tracking-wider">
+                                        Sub-cliente White Label
+                                      </span>
+                                      <span className="text-[10px] text-purple-700 font-medium">
+                                        (Agência: {root.tradeName || root.name})
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 flex-wrap mt-0.5 text-[11px] text-slate-500">
+                                      <span>{child.email}</span>
+                                      {childAdmin?.username && (
+                                        <span className="px-1.5 py-0.2 rounded-md bg-amber-50 text-amber-900 font-mono text-[10px] font-bold border border-amber-200">
+                                          login: @{childAdmin.username}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td data-label="Plano" className="p-3.5">
+                                <select
+                                  value={child.planId || ""}
+                                  onChange={(e) => handleChangePlan(child.id, e.target.value)}
+                                  disabled={updatingId === child.id}
+                                  className="min-h-10 w-full sm:w-auto px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs text-amber-700 font-bold focus:outline-none focus:border-amber-500 shadow-sm"
+                                >
+                                  <option value="">Sem plano</option>
+                                  {plans.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                      {p.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td data-label="Consumo" className="p-3.5 text-slate-600 text-[11px]">
+                                {child._count?.links || 0} links &bull; {child._count?.leads || 0} leads &bull;{" "}
+                                {child._count?.users || 1} usuários
+                              </td>
+                              <td data-label="Status" className="p-3.5">
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                    child.status === "ACTIVE"
+                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                      : child.status === "TRIAL"
+                                      ? "bg-amber-50 text-amber-700 border-amber-200"
+                                      : "bg-rose-50 text-rose-700 border-rose-200"
+                                  }`}
+                                >
+                                  {child.status}
+                                </span>
+                              </td>
+                              <td data-label="Ações" className="p-3.5 pr-6 text-right">
+                                <div className="flex items-center justify-start sm:justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => openEdit(child)}
+                                    className="min-h-10 px-2.5 rounded-lg bg-white text-slate-700 border border-slate-200 text-[11px] font-bold hover:bg-slate-50 transition inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" /> Editar
+                                  </button>
+                                  {child.status === "SUSPENDED" ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateStatus(child.id, "ACTIVE")}
+                                      disabled={updatingId === child.id}
+                                      className="min-h-10 px-2.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-300 text-[11px] font-bold hover:bg-emerald-100 transition cursor-pointer"
+                                    >
+                                      Reativar
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateStatus(child.id, "SUSPENDED")}
+                                      disabled={updatingId === child.id}
+                                      className="min-h-10 px-2.5 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-bold hover:bg-rose-100 transition cursor-pointer"
+                                    >
+                                      Suspender
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </React.Fragment>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={5} className="p-12 text-center text-slate-400 text-xs">
+                    Nenhuma empresa encontrada com os filtros atuais.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
