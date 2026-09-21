@@ -4,7 +4,8 @@ const migrationStatements = [
   // 0. User Columns
   `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "username" TEXT`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "User_username_key" ON "User"("username")`,
-  `UPDATE "User" SET "username" = LOWER("email") WHERE "username" IS NULL AND "email" IS NOT NULL`,
+  `UPDATE "User" SET "username" = LOWER(SPLIT_PART("email", '@', 1)) WHERE ("username" IS NULL OR "username" LIKE '%@%') AND LOWER(SPLIT_PART("email", '@', 1)) NOT IN (SELECT LOWER(SPLIT_PART("email", '@', 1)) FROM "User" GROUP BY LOWER(SPLIT_PART("email", '@', 1)) HAVING COUNT(*) > 1)`,
+  `UPDATE "User" SET "username" = LOWER("email") WHERE "username" IS NULL`,
 
   // 1. Organization Columns
   `ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "isWhiteLabel" BOOLEAN DEFAULT false`,

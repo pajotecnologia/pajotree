@@ -20,42 +20,37 @@ function getConfiguredAdminCredentials(): { username: string; email: string; pas
 
 /**
  * Ensures that the administrator configured through Coolify exists.
- * This operation is idempotent and never promotes another user.
+ * This operation is idempotent and keeps the password in sync with environment variables.
  */
 export async function ensureDefaultSuperAdmin(): Promise<void> {
   const credentials = getConfiguredAdminCredentials();
   if (!credentials) return;
 
+  const passwordHash = await hashPassword(credentials.password);
+
   const existingAdmin = await db.user.findFirst({
     where: {
       OR: [
-        { email: credentials.email },
-        { username: credentials.username },
+        { email: { equals: credentials.email, mode: "insensitive" } },
+        { username: { equals: credentials.username, mode: "insensitive" } },
+        { email: { startsWith: `${credentials.username}@`, mode: "insensitive" } },
       ],
     },
     select: { id: true, username: true, status: true, isSuperAdmin: true },
   });
 
   if (existingAdmin) {
-    const shouldUpdate =
-      !existingAdmin.isSuperAdmin ||
-      existingAdmin.status !== "ACTIVE" ||
-      !existingAdmin.username;
-
-    if (shouldUpdate) {
-      await db.user.update({
-        where: { id: existingAdmin.id },
-        data: {
-          username: existingAdmin.username || credentials.username,
-          isSuperAdmin: true,
-          status: "ACTIVE",
-        },
-      });
-    }
+    await db.user.update({
+      where: { id: existingAdmin.id },
+      data: {
+        username: credentials.username,
+        passwordHash,
+        isSuperAdmin: true,
+        status: "ACTIVE",
+      },
+    });
     return;
   }
-
-  const passwordHash = await hashPassword(credentials.password);
 
   try {
     await db.user.create({
@@ -73,8 +68,9 @@ export async function ensureDefaultSuperAdmin(): Promise<void> {
     const concurrentAdmin = await db.user.findFirst({
       where: {
         OR: [
-          { email: credentials.email },
-          { username: credentials.username },
+          { email: { equals: credentials.email, mode: "insensitive" } },
+          { username: { equals: credentials.username, mode: "insensitive" } },
+          { email: { startsWith: `${credentials.username}@`, mode: "insensitive" } },
         ],
       },
       select: { id: true, username: true, status: true, isSuperAdmin: true },
@@ -82,15 +78,14 @@ export async function ensureDefaultSuperAdmin(): Promise<void> {
 
     if (!concurrentAdmin) throw error;
 
-    if (!concurrentAdmin.isSuperAdmin || concurrentAdmin.status !== "ACTIVE" || !concurrentAdmin.username) {
-      await db.user.update({
-        where: { id: concurrentAdmin.id },
-        data: {
-          username: concurrentAdmin.username || credentials.username,
-          isSuperAdmin: true,
-          status: "ACTIVE",
-        },
-      });
-    }
+    await db.user.update({
+      where: { id: concurrentAdmin.id },
+      data: {
+        username: credentials.username,
+        passwordHash,
+        isSuperAdmin: true,
+        status: "ACTIVE",
+      },
+    });
   }
 }

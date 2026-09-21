@@ -41,13 +41,17 @@ export async function POST(req: Request) {
     }
 
     const { password } = parsed.data;
-    const loginIdentifier = (parsed.data.login || parsed.data.username || parsed.data.email || "").trim().toLowerCase();
+    const rawIdentifier = (parsed.data.login || parsed.data.username || parsed.data.email || "").trim();
+    const loginIdentifier = rawIdentifier.toLowerCase();
+    const usernamePrefix = loginIdentifier.includes("@") ? loginIdentifier.split("@")[0] : loginIdentifier;
 
     const user = await db.user.findFirst({
       where: {
         OR: [
           { username: { equals: loginIdentifier, mode: "insensitive" } },
+          { username: { equals: usernamePrefix, mode: "insensitive" } },
           { email: { equals: loginIdentifier, mode: "insensitive" } },
+          { email: { startsWith: `${usernamePrefix}@`, mode: "insensitive" } },
         ],
       },
       select: {
