@@ -6,7 +6,10 @@ import { sendPasswordResetEmail } from "@/lib/email";
 import { AuditService } from "@/server/services/audit.service";
 
 const forgotSchema = z.object({
-  email: z.string().trim().email("E-mail inválido"),
+  email: z.string().trim().min(1, "Informe seu e-mail ou usuário").optional(),
+  login: z.string().trim().min(1).optional(),
+}).refine((data) => Boolean(data.email || data.login), {
+  message: "Informe seu e-mail ou usuário de acesso",
 });
 
 export async function POST(request: NextRequest) {
@@ -16,16 +19,21 @@ export async function POST(request: NextRequest) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || "E-mail inválido" },
+        { error: parsed.error.issues[0]?.message || "Dados inválidos" },
         { status: 400 }
       );
     }
 
-    const email = parsed.data.email.toLowerCase();
+    const identifier = (parsed.data.email || parsed.data.login || "").toLowerCase().trim();
 
-    // Procura o usuário
-    const user = await db.user.findUnique({
-      where: { email },
+    // Procura o usuário por email ou por username
+    const user = await db.user.findFirst({
+      where: {
+        OR: [
+          { email: { equals: identifier, mode: "insensitive" } },
+          { username: { equals: identifier, mode: "insensitive" } },
+        ],
+      },
       include: {
         organizations: {
           include: {
@@ -39,13 +47,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Se usuário não existir, retornamos sucesso genérico por segurança (evita enumeração de e-mails)
+    // Se usuário não existir, retornamos sucesso genérico por segurança (evita enumeração)
     if (!user) {
       return NextResponse.json({
         success: true,
-        message: "Se o e-mail informado estiver cadastrado, você receberá as instruções para redefinir sua senha em instantes.",
+        message: "Se os dados informados estiverem cadastrados, você receberá as instruções para redefinir sua senha em instantes.",
       });
     }
+
+    const targetEmail = user.email.toLowerCase();
 
     // Gera token seguro de 64 caracteres hexadecimais
     const token = crypto.randomBytes(32).toString("hex");
@@ -54,14 +64,14 @@ export async function POST(request: NextRequest) {
     try {
       // Invalida tokens anteriores não usados para este e-mail
       await db.passwordResetToken.updateMany({
-        where: { email, used: false },
+        where: { email: targetEmail, used: false },
         data: { used: true },
       });
 
       // Cria o novo token
       await db.passwordResetToken.create({
         data: {
-          email,
+          email: targetEmail,
           token,
           expiresAt,
           used: false,
@@ -87,7 +97,7 @@ export async function POST(request: NextRequest) {
     // Envia o e-mail (resiliente)
     try {
       await sendPasswordResetEmail({
-        to: email,
+        to: targetEmail,
         name: user.name,
         resetUrl,
         brandName,
@@ -105,7 +115,7 @@ export async function POST(request: NextRequest) {
         action: "REQUEST_PASSWORD_RESET",
         entity: "User",
         entityId: user.id,
-        metadata: { email },
+        metadata: { email: targetEmail, identifier },
       });
     } catch {
       // Non-blocking

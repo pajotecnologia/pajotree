@@ -1,6 +1,11 @@
 import { db } from "./db";
 
 const migrationStatements = [
+  // 0. User Columns
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "username" TEXT`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "User_username_key" ON "User"("username")`,
+  `UPDATE "User" SET "username" = LOWER("email") WHERE "username" IS NULL AND "email" IS NOT NULL`,
+
   // 1. Organization Columns
   `ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "isWhiteLabel" BOOLEAN DEFAULT false`,
   `ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "whiteLabelDomain" TEXT`,

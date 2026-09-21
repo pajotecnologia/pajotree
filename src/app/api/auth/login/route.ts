@@ -8,8 +8,12 @@ import { ensureDatabaseSchema } from "@/lib/db-migrate";
 import { z } from "zod";
 
 const loginSchema = z.object({
-  email: z.string().trim().email("E-mail inválido").transform((value) => value.toLowerCase()),
+  login: z.string().trim().min(1, "Informe seu usuário ou login").optional(),
+  username: z.string().trim().min(1).optional(),
+  email: z.string().trim().min(1).optional(),
   password: z.string().min(1, "Senha obrigatória"),
+}).refine((data) => Boolean(data.login || data.username || data.email), {
+  message: "Informe seu usuário ou login de acesso",
 });
 
 export async function POST(req: Request) {
@@ -36,12 +40,20 @@ export async function POST(req: Request) {
       console.warn("Aviso no bootstrap do Super Admin:", bootstrapErr);
     }
 
-    const { email, password } = parsed.data;
-    const user = await db.user.findUnique({
-      where: { email },
+    const { password } = parsed.data;
+    const loginIdentifier = (parsed.data.login || parsed.data.username || parsed.data.email || "").trim().toLowerCase();
+
+    const user = await db.user.findFirst({
+      where: {
+        OR: [
+          { username: { equals: loginIdentifier, mode: "insensitive" } },
+          { email: { equals: loginIdentifier, mode: "insensitive" } },
+        ],
+      },
       select: {
         id: true,
         name: true,
+        username: true,
         email: true,
         passwordHash: true,
         status: true,
@@ -78,6 +90,7 @@ export async function POST(req: Request) {
     const primaryOrg = user.organizations[0]?.organization;
     const token = signToken({
       userId: user.id,
+      username: user.username,
       email: user.email,
       isSuperAdmin: user.isSuperAdmin,
       activeOrganizationId: primaryOrg?.id,
@@ -86,6 +99,7 @@ export async function POST(req: Request) {
     try {
       await setSessionCookie({
         userId: user.id,
+        username: user.username,
         email: user.email,
         isSuperAdmin: user.isSuperAdmin,
         activeOrganizationId: primaryOrg?.id,
@@ -108,7 +122,13 @@ export async function POST(req: Request) {
 
     const response = NextResponse.json({
       success: true,
-      user: { id: user.id, name: user.name, email: user.email, isSuperAdmin: user.isSuperAdmin },
+      user: {
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        isSuperAdmin: user.isSuperAdmin,
+      },
       organization: primaryOrg
         ? { id: primaryOrg.id, name: primaryOrg.name, status: primaryOrg.status }
         : null,

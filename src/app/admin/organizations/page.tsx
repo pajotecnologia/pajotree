@@ -63,6 +63,7 @@ type FormState = {
   city: string;
   state: string;
   adminName: string;
+  adminUsername: string;
   adminEmail: string;
   adminPassword: string;
 };
@@ -70,7 +71,7 @@ type FormState = {
 const emptyForm: FormState = {
   name: "", legalName: "", tradeName: "", document: "", email: "", phone: "", whatsapp: "",
   website: "", description: "", segment: "", status: "TRIAL", planId: "", zipCode: "", street: "",
-  number: "", complement: "", neighborhood: "", city: "", state: "", adminName: "", adminEmail: "", adminPassword: "",
+  number: "", complement: "", neighborhood: "", city: "", state: "", adminName: "", adminUsername: "", adminEmail: "", adminPassword: "",
 };
 
 export default function AdminOrganizationsPage() {
@@ -172,6 +173,7 @@ export default function AdminOrganizationsPage() {
       },
       ...(editing ? {} : {
         adminName: form.adminName,
+        adminUsername: form.adminUsername.trim().toLowerCase() || null,
         adminEmail: form.adminEmail,
         adminPassword: form.adminPassword,
       }),
@@ -341,9 +343,12 @@ export default function AdminOrganizationsPage() {
                   <Field label="Complemento" value={form.complement} onChange={(v) => setField("complement", v)} /><Field label="Bairro" value={form.neighborhood} onChange={(v) => setField("neighborhood", v)} /><Field label="Cidade" value={form.city} onChange={(v) => setField("city", v)} /><Field label="UF" value={form.state} onChange={(v) => setField("state", v)} maxLength={2} />
                 </div></section>
 
-                {!editing && <section className="rounded-2xl bg-slate-50 border border-slate-200 p-4"><h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-3">Primeiro administrador</h3><div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <Field label="Nome *" value={form.adminName} onChange={(v) => setField("adminName", v)} required /><Field label="E-mail de acesso *" type="email" value={form.adminEmail} onChange={(v) => setField("adminEmail", v)} required /><Field label="Senha inicial *" type="password" value={form.adminPassword} onChange={(v) => setField("adminPassword", v)} required minLength={6} />
-                </div><p className="text-[10px] text-slate-500 mt-3">A conta será criada como Administrador da empresa, sem privilégios de Super Admin.</p></section>}
+                {!editing && <section className="rounded-2xl bg-slate-50 border border-slate-200 p-4"><h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-3">Primeiro administrador</h3><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <Field label="Nome *" value={form.adminName} onChange={(v) => setField("adminName", v)} required />
+                  <Field label="Login de acesso *" value={form.adminUsername} onChange={(v) => setField("adminUsername", v.toLowerCase().replace(/[^a-z0-9._-]/g, ""))} required placeholder="Ex.: admin.empresa" />
+                  <Field label="E-mail *" type="email" value={form.adminEmail} onChange={(v) => setField("adminEmail", v)} required />
+                  <Field label="Senha inicial *" type="password" value={form.adminPassword} onChange={(v) => setField("adminPassword", v)} required minLength={6} />
+                </div><p className="text-[10px] text-slate-500 mt-3">A conta será criada com login e senha para acesso ao painel da empresa, sem privilégios de Super Admin.</p></section>}
               </div>
 
               <div className="px-5 sm:px-6 py-4 border-t border-slate-200 bg-slate-50 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">

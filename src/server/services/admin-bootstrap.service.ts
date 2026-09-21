@@ -1,13 +1,18 @@
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
 
-function getConfiguredAdminCredentials(): { email: string; password: string } | null {
+function getConfiguredAdminCredentials(): { username: string; email: string; password: string } | null {
   try {
-    const email = process.env.ADMIN_DEFAULT_EMAIL?.trim().toLowerCase();
+    const rawUsername = process.env.ADMIN_DEFAULT_USERNAME || process.env.ADMIN_DEFAULT_LOGIN;
+    const rawEmail = process.env.ADMIN_DEFAULT_EMAIL?.trim().toLowerCase();
     const password = process.env.ADMIN_DEFAULT_PASSWORD;
 
-    if (!email || !password || password.length < 6) return null;
-    return { email, password };
+    if (!password || password.length < 6) return null;
+
+    const username = (rawUsername || (rawEmail ? rawEmail.split("@")[0] : "admin")).trim().toLowerCase();
+    const email = rawEmail || `${username}@pajotree.com`;
+
+    return { username, email, password };
   } catch {
     return null;
   }
@@ -21,16 +26,27 @@ export async function ensureDefaultSuperAdmin(): Promise<void> {
   const credentials = getConfiguredAdminCredentials();
   if (!credentials) return;
 
-  const existingAdmin = await db.user.findUnique({
-    where: { email: credentials.email },
-    select: { id: true, status: true, isSuperAdmin: true },
+  const existingAdmin = await db.user.findFirst({
+    where: {
+      OR: [
+        { email: credentials.email },
+        { username: credentials.username },
+      ],
+    },
+    select: { id: true, username: true, status: true, isSuperAdmin: true },
   });
 
   if (existingAdmin) {
-    if (!existingAdmin.isSuperAdmin || existingAdmin.status !== "ACTIVE") {
+    const shouldUpdate =
+      !existingAdmin.isSuperAdmin ||
+      existingAdmin.status !== "ACTIVE" ||
+      !existingAdmin.username;
+
+    if (shouldUpdate) {
       await db.user.update({
         where: { id: existingAdmin.id },
         data: {
+          username: existingAdmin.username || credentials.username,
           isSuperAdmin: true,
           status: "ACTIVE",
         },
@@ -45,6 +61,7 @@ export async function ensureDefaultSuperAdmin(): Promise<void> {
     await db.user.create({
       data: {
         name: "Super Administrador",
+        username: credentials.username,
         email: credentials.email,
         passwordHash,
         status: "ACTIVE",
@@ -52,18 +69,24 @@ export async function ensureDefaultSuperAdmin(): Promise<void> {
       },
     });
   } catch (error) {
-    // Another application instance may have created the unique e-mail concurrently.
-    const concurrentAdmin = await db.user.findUnique({
-      where: { email: credentials.email },
-      select: { id: true, status: true, isSuperAdmin: true },
+    // Another application instance may have created the unique e-mail/username concurrently.
+    const concurrentAdmin = await db.user.findFirst({
+      where: {
+        OR: [
+          { email: credentials.email },
+          { username: credentials.username },
+        ],
+      },
+      select: { id: true, username: true, status: true, isSuperAdmin: true },
     });
 
     if (!concurrentAdmin) throw error;
 
-    if (!concurrentAdmin.isSuperAdmin || concurrentAdmin.status !== "ACTIVE") {
+    if (!concurrentAdmin.isSuperAdmin || concurrentAdmin.status !== "ACTIVE" || !concurrentAdmin.username) {
       await db.user.update({
         where: { id: concurrentAdmin.id },
         data: {
+          username: concurrentAdmin.username || credentials.username,
           isSuperAdmin: true,
           status: "ACTIVE",
         },

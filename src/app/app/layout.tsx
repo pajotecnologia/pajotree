@@ -210,7 +210,9 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
           <div className="flex items-center justify-between gap-2 p-1 text-xs">
             <div className="truncate max-w-[150px] min-w-0">
               <span className="text-slate-800 font-semibold block truncate text-xs">{authData?.user?.name}</span>
-              <span className="text-slate-400 text-[10px] block truncate">{authData?.user?.email}</span>
+              <span className="text-slate-400 text-[10px] block truncate">
+                {authData?.user?.username ? `@${authData?.user?.username}` : authData?.user?.email}
+              </span>
               <span className="text-slate-400 text-[9px] block mt-0.5">v{APP_VERSION} • By {vendorCredit}</span>
             </div>
             <button type="button" onClick={handleLogout} title="Sair da Conta" aria-label="Sair da Conta" className="min-h-10 min-w-10 p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition flex items-center justify-center cursor-pointer"><LogOut className="w-4 h-4" /></button>

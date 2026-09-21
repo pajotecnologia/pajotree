@@ -9,6 +9,7 @@ const ALLOWED_LOGO_MIME_TYPES = ["image/png", "image/jpeg", "image/webp"] as con
 
 const registerSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+  username: z.string().trim().min(3, "Login deve ter pelo menos 3 caracteres").regex(/^[a-zA-Z0-9._-]+$/, "Login deve conter apenas letras, números, ponto, hífen ou sublinhado").optional(),
   email: z.string().email("E-mail inválido"),
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
   companyName: z.string().min(2, "Nome da empresa obrigatório"),
@@ -65,6 +66,25 @@ export async function POST(req: Request) {
 
     const { name, email, password, companyName, whatsapp, segment, whiteLabelRef } = parsed.data;
     const logoUrl = validateLogoDataUrl(parsed.data.logoDataUrl);
+
+    const normalizedUsername = (parsed.data.username || email.split("@")[0] || name.replace(/[^a-zA-Z0-9]/g, "")).toLowerCase().trim();
+
+    // Verifica se e-mail ou nome de usuário já existem no sistema
+    const existingUser = await db.user.findFirst({
+      where: {
+        OR: [
+          { email: email.toLowerCase() },
+          { username: normalizedUsername },
+        ],
+      },
+    });
+
+    if (existingUser) {
+      if (existingUser.email.toLowerCase() === email.toLowerCase()) {
+        return NextResponse.json({ error: "Este e-mail já está cadastrado na plataforma." }, { status: 409 });
+      }
+      return NextResponse.json({ error: "Este usuário/login já está em uso. Por favor escolha outro." }, { status: 409 });
+    }
 
     // Identifica se o cadastro veio através de um parceiro White Label (via link de indicação ou domínio)
     let parentOrgId: string | null = null;
@@ -174,6 +194,7 @@ export async function POST(req: Request) {
       const user = await tx.user.create({
         data: {
           name,
+          username: normalizedUsername,
           email: email.toLowerCase(),
           passwordHash,
           status: "ACTIVE",
@@ -323,6 +344,7 @@ export async function POST(req: Request) {
 
     await setSessionCookie({
       userId: result.user.id,
+      username: result.user.username,
       email: result.user.email,
       isSuperAdmin: result.user.isSuperAdmin,
       activeOrganizationId: result.org.id,
@@ -334,7 +356,7 @@ export async function POST(req: Request) {
       action: "REGISTER",
       entity: "User",
       entityId: result.user.id,
-      metadata: { companyName, email },
+      metadata: { companyName, email, username: result.user.username },
     });
 
     return NextResponse.json({
@@ -342,6 +364,7 @@ export async function POST(req: Request) {
       user: {
         id: result.user.id,
         name: result.user.name,
+        username: result.user.username,
         email: result.user.email,
       },
       organization: {

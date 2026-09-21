@@ -16,6 +16,7 @@ function getJwtSecret(): string {
 
 export interface SessionPayload {
   userId: string;
+  username?: string | null;
   email: string;
   isSuperAdmin: boolean;
   activeOrganizationId?: string;
@@ -278,6 +279,7 @@ export async function getCurrentAuthContext() {
     user: {
       id: user.id,
       name: user.name,
+      username: user.username || user.email?.split("@")[0] || null,
       email: user.email,
       isSuperAdmin: user.isSuperAdmin,
     },

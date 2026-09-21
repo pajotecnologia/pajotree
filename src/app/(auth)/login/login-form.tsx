@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Zap, Loader2, AlertCircle, ArrowRight, Lock, Mail, Eye, EyeOff } from "lucide-react";
+import { Zap, Loader2, AlertCircle, ArrowRight, Lock, User, Eye, EyeOff } from "lucide-react";
 import { APP_VERSION } from "@/lib/app-meta";
 import { useBranding, BrandingInfo } from "@/lib/use-branding";
 
@@ -17,7 +17,7 @@ interface LoginErrorResponse {
 export function LoginForm({ initialBranding }: { initialBranding?: BrandingInfo }) {
   const router = useRouter();
   const branding = useBranding(initialBranding);
-  const [email, setEmail] = useState("");
+  const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -44,7 +44,7 @@ export function LoginForm({ initialBranding }: { initialBranding?: BrandingInfo 
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ login, password }),
       });
 
       const data: LoginErrorResponse & {
@@ -130,15 +130,17 @@ export function LoginForm({ initialBranding }: { initialBranding?: BrandingInfo 
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1.5">E-mail</label>
+          <label className="block text-xs font-semibold text-slate-700 mb-1.5">Usuário / Login</label>
           <div className="relative">
-            <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+            <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
             <input
-              type="email"
+              type="text"
               required
-              placeholder="seu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Seu usuário ou login"
+              value={login}
+              onChange={(e) => setLogin(e.target.value)}
+              autoCapitalize="none"
+              autoCorrect="off"
               className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition shadow-sm"
             />
           </div>

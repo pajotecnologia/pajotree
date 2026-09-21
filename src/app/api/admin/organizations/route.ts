@@ -33,6 +33,7 @@ const organizationSchema = z.object({
 
 const createSchema = organizationSchema.extend({
   adminName: z.string().trim().min(2, "Nome do administrador é obrigatório"),
+  adminUsername: z.string().trim().min(3, "Login do administrador deve ter pelo menos 3 caracteres").regex(/^[a-zA-Z0-9._-]+$/, "Login deve conter apenas letras, números, ponto, hífen ou sublinhado").optional(),
   adminEmail: z.string().trim().email("E-mail do administrador inválido"),
   adminPassword: z.string().min(6, "Senha do administrador deve ter pelo menos 6 caracteres"),
 });
@@ -125,10 +126,12 @@ export async function POST(request: NextRequest) {
     const data = parsed.data;
     const email = data.email.toLowerCase();
     const adminEmail = data.adminEmail.toLowerCase();
+    const adminUsername = (data.adminUsername || adminEmail.split("@")[0] || data.adminName.replace(/[^a-zA-Z0-9]/g, "")).toLowerCase().trim();
 
-    const [existingOrg, existingUser, plan] = await Promise.all([
+    const [existingOrg, existingUser, existingUsernameUser, plan] = await Promise.all([
       db.organization.findFirst({ where: { email } }),
       db.user.findUnique({ where: { email: adminEmail } }),
+      db.user.findFirst({ where: { username: { equals: adminUsername, mode: "insensitive" } } }),
       data.planId ? db.plan.findUnique({ where: { id: data.planId } }) : Promise.resolve(null),
     ]);
 
@@ -137,6 +140,9 @@ export async function POST(request: NextRequest) {
     }
     if (existingUser) {
       return NextResponse.json({ error: "O e-mail do administrador já está cadastrado na plataforma." }, { status: 409 });
+    }
+    if (existingUsernameUser) {
+      return NextResponse.json({ error: "O usuário/login do administrador já está em uso na plataforma." }, { status: 409 });
     }
     if (data.planId && (!plan || plan.name === "MASTER")) {
       return NextResponse.json({ error: "Plano inválido para uma empresa." }, { status: 400 });
@@ -148,6 +154,7 @@ export async function POST(request: NextRequest) {
       const user = await tx.user.create({
         data: {
           name: data.adminName,
+          username: adminUsername,
           email: adminEmail,
           passwordHash,
           status: "ACTIVE",
@@ -230,7 +237,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       organization: result.org,
-      adminUser: { id: result.user.id, name: result.user.name, email: result.user.email },
+      adminUser: { id: result.user.id, name: result.user.name, username: result.user.username, email: result.user.email },
     }, { status: 201 });
   } catch (error) {
     console.error("Erro ao criar empresa admin:", error);
