@@ -10,7 +10,7 @@ const changePlanSchema = z.object({
   billingCycle: z.enum(["monthly", "yearly"]),
 });
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const auth = await getCurrentAuthContext();
     if (!auth || !auth.organization) {
@@ -18,12 +18,44 @@ export async function GET() {
     }
 
     const orgId = auth.organization.id;
-    const parentId = auth.organization.whiteLabelParentId;
+    let parentId = auth.organization.whiteLabelParentId;
+
+    // Se parentId não estiver preenchido diretamente, verifica se a requisição veio de um domínio White Label
+    if (!parentId) {
+      const hostHeader = request.headers.get("x-custom-host") || request.headers.get("host") || "";
+      const cleanHost = hostHeader.split(":")[0].toLowerCase().trim();
+      const defaultHost = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/https?:\/\//, "").split(":")[0].toLowerCase().trim();
+
+      if (cleanHost && cleanHost !== defaultHost && cleanHost !== "localhost" && !cleanHost.includes("pajotech.com.br") && !cleanHost.includes("pajotree")) {
+        const wlOrg = await db.organization.findFirst({
+          where: {
+            OR: [
+              { whiteLabelDomain: { equals: cleanHost, mode: "insensitive" } },
+              { domains: { some: { domain: { equals: cleanHost, mode: "insensitive" } } } },
+            ],
+          },
+        });
+
+        if (wlOrg && wlOrg.id !== orgId) {
+          parentId = wlOrg.id;
+          try {
+            await db.organization.update({
+              where: { id: orgId },
+              data: { whiteLabelParentId: wlOrg.id },
+            });
+          } catch {
+            // Non-blocking
+          }
+        }
+      }
+    }
 
     const [planAndUsage, allPlans, subscription] = await Promise.all([
       PlanLimitService.getPlanAndUsage(orgId),
       db.plan.findMany({
-        where: parentId ? { organizationId: parentId, status: "ACTIVE" } : { organizationId: null },
+        where: parentId
+          ? { organizationId: parentId, status: { not: "INACTIVE" } }
+          : { organizationId: null, status: "ACTIVE", name: { not: "MASTER" } },
         include: { features: true },
         orderBy: { priceMonthly: "asc" },
       }),
@@ -34,12 +66,15 @@ export async function GET() {
       }),
     ]);
 
+    const isWhiteLabelClient = Boolean(parentId);
+
     return NextResponse.json({
       planAndUsage,
       allPlans,
       subscription,
       isSuperAdmin: auth.isSuperAdmin,
-      isWhiteLabelClient: Boolean(parentId),
+      isWhiteLabelClient,
+      whiteLabelParentName: auth.organization.whiteLabelParent?.tradeName || auth.organization.whiteLabelParent?.name || null,
     });
   } catch (error) {
     console.error("Erro ao obter dados de faturamento:", error);

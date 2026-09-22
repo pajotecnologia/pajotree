@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Palette, Link2, Users2, KanbanSquare, MessageSquare, FileText, BarChart3, QrCode, Settings, CreditCard, LogOut, ExternalLink, Zap, Menu, X, Sparkles, ChevronRight, ShieldAlert, Brush, Loader2,
+  LayoutDashboard, Palette, Link2, Users2, KanbanSquare, MessageSquare, FileText, BarChart3, QrCode, Settings, CreditCard, LogOut, ExternalLink, Zap, Menu, X, Sparkles, ChevronRight, ShieldAlert, Brush, Loader2, Crown,
 } from "lucide-react";
 import { APP_VERSION, APP_VENDOR } from "@/lib/app-meta";
 
@@ -56,18 +56,67 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
     router.refresh();
   }
 
-  const navItems = [
-    { label: "Dashboard", href: "/app", icon: LayoutDashboard },
-    { label: "Editor Visual", href: "/app/editor", icon: Palette },
-    { label: "Links & Tracking", href: "/app/links", icon: Link2 },
-    { label: "Leads & Contatos", href: "/app/leads", icon: Users2, badge: newLeadsCount > 0 ? `${newLeadsCount} novo${newLeadsCount > 1 ? "s" : ""}` : null },
-    { label: "CRM Kanban", href: "/app/crm", icon: KanbanSquare, badge: newLeadsCount > 0 ? "Novo" : null },
-    { label: "Formulários", href: "/app/forms", icon: FileText },
-    { label: "Analytics & Pixels", href: "/app/analytics", icon: BarChart3 },
-    { label: "QR Codes", href: "/app/qr-code", icon: QrCode },
-    { label: "Assinatura & Planos", href: "/app/billing", icon: CreditCard },
-    { label: "White Label", href: "/app/settings/white-label", icon: Brush },
-    { label: "Configurações", href: "/app/settings", icon: Settings },
+  const isWhiteLabelPartner = Boolean(
+    authData?.isWhiteLabelPartner && !authData?.isWhiteLabelClient
+  );
+
+  const navSections = [
+    {
+      title: "PRINCIPAL",
+      items: [
+        { label: "Dashboard", href: "/app", icon: LayoutDashboard },
+      ],
+    },
+    {
+      title: "MARKETING & CONTEÚDO",
+      items: [
+        { label: "Editor Visual", href: "/app/editor", icon: Palette },
+        { label: "Links & Tracking", href: "/app/links", icon: Link2 },
+        { label: "QR Codes", href: "/app/qr-code", icon: QrCode },
+        { label: "Formulários", href: "/app/forms", icon: FileText },
+      ],
+    },
+    {
+      title: "VENDAS & CRM",
+      items: [
+        {
+          label: "Leads & Contatos",
+          href: "/app/leads",
+          icon: Users2,
+          badge: newLeadsCount > 0 ? `${newLeadsCount} novo${newLeadsCount > 1 ? "s" : ""}` : null,
+        },
+        {
+          label: "CRM Kanban",
+          href: "/app/crm",
+          icon: KanbanSquare,
+          badge: newLeadsCount > 0 ? "Novo" : null,
+        },
+        { label: "Analytics & Pixels", href: "/app/analytics", icon: BarChart3 },
+      ],
+    },
+    ...(isWhiteLabelPartner
+      ? [
+          {
+            title: "GESTÃO DA AGÊNCIA",
+            items: [
+              {
+                label: "Painel White Label",
+                href: "/app/settings/white-label",
+                icon: Crown,
+                badge: "Agência",
+                highlight: true,
+              },
+            ],
+          },
+        ]
+      : []),
+    {
+      title: "CONTA & SISTEMA",
+      items: [
+        { label: "Meu Plano & Assinatura", href: "/app/billing", icon: CreditCard },
+        { label: "Configurações da Empresa", href: "/app/settings", icon: Settings },
+      ],
+    },
   ];
 
   const organization = authData?.organization;
@@ -167,32 +216,59 @@ export default function TenantAppLayout({ children }: { children: React.ReactNod
             <button type="button" aria-label="Fechar menu" onClick={() => setSidebarOpen(false)} className="lg:hidden min-h-11 min-w-11 p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center"><X className="w-5 h-5" /></button>
           </div>
 
-          <nav className="p-3 space-y-0.5 overflow-y-auto max-h-[calc(100vh-210px)]" aria-label="Navegação principal">
-            {navItems.map((item) => {
-              const active = pathname === item.href;
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`min-h-10 flex items-center justify-between px-3 rounded-lg text-xs font-medium transition ${
-                    active ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <Icon className={`w-4 h-4 shrink-0 ${active ? "text-white" : "text-slate-400"}`} />
-                    <span className="truncate">{item.label}</span>
-                  </div>
+          <nav className="p-3 space-y-4 overflow-y-auto max-h-[calc(100vh-210px)]" aria-label="Navegação principal">
+            {navSections.map((section, idx) => (
+              <div key={idx} className="space-y-1">
+                <div className="px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+                  {section.title}
+                </div>
+                <div className="space-y-0.5">
+                  {section.items.map((item) => {
+                    const active = pathname === item.href;
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setSidebarOpen(false)}
+                        className={`min-h-10 flex items-center justify-between px-3 rounded-lg text-xs font-medium transition ${
+                          active
+                            ? "bg-slate-900 text-white"
+                            : (item as any).highlight
+                            ? "text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/70 font-semibold"
+                            : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Icon
+                            className={`w-4 h-4 shrink-0 ${
+                              active
+                                ? "text-white"
+                                : (item as any).highlight
+                                ? "text-indigo-600"
+                                : "text-slate-400"
+                            }`}
+                          />
+                          <span className="truncate">{item.label}</span>
+                        </div>
 
-                  {item.badge && (
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-semibold">
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
+                        {item.badge && (
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                              (item as any).highlight
+                                ? "bg-indigo-100 text-indigo-700"
+                                : "bg-emerald-600 text-white"
+                            }`}
+                          >
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
         </div>
 

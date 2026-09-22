@@ -31,9 +31,9 @@ export async function GET() {
     }
 
     const org = authContext.organization;
-    const isWlPlan = planAndUsage?.plan?.name?.toUpperCase().includes("WHITE") || Boolean(planAndUsage?.features?.removeBranding && planAndUsage?.features?.customDomainAllowed);
-    const isWhiteLabelPartner = Boolean(org?.isWhiteLabel || isWlPlan || authContext.isSuperAdmin);
     const isWhiteLabelClient = Boolean(org?.whiteLabelParentId);
+    const isWlPlan = planAndUsage?.plan?.name?.toUpperCase().includes("WHITE") || Boolean(planAndUsage?.features?.removeBranding && planAndUsage?.features?.customDomainAllowed);
+    const isWhiteLabelPartner = !isWhiteLabelClient && Boolean(org?.isWhiteLabel || isWlPlan || authContext.isSuperAdmin);
     const customDomain = org?.whiteLabelDomain || org?.whiteLabelParent?.whiteLabelDomain || null;
 
     return NextResponse.json({
