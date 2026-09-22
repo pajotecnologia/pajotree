@@ -28,6 +28,9 @@ import {
   Trash2,
   Edit3,
   MessageSquare,
+  Eye,
+  EyeOff,
+  ShieldCheck,
 } from "lucide-react";
 
 const FONTS = [
@@ -144,6 +147,10 @@ export default function WhiteLabelPage() {
     clients: [],
   });
   const [orgId, setOrgId] = useState<string>("");
+  const [editingClient, setEditingClient] = useState<any | null>(null);
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [savingClient, setSavingClient] = useState(false);
+  const [showClientPassword, setShowClientPassword] = useState(false);
 
   useEffect(() => {
     loadAllData();
@@ -461,6 +468,62 @@ export default function WhiteLabelPage() {
       setTimeout(() => setSuccess(null), 4000);
     } catch (err: any) {
       setError(err.message || "Erro ao excluir plano.");
+    }
+  }
+
+  function handleOpenClientModal(client: any) {
+    setEditingClient({
+      clientId: client.id,
+      name: client.name || "",
+      tradeName: client.tradeName || "",
+      document: client.document || "",
+      email: client.email || "",
+      phone: client.phone || "",
+      whatsapp: client.whatsapp || "",
+      status: client.status || "ACTIVE",
+      planId: client.planId || "",
+      adminUserId: client.owner?.id || "",
+      adminName: client.owner?.name || client.name || "",
+      adminUsername: client.owner?.username || "",
+      adminEmail: client.owner?.email || client.email || "",
+      adminPassword: "",
+    });
+    setShowClientPassword(false);
+    setIsClientModalOpen(true);
+  }
+
+  async function handleSaveClient(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingClient) return;
+    setSavingClient(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const res = await fetch("/api/white-label/clients", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editingClient),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao salvar dados do cliente.");
+
+      setSuccess(`Cliente "${editingClient.name}" atualizado com sucesso!`);
+      setIsClientModalOpen(false);
+      setEditingClient(null);
+
+      // Recarrega lista de clientes
+      const clientsRes = await fetch("/api/white-label/clients");
+      if (clientsRes.ok) {
+        const cData = await clientsRes.json();
+        setClientsData(cData);
+      }
+      setTimeout(() => setSuccess(null), 4000);
+    } catch (err: any) {
+      setError(err.message || "Erro ao atualizar cliente.");
+    } finally {
+      setSavingClient(false);
     }
   }
 
@@ -1503,11 +1566,12 @@ export default function WhiteLabelPage() {
                     <tr>
                       <th className="py-3 px-4">Empresa / Cliente</th>
                       <th className="py-3 px-4">Página Pública</th>
-                      <th className="py-3 px-4">Responsável</th>
+                      <th className="py-3 px-4">Responsável & Login</th>
                       <th className="py-3 px-4">WhatsApp</th>
                       <th className="py-3 px-4">Plano</th>
                       <th className="py-3 px-4">Status</th>
-                      <th className="py-3 px-4 text-right">Data</th>
+                      <th className="py-3 px-4">Data</th>
+                      <th className="py-3 px-4 text-right">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -1518,7 +1582,12 @@ export default function WhiteLabelPage() {
                             <div className="w-7 h-7 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">
                               {c.name.substring(0, 2).toUpperCase()}
                             </div>
-                            <span>{c.name}</span>
+                            <div>
+                              <span>{c.name}</span>
+                              {c.tradeName && c.tradeName !== c.name && (
+                                <span className="text-[10px] text-slate-400 block font-normal">{c.tradeName}</span>
+                              )}
+                            </div>
                           </div>
                         </td>
 
@@ -1541,8 +1610,15 @@ export default function WhiteLabelPage() {
                         </td>
 
                         <td className="py-3.5 px-4">
-                          <span>{c.owner?.name || c.name}</span>
-                          <span className="text-[10px] text-slate-400 block">{c.email}</span>
+                          <div className="space-y-0.5">
+                            <span className="font-medium text-slate-900 block">{c.owner?.name || c.name}</span>
+                            {c.owner?.username && (
+                              <span className="text-[10px] font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.2 rounded inline-block font-semibold">
+                                @{c.owner.username}
+                              </span>
+                            )}
+                            <span className="text-[10px] text-slate-400 block">{c.email}</span>
+                          </div>
                         </td>
 
                         <td className="py-3.5 px-4">
@@ -1571,14 +1647,28 @@ export default function WhiteLabelPage() {
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
                             c.status === "ACTIVE"
                               ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : c.status === "TRIAL"
+                              ? "bg-amber-50 text-amber-700 border border-amber-200"
                               : "bg-slate-100 text-slate-600"
                           }`}>
                             {c.status === "ACTIVE" ? "Ativo" : c.status === "TRIAL" ? "Período Teste" : "Inativo"}
                           </span>
                         </td>
 
-                        <td className="py-3.5 px-4 text-right text-slate-500 font-mono text-[11px]">
+                        <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px]">
                           {new Date(c.createdAt).toLocaleDateString("pt-BR")}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenClientModal(c)}
+                            className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+                            title="Editar Dados, Plano e Acesso"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Editar</span>
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -1587,6 +1677,253 @@ export default function WhiteLabelPage() {
               </div>
             )}
           </div>
+
+          {/* Modal de Edição de Cliente */}
+          {isClientModalOpen && editingClient && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-2xs z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-200 space-y-5 shadow-xl">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                      <Building2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm text-slate-900">Editar Cliente da White Label</h3>
+                      <p className="text-[11px] text-slate-500">Altere informações cadastrais, plano e credenciais de acesso</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsClientModalOpen(false);
+                      setEditingClient(null);
+                    }}
+                    className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveClient} className="space-y-4">
+                  {/* Seção: Dados da Empresa */}
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <Building2 className="w-3.5 h-3.5 text-slate-600" />
+                      <span>Dados da Empresa</span>
+                    </span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Razão Social / Nome da Empresa *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={editingClient.name}
+                          onChange={(e) => setEditingClient({ ...editingClient, name: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Nome Fantasia (Opcional)
+                        </label>
+                        <input
+                          type="text"
+                          value={editingClient.tradeName || ""}
+                          onChange={(e) => setEditingClient({ ...editingClient, tradeName: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          CPF ou CNPJ
+                        </label>
+                        <input
+                          type="text"
+                          value={editingClient.document || ""}
+                          onChange={(e) => setEditingClient({ ...editingClient, document: e.target.value })}
+                          placeholder="000.000.000-00"
+                          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          E-mail de Contato *
+                        </label>
+                        <input
+                          type="email"
+                          required
+                          value={editingClient.email}
+                          onChange={(e) => setEditingClient({ ...editingClient, email: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          WhatsApp / Telefone
+                        </label>
+                        <input
+                          type="text"
+                          value={editingClient.whatsapp || editingClient.phone || ""}
+                          onChange={(e) => setEditingClient({ ...editingClient, whatsapp: e.target.value, phone: e.target.value })}
+                          placeholder="(00) 00000-0000"
+                          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Seção: Plano & Status */}
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <CreditCard className="w-3.5 h-3.5 text-slate-600" />
+                      <span>Plano & Status</span>
+                    </span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Plano da Empresa
+                        </label>
+                        <select
+                          value={editingClient.planId || ""}
+                          onChange={(e) => setEditingClient({ ...editingClient, planId: e.target.value || null })}
+                          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none"
+                        >
+                          <option value="">Nenhum Plano (Gratuito)</option>
+                          {customPlans.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} - R$ {Number(p.priceMonthly || 0).toFixed(2)}/mês
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Status da Empresa
+                        </label>
+                        <select
+                          value={editingClient.status}
+                          onChange={(e) => setEditingClient({ ...editingClient, status: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none"
+                        >
+                          <option value="ACTIVE">Ativo (Acesso Liberado)</option>
+                          <option value="TRIAL">Período de Testes (Trial)</option>
+                          <option value="SUSPENDED">Suspenso</option>
+                          <option value="BLOCKED">Bloqueado</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Seção: Usuário & Senha de Acesso */}
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <Key className="w-3.5 h-3.5 text-slate-600" />
+                      <span>Acesso & Login do Cliente</span>
+                    </span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Nome do Responsável
+                        </label>
+                        <input
+                          type="text"
+                          value={editingClient.adminName || ""}
+                          onChange={(e) => setEditingClient({ ...editingClient, adminName: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Usuário / Login (Username)
+                        </label>
+                        <input
+                          type="text"
+                          value={editingClient.adminUsername || ""}
+                          onChange={(e) => setEditingClient({ ...editingClient, adminUsername: e.target.value.toLowerCase().replace(/[^a-zA-Z0-9._-]/g, "") })}
+                          placeholder="ex: amandaarruda"
+                          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          E-mail de Login
+                        </label>
+                        <input
+                          type="email"
+                          value={editingClient.adminEmail || ""}
+                          onChange={(e) => setEditingClient({ ...editingClient, adminEmail: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Nova Senha de Acesso
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showClientPassword ? "text" : "password"}
+                            value={editingClient.adminPassword || ""}
+                            onChange={(e) => setEditingClient({ ...editingClient, adminPassword: e.target.value })}
+                            placeholder="Deixe em branco para manter a atual"
+                            minLength={6}
+                            className="w-full pl-3 pr-10 py-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowClientPassword(!showClientPassword)}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                          >
+                            {showClientPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-500">
+                      💡 Deixe o campo de senha vazio se quiser apenas atualizar os outros dados sem alterar a senha do cliente.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsClientModalOpen(false);
+                        setEditingClient(null);
+                      }}
+                      className="px-3.5 py-2 rounded-lg text-slate-600 font-medium text-xs hover:bg-slate-100 transition cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={savingClient}
+                      className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {savingClient ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                      <span>Salvar Alterações</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
