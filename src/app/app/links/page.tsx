@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Plus,
   Link2,
@@ -20,17 +20,35 @@ import {
   ChevronUp,
   ChevronDown,
   ArrowUpDown,
+  Calendar as CalendarIcon,
+  MousePointerClick,
+  TrendingUp,
+  Filter,
+  RefreshCw,
+  BarChart3,
+  X,
 } from "lucide-react";
+import { IconImagePicker } from "@/components/ui/icon-image-picker";
+import { LinkIconRenderer } from "@/components/ui/link-icon-renderer";
+
+type PeriodOption = "all" | "today" | "7d" | "30d" | "this_month" | "custom";
 
 export default function LinksPage() {
   const [links, setLinks] = useState<any[]>([]);
   const [metaPixels, setMetaPixels] = useState<any[]>([]);
   const [planUsage, setPlanUsage] = useState<any>(null);
+  const [metrics, setMetrics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingClicks, setLoadingClicks] = useState(false);
   const [reordering, setReordering] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
+
+  // Date Filter State
+  const [period, setPeriod] = useState<PeriodOption>("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   // Link Form State
   const [linkType, setLinkType] = useState<"custom" | "whatsapp">("custom");
@@ -49,21 +67,33 @@ export default function LinksPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function loadData() {
+  const loadData = useCallback(async (isFilterChange = false) => {
     try {
-      const res = await fetch("/api/links");
+      if (isFilterChange) {
+        setLoadingClicks(true);
+      }
+      const params = new URLSearchParams();
+      params.set("period", period);
+      if (period === "custom") {
+        if (startDate) params.set("startDate", startDate);
+        if (endDate) params.set("endDate", endDate);
+      }
+
+      const res = await fetch(`/api/links?${params.toString()}`);
       if (res.ok) {
         const json = await res.json();
         setLinks(json.links || []);
         setMetaPixels(json.metaPixels || []);
         setPlanUsage(json.planUsage);
+        setMetrics(json.metrics || null);
       }
     } catch (err) {
       console.error("Erro ao carregar links:", err);
     } finally {
       setLoading(false);
+      setLoadingClicks(false);
     }
-  }
+  }, [period, startDate, endDate]);
 
   const syncReorder = async (updatedLinks: any[]) => {
     try {
@@ -111,8 +141,8 @@ export default function LinksPage() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData(true);
+  }, [loadData]);
 
   const handleCopyShortLink = (code: string, id: string) => {
     const fullUrl = `${window.location.origin}/go/${code}`;
@@ -123,7 +153,7 @@ export default function LinksPage() {
 
   const handleIconChange = (newIcon: string) => {
     setIcon(newIcon);
-    if (newIcon === "whatsapp") {
+    if (newIcon === "whatsapp" || newIcon.includes("wa-3d")) {
       setEventName("Contact");
     }
   };
@@ -293,52 +323,185 @@ export default function LinksPage() {
   const currentCount = links.length;
   const isLimitReached = currentCount >= maxLinks;
 
+  // Compute metrics
+  const totalClicksPeriod = links.reduce((sum, l) => sum + (l._count?.analyticsEvents || 0), 0);
+  const mostClickedLink = [...links].sort(
+    (a, b) => (b._count?.analyticsEvents || 0) - (a._count?.analyticsEvents || 0)
+  )[0];
+
+  const periodLabels: Record<PeriodOption, string> = {
+    all: "Todo o Período",
+    today: "Hoje",
+    "7d": "Últimos 7 dias",
+    "30d": "Últimos 30 dias",
+    this_month: "Este Mês",
+    custom: "Personalizado",
+  };
+
   return (
     <div className="space-y-6 min-w-0">
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight break-words">
             Links & Tracking de Cliques
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Crie links inteligentes com redirecionamento rastreável, disparo automático de eventos no Meta Pixel e suporte a WhatsApp.
+            Personalize ícones, imagens, links rastreáveis e analise métricas de cliques por período.
           </p>
         </div>
         <button
           type="button"
           onClick={handleOpenCreate}
           disabled={isLimitReached}
-          className="min-h-11 w-full sm:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center justify-center gap-2"
+          className="min-h-11 w-full sm:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Novo Link</span>
         </button>
       </div>
 
-      <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600 shrink-0">
-            <Link2 className="w-4 h-4" />
+      {/* Plan Usage & Date Filter Bar */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Consumo do Plano */}
+        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 shrink-0">
+              <Link2 className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-xs font-semibold text-slate-800 block break-words">
+                Consumo: {currentCount} de {maxLinks} links
+              </span>
+              <span className="text-[10px] text-slate-500 block">
+                {isLimitReached
+                  ? "Limite máximo atingido. Faça upgrade para mais."
+                  : `Restam ${maxLinks - currentCount} link(s) disponíveis.`}
+              </span>
+            </div>
           </div>
-          <div className="min-w-0">
-            <span className="text-xs font-semibold text-slate-800 block break-words">
-              Consumo do Plano: {currentCount} de {maxLinks} links utilizados
-            </span>
-            <span className="text-[10px] text-slate-500 block">
-              {isLimitReached
-                ? "Limite máximo atingido. Faça upgrade do seu plano para criar mais links."
-                : `Você ainda pode criar mais ${maxLinks - currentCount} link(s).`}
-            </span>
+          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              style={{ width: `${Math.min((currentCount / maxLinks) * 100, 100)}%` }}
+              className={`h-full transition-all ${isLimitReached ? "bg-rose-500" : "bg-indigo-600"}`}
+            />
           </div>
         </div>
-        <div className="w-full sm:w-32 h-2 bg-slate-100 rounded-full overflow-hidden">
-          <div
-            style={{ width: `${Math.min((currentCount / maxLinks) * 100, 100)}%` }}
-            className={`h-full transition-all ${isLimitReached ? "bg-rose-500" : "bg-indigo-600"}`}
-          />
+
+        {/* Resumo de Cliques no Período */}
+        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between gap-3 lg:col-span-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 shrink-0">
+              <MousePointerClick className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-extrabold text-slate-900 leading-tight">
+                  {totalClicksPeriod}
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-100">
+                  {periodLabels[period]}
+                </span>
+              </div>
+              <span className="text-[11px] text-slate-500 block mt-0.5">
+                Total de cliques registrados
+                {mostClickedLink && totalClicksPeriod > 0 && (
+                  <span className="text-slate-700 font-semibold ml-1">
+                    • Mais clicado: &quot;{mostClickedLink.title}&quot; ({mostClickedLink._count?.analyticsEvents || 0})
+                  </span>
+                )}
+              </span>
+            </div>
+          </div>
+
+          {loadingClicks && (
+            <div className="flex items-center gap-1.5 text-xs text-indigo-600 font-medium animate-pulse shrink-0">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span className="hidden sm:inline">Filtrando...</span>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* DATE FILTER BAR */}
+      <div className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-indigo-600" />
+            <span className="text-xs font-bold text-slate-800">Filtro por Data de Cliques</span>
+          </div>
+          <span className="text-[11px] text-slate-400">
+            Filtre os contadores de cliques de cada link por período específico.
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+          {(
+            [
+              { id: "all", label: "Todo o período" },
+              { id: "today", label: "Hoje" },
+              { id: "7d", label: "Últimos 7 dias" },
+              { id: "30d", label: "Últimos 30 dias" },
+              { id: "this_month", label: "Este mês" },
+              { id: "custom", label: "Personalizado" },
+            ] as const
+          ).map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setPeriod(opt.id)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                period === opt.id
+                  ? "bg-indigo-600 text-white shadow-xs"
+                  : "bg-slate-50 border border-slate-200/80 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              }`}
+            >
+              {opt.id === "custom" && <CalendarIcon className="w-3 h-3" />}
+              <span>{opt.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Custom Date Inputs */}
+        {period === "custom" && (
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-wrap items-center gap-3 pt-2">
+            <div className="flex items-center gap-2">
+              <label className="text-[11px] font-semibold text-slate-600">De:</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-indigo-500 shadow-2xs"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-[11px] font-semibold text-slate-600">Até:</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-indigo-500 shadow-2xs"
+              />
+            </div>
+
+            {(startDate || endDate) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStartDate("");
+                  setEndDate("");
+                }}
+                className="text-xs text-rose-600 hover:underline flex items-center gap-1 ml-auto"
+              >
+                <X className="w-3 h-3" /> Limpar datas
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Links List */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <span className="text-xs font-semibold text-slate-500">
@@ -369,7 +532,7 @@ export default function LinksPage() {
                         type="button"
                         disabled={index === 0 || reordering}
                         onClick={() => handleMoveLink(index, "up")}
-                        className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-white disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition"
+                        className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-white disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition cursor-pointer"
                         title="Subir posição"
                         aria-label="Subir posição"
                       >
@@ -379,7 +542,7 @@ export default function LinksPage() {
                         type="button"
                         disabled={index === links.length - 1 || reordering}
                         onClick={() => handleMoveLink(index, "down")}
-                        className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-white disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition"
+                        className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-white disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition cursor-pointer"
                         title="Descer posição"
                         aria-label="Descer posição"
                       >
@@ -404,13 +567,20 @@ export default function LinksPage() {
                     </div>
                   </div>
 
-                  <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 border border-slate-100 text-indigo-600 shrink-0">
-                    {link.icon === "whatsapp" ? (
-                      <MessageCircle className="w-5 h-5 text-emerald-600" />
-                    ) : (
-                      <Globe className="w-5 h-5" />
-                    )}
-                  </div>
+                  {/* Icon / Avatar Render with Direct Click to Edit */}
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEdit(link)}
+                    className="w-11 h-11 rounded-xl bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 text-indigo-600 shrink-0 flex items-center justify-center p-1.5 shadow-2xs overflow-hidden transition group/icon relative cursor-pointer"
+                    title="Clique para alterar o ícone ou imagem deste link"
+                    aria-label={`Alterar ícone do link ${link.title}`}
+                  >
+                    <LinkIconRenderer icon={link.icon} className="w-6 h-6 max-h-6 object-contain transition-transform group-hover/icon:scale-110" />
+                    <div className="absolute inset-0 bg-indigo-900/60 opacity-0 group-hover/icon:opacity-100 transition-opacity flex items-center justify-center rounded-xl text-white">
+                      <Pencil className="w-3.5 h-3.5" />
+                    </div>
+                  </button>
+
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-sm text-slate-900 break-words">{link.title}</span>
@@ -434,13 +604,15 @@ export default function LinksPage() {
                 <div className="flex items-center gap-2 sm:gap-2.5 border-t md:border-t-0 border-slate-100 pt-2.5 md:pt-0 justify-between md:justify-end flex-wrap">
                   <div className="min-h-10 px-3 py-1 rounded-xl bg-slate-50 border border-slate-100 text-center flex flex-col justify-center">
                     <span className="text-xs font-extrabold text-slate-900 block leading-tight">{clickCount}</span>
-                    <span className="text-[9px] text-slate-400 uppercase tracking-wider">Cliques</span>
+                    <span className="text-[9px] text-slate-400 uppercase tracking-wider">
+                      {period === "all" ? "Cliques" : "No Período"}
+                    </span>
                   </div>
                   {shortCode && (
                     <button
                       type="button"
                       onClick={() => handleCopyShortLink(shortCode, link.id)}
-                      className="min-h-10 min-w-10 p-2 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition shadow-2xs flex items-center justify-center"
+                      className="min-h-10 min-w-10 p-2 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition shadow-2xs flex items-center justify-center cursor-pointer"
                       title="Copiar Link de Redirecionamento"
                       aria-label="Copiar Link de Redirecionamento"
                     >
@@ -464,7 +636,7 @@ export default function LinksPage() {
                   <button
                     type="button"
                     onClick={() => handleOpenEdit(link)}
-                    className="min-h-10 min-w-10 p-2 rounded-xl bg-slate-50 border border-slate-200 hover:bg-indigo-50 hover:border-indigo-200 text-indigo-600 transition shadow-2xs flex items-center justify-center"
+                    className="min-h-10 min-w-10 p-2 rounded-xl bg-slate-50 border border-slate-200 hover:bg-indigo-50 hover:border-indigo-200 text-indigo-600 transition shadow-2xs flex items-center justify-center cursor-pointer"
                     title="Editar Link"
                     aria-label="Editar Link"
                   >
@@ -473,7 +645,7 @@ export default function LinksPage() {
                   <button
                     type="button"
                     onClick={() => handleDelete(link.id)}
-                    className="min-h-10 min-w-10 p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition shadow-2xs flex items-center justify-center"
+                    className="min-h-10 min-w-10 p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition shadow-2xs flex items-center justify-center cursor-pointer"
                     title="Excluir Link"
                     aria-label="Excluir Link"
                   >
@@ -490,9 +662,10 @@ export default function LinksPage() {
         )}
       </div>
 
+      {/* CREATE / EDIT LINK MODAL */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="w-full max-w-lg max-h-[calc(100vh-1.5rem)] overflow-y-auto bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-xl">
+          <div className="w-full max-w-2xl max-h-[calc(100vh-1.5rem)] overflow-y-auto bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-xl">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
               <h3 className="font-bold text-base text-slate-900">
                 {editingLinkId ? "Editar Link Rastreável" : "Adicionar Link Rastreável"}
@@ -502,9 +675,9 @@ export default function LinksPage() {
                   type="button"
                   onClick={() => {
                     setLinkType("custom");
-                    setIcon("globe");
+                    if (icon === "whatsapp") setIcon("globe");
                   }}
-                  className={`px-2.5 py-1 rounded-md transition ${
+                  className={`px-2.5 py-1 rounded-md transition cursor-pointer ${
                     linkType === "custom"
                       ? "bg-white text-indigo-600 shadow-xs font-bold"
                       : "text-slate-600 hover:text-slate-900"
@@ -519,7 +692,7 @@ export default function LinksPage() {
                     setIcon("whatsapp");
                     setEventName("Contact");
                   }}
-                  className={`px-2.5 py-1 rounded-md transition flex items-center gap-1 ${
+                  className={`px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer ${
                     linkType === "whatsapp"
                       ? "bg-emerald-600 text-white shadow-xs font-bold"
                       : "text-slate-600 hover:text-slate-900"
@@ -548,8 +721,8 @@ export default function LinksPage() {
                   required
                   placeholder={
                     linkType === "whatsapp"
-                      ? "Ex: Agende sua Consulta em Garanhuns"
-                      : "Ex: Acesse nosso Site Oficial"
+                      ? "Ex: Falar no WhatsApp com Atendente"
+                      : "Ex: Sistema Ponto Eletrônico"
                   }
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -577,7 +750,7 @@ export default function LinksPage() {
                         setWaPhone(e.target.value);
                         handleUpdateWhatsAppUrl(e.target.value, waMessage);
                       }}
-                      className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                      className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500 shadow-2xs"
                     />
                   </div>
 
@@ -587,13 +760,13 @@ export default function LinksPage() {
                     </label>
                     <input
                       type="text"
-                      placeholder="Ex: Olá! Gostaria de agendar uma consulta em Garanhuns."
+                      placeholder="Ex: Olá! Gostaria de mais informações."
                       value={waMessage}
                       onChange={(e) => {
                         setWaMessage(e.target.value);
                         handleUpdateWhatsAppUrl(waPhone, e.target.value);
                       }}
-                      className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                      className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-emerald-500 shadow-2xs"
                     />
                   </div>
 
@@ -611,7 +784,7 @@ export default function LinksPage() {
                   <input
                     type="text"
                     required
-                    placeholder="https://meusite.com.br/oferta ou meusite.com.br"
+                    placeholder="https://meusite.com.br ou meusite.com.br"
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     className="w-full min-h-11 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 shadow-2xs"
@@ -622,39 +795,24 @@ export default function LinksPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Ícone</label>
-                  <select
-                    value={icon}
-                    onChange={(e) => handleIconChange(e.target.value)}
-                    className="w-full min-h-11 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-500 shadow-2xs"
-                  >
-                    <option value="globe">🌐 Globo / Site Geral</option>
-                    <option value="whatsapp">📱 WhatsApp</option>
-                    <option value="instagram">📸 Instagram</option>
-                    <option value="facebook">📘 Facebook</option>
-                    <option value="youtube">🎥 YouTube / Vídeo</option>
-                    <option value="linkedin">💼 LinkedIn</option>
-                  </select>
-                </div>
+              {/* ICON & IMAGE PICKER COMPONENT */}
+              <IconImagePicker value={icon} onChange={handleIconChange} />
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Evento de Conversão (Pixel)
-                  </label>
-                  <select
-                    value={eventName}
-                    onChange={(e) => setEventName(e.target.value)}
-                    className="w-full min-h-11 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-500 shadow-2xs font-medium"
-                  >
-                    <option value="Contact">Contato no WhatsApp / Chat (Contact)</option>
-                    <option value="Schedule">Agendamento de Consulta / Serviço (Schedule)</option>
-                    <option value="Lead">Cadastro de Lead / Formulário (Lead)</option>
-                    <option value="ViewContent">Visualização de Conteúdo / Catálogo (ViewContent)</option>
-                    <option value="LinkClick">Clique Geral no Link (LinkClick)</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Evento de Conversão (Pixel)
+                </label>
+                <select
+                  value={eventName}
+                  onChange={(e) => setEventName(e.target.value)}
+                  className="w-full min-h-11 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-500 shadow-2xs font-medium"
+                >
+                  <option value="Contact">Contato no WhatsApp / Chat (Contact)</option>
+                  <option value="Schedule">Agendamento de Consulta / Serviço (Schedule)</option>
+                  <option value="Lead">Cadastro de Lead / Formulário (Lead)</option>
+                  <option value="ViewContent">Visualização de Conteúdo / Catálogo (ViewContent)</option>
+                  <option value="LinkClick">Clique Geral no Link (LinkClick)</option>
+                </select>
               </div>
 
               <div className="flex items-start gap-2 pt-1">
@@ -674,14 +832,14 @@ export default function LinksPage() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="min-h-11 px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900"
+                  className="min-h-11 px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="min-h-11 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  className="min-h-11 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
                 >
                   {submitting ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />

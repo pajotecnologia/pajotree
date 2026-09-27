@@ -18,7 +18,7 @@ const linkSchema = z.object({
   position: z.number().int().optional(),
 });
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const auth = await getCurrentAuthContext();
     if (!auth || !auth.organization) {
@@ -26,6 +26,38 @@ export async function GET() {
     }
 
     const orgId = auth.organization.id;
+    const { searchParams } = new URL(request.url);
+    const period = searchParams.get("period") || "all";
+    const startDateParam = searchParams.get("startDate");
+    const endDateParam = searchParams.get("endDate");
+
+    let eventDateFilter: { gte?: Date; lte?: Date } | undefined;
+    const now = new Date();
+
+    if (period === "today") {
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      eventDateFilter = { gte: start, lte: end };
+    } else if (period === "7d") {
+      const start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      eventDateFilter = { gte: start };
+    } else if (period === "30d") {
+      const start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      eventDateFilter = { gte: start };
+    } else if (period === "this_month") {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      eventDateFilter = { gte: start };
+    } else if (period === "custom" && (startDateParam || endDateParam)) {
+      eventDateFilter = {};
+      if (startDateParam) {
+        const [y, m, d] = startDateParam.split("-").map(Number);
+        eventDateFilter.gte = new Date(y, m - 1, d, 0, 0, 0, 0);
+      }
+      if (endDateParam) {
+        const [y, m, d] = endDateParam.split("-").map(Number);
+        eventDateFilter.lte = new Date(y, m - 1, d, 23, 59, 59, 999);
+      }
+    }
 
     const links = await db.link.findMany({
       where: { organizationId: orgId },
@@ -33,7 +65,9 @@ export async function GET() {
         shortLinks: true,
         trackingConfig: true,
         _count: {
-          select: { analyticsEvents: true },
+          select: {
+            analyticsEvents: eventDateFilter ? { where: { createdAt: eventDateFilter } } : true,
+          },
         },
       },
       orderBy: { position: "asc" },
@@ -61,7 +95,19 @@ export async function GET() {
 
     const planUsage = await PlanLimitService.getPlanAndUsage(orgId);
 
-    return NextResponse.json({ links, metaPixels, planUsage });
+    const totalClicks = links.reduce((acc, l) => acc + (l._count?.analyticsEvents || 0), 0);
+
+    return NextResponse.json({
+      links,
+      metaPixels,
+      planUsage,
+      metrics: {
+        period,
+        startDate: startDateParam,
+        endDate: endDateParam,
+        totalClicks,
+      },
+    });
   } catch (error: any) {
     console.error("Erro ao buscar links:", error);
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 });

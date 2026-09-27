@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { MessageCircle, Camera, Globe, ExternalLink, ChevronDown, Sparkles, Share2, Check, HelpCircle, Video, Share } from "lucide-react";
 import { PublicContactForm } from "./contact-form";
+import { LinkIconRenderer } from "@/components/ui/link-icon-renderer";
 
 interface BlockData {
   id: string;
@@ -241,9 +242,9 @@ export function PublicPageRenderer({ page }: PageProps) {
                   {link.icon && (
                     <div
                       style={{ color: settings.primaryColor }}
-                      className="p-2 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center group-hover:scale-110 transition"
+                      className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 group-hover:scale-110 transition overflow-hidden p-1.5"
                     >
-                      {renderSocialIcon(link.icon)}
+                      <LinkIconRenderer icon={link.icon} className="w-5 h-5 max-h-5 object-contain" />
                     </div>
                   )}
                   <div>
